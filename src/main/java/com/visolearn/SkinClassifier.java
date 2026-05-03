@@ -132,9 +132,6 @@ public class SkinClassifier implements AutoCloseable {
         System.out.println("SkinClassifier: loaded " +
                 classLabels.size() + " class labels: " + classLabels);
 
-        // Create NDManager for tensor memory management
-        // NDManager.newBaseManager() automatically selects CPU
-        manager = NDManager.newBaseManager();
 
         // Extract ONNX model from resources to a temp file
         // DJL requires a file path — it cannot load from InputStream
@@ -170,54 +167,73 @@ public class SkinClassifier implements AutoCloseable {
      */
     public PredictionResult predict(Path imagePath) throws Exception {
 
-        // Record start time for inference timing
         long startTime = System.currentTimeMillis();
 
-        // Step 1 — Preprocess image to tensor [1, 3, 380, 380]
-        NDArray inputTensor = preprocessor
-                .preprocessFromFile(manager, imagePath);
+        // Use try-with-resources to create a child NDManager
+        // scoped to this single prediction call.
+        // This ensures tensors are released after inference.
+        try (NDManager predictionManager = NDManager.newBaseManager()) {
 
-        // Step 2 — Wrap tensor in NDList for DJL predictor
-        NDList inputList = new NDList(inputTensor);
+            // Step 1 — Preprocess image to float tensor [1, 3, 380, 380]
+            NDArray inputTensor = preprocessor.preprocessFromFile(
+                    predictionManager, imagePath);
 
-        // Step 3 — Run ONNX model inference
-        // Output is raw logits [1, 7] — NOT probabilities yet
-        NDList outputList = predictor.predict(inputList);
-        NDArray logits    = outputList.get(0);
+            // Step 2 — Wrap in NDList for DJL predictor
+            NDList inputList = new NDList(inputTensor);
 
-        // Step 4 — Apply softmax to convert logits to probabilities
-        // softmax(x_i) = exp(x_i) / sum(exp(x_j)) for all j
-        NDArray probTensor = logits.softmax(1);
+            // Step 3 — Run ONNX model inference
+            // Output is raw logits [1, 7]
+            NDList outputList = predictor.predict(inputList);
+            NDArray logits    = outputList.get(0);
 
-        // Step 5 — Extract probabilities as Java float array
-        float[] probabilities = probTensor.toFloatArray();
+            // Step 4 — Convert logits to float array
+            float[] rawLogits = logits.toFloatArray();
 
-        // Step 6 — Find the class with highest probability
-        int   bestIndex = 0;
-        float bestProb  = probabilities[0];
-        for (int i = 1; i < NUM_CLASSES; i++) {
-            if (probabilities[i] > bestProb) {
-                bestProb  = probabilities[i];
-                bestIndex = i;
+            // Step 5 — Apply softmax manually in Java
+            // softmax(x_i) = exp(x_i - max) / sum(exp(x_j - max))
+            // Subtracting max prevents floating point overflow
+            float maxLogit = rawLogits[0];
+            for (float v : rawLogits) {
+                if (v > maxLogit) maxLogit = v;
             }
+
+            float[] probabilities = new float[NUM_CLASSES];
+            float   sumExp        = 0f;
+            for (int i = 0; i < NUM_CLASSES; i++) {
+                probabilities[i] = (float) Math.exp(rawLogits[i] - maxLogit);
+                sumExp += probabilities[i];
+            }
+            for (int i = 0; i < NUM_CLASSES; i++) {
+                probabilities[i] /= sumExp;
+            }
+
+            // Step 6 — Find highest probability class
+            int   bestIndex = 0;
+            float bestProb  = probabilities[0];
+            for (int i = 1; i < NUM_CLASSES; i++) {
+                if (probabilities[i] > bestProb) {
+                    bestProb  = probabilities[i];
+                    bestIndex = i;
+                }
+            }
+
+            // Step 7 — Build and return result
+            long   inferenceTime = System.currentTimeMillis() - startTime;
+            String className     = classLabels.get(bestIndex);
+            float  confidence    = bestProb * 100f;
+
+            System.out.printf("SkinClassifier: predicted %s " +
+                            "(%.2f%%) in %dms%n",
+                    className, confidence, inferenceTime);
+
+            return new PredictionResult(
+                    bestIndex,
+                    className,
+                    confidence,
+                    probabilities,
+                    inferenceTime
+            );
         }
-
-        // Step 7 — Build and return result
-        long inferenceTime = System.currentTimeMillis() - startTime;
-        String className   = classLabels.get(bestIndex);
-        float  confidence  = bestProb * 100f;
-
-        System.out.printf("SkinClassifier: predicted %s " +
-                        "(%.2f%%) in %dms%n",
-                className, confidence, inferenceTime);
-
-        return new PredictionResult(
-                bestIndex,
-                className,
-                confidence,
-                probabilities,
-                inferenceTime
-        );
     }
 
     /**
@@ -322,9 +338,6 @@ public class SkinClassifier implements AutoCloseable {
         }
         if (model != null) {
             model.close();
-        }
-        if (manager != null) {
-            manager.close();
         }
         System.out.println("SkinClassifier: resources released.");
     }

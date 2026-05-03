@@ -123,13 +123,22 @@ public class ClassifyController implements Initializable {
     public void initialize(URL url, ResourceBundle rb) {
         gradCamRenderer = new GradCamRenderer();
 
-        // Initialize classifier on background thread
-        // Model loading takes 2-5 seconds — must not block UI
+        // Use shared classifier from MainApp
+        // Avoids loading ONNX model twice
         Task<Void> initTask = new Task<>() {
             @Override
             protected Void call() throws Exception {
-                classifier = new SkinClassifier();
-                classifier.initialize();
+                // Wait until shared classifier is ready
+                int attempts = 0;
+                while (MainApp.getSharedClassifier() == null
+                        && attempts < 30) {
+                    Thread.sleep(500);
+                    attempts++;
+                }
+                classifier = MainApp.getSharedClassifier();
+                if (classifier == null) {
+                    throw new Exception("Shared classifier not available.");
+                }
                 return null;
             }
         };
@@ -139,7 +148,7 @@ public class ClassifyController implements Initializable {
                 uploadButton.setDisable(false);
                 predictionLabel.setText("Model ready. Upload an image.");
                 System.out.println("ClassifyController: " +
-                        "model initialized successfully.");
+                        "shared classifier connected.");
             });
         });
 
@@ -148,21 +157,16 @@ public class ClassifyController implements Initializable {
                 predictionLabel.setText("Model failed to load.");
                 predictionLabel.setStyle(
                         "-fx-text-fill: #E24B4A; -fx-font-size: 14px;");
-                System.err.println("Model init failed: " +
-                        initTask.getException().getMessage());
             });
         });
 
-        // Disable upload button until model is ready
         uploadButton.setDisable(true);
         predictionLabel.setText("Loading model...");
 
-        // Start model loading on background thread
         Thread initThread = new Thread(initTask);
         initThread.setDaemon(true);
         initThread.start();
 
-        // Setup drag and drop on image container
         setupDragAndDrop();
     }
 

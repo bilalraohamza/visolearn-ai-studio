@@ -132,7 +132,6 @@ public class BatchController implements Initializable {
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // Setup TableView column bindings
         fileNameColumn.setCellValueFactory(
                 new PropertyValueFactory<>("fileName"));
         predictedClassColumn.setCellValueFactory(
@@ -142,12 +141,20 @@ public class BatchController implements Initializable {
         inferenceTimeColumn.setCellValueFactory(
                 new PropertyValueFactory<>("inferenceTime"));
 
-        // Initialize classifier on background thread
+        // Use shared classifier from MainApp
         Task<Void> initTask = new Task<>() {
             @Override
             protected Void call() throws Exception {
-                classifier = new SkinClassifier();
-                classifier.initialize();
+                int attempts = 0;
+                while (MainApp.getSharedClassifier() == null
+                        && attempts < 30) {
+                    Thread.sleep(500);
+                    attempts++;
+                }
+                classifier = MainApp.getSharedClassifier();
+                if (classifier == null) {
+                    throw new Exception("Shared classifier not available.");
+                }
                 return null;
             }
         };
@@ -156,15 +163,13 @@ public class BatchController implements Initializable {
             Platform.runLater(() -> {
                 selectFolderButton.setDisable(false);
                 System.out.println("BatchController: " +
-                        "model initialized.");
+                        "shared classifier connected.");
             });
         });
 
         initTask.setOnFailed(e -> {
             Platform.runLater(() -> {
                 progressLabel.setText("Model failed to load.");
-                System.err.println("Batch init error: " +
-                        initTask.getException().getMessage());
             });
         });
 

@@ -1,19 +1,12 @@
 package com.visolearn;
 
-import ai.djl.modality.cv.Image;
-import ai.djl.modality.cv.ImageFactory;
-import ai.djl.modality.cv.transform.Normalize;
-import ai.djl.modality.cv.transform.Resize;
-import ai.djl.modality.cv.transform.ToTensor;
-import ai.djl.modality.cv.translator.ImageClassificationTranslator;
 import ai.djl.ndarray.NDArray;
-import ai.djl.ndarray.NDList;
 import ai.djl.ndarray.NDManager;
-import ai.djl.translate.Pipeline;
+import ai.djl.ndarray.types.Shape;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.InputStream;
 import java.nio.file.Path;
 
 /**
@@ -21,15 +14,18 @@ import java.nio.file.Path;
  * passing an image to the EfficientNet-B4 ONNX model.
  *
  * Pipeline:
- * 1. Load image from file path or BufferedImage
- * 2. Resize to 380x380 (EfficientNet-B4 native resolution)
- * 3. Convert to float tensor with values in [0, 1]
- * 4. Normalize using ImageNet mean and std
+ * 1. Load image from file path
+ * 2. Resize to 380x380 using bilinear interpolation
+ * 3. Extract RGB pixel values normalized to [0, 1]
+ * 4. Apply ImageNet normalization per channel
  *    mean = [0.485, 0.456, 0.406]
  *    std  = [0.229, 0.224, 0.225]
+ * 5. Arrange into [1, 3, 380, 380] float array
+ * 6. Wrap in NDArray for DJL ONNX inference
  *
- * These values must match exactly what was used during Python training.
- * Any mismatch will cause incorrect predictions.
+ * Note: Preprocessing is done manually using Java AWT
+ * because ONNX Runtime NDManager does not support
+ * math operations like sub() and div().
  *
  * @author Rao Hamza Bilal
  * @version 1.0
@@ -40,105 +36,102 @@ public class ImagePreprocessor {
     public static final int IMAGE_SIZE = 380;
 
     /**
-     * ImageNet mean values per channel (RGB order).
-     * Used to normalize pixel values after converting to [0,1].
-     * Must match Python training: mean=[0.485, 0.456, 0.406]
+     * ImageNet mean per channel (RGB order).
+     * Must match Python training exactly.
      */
-    private static final float[] IMAGENET_MEAN =
-            {0.485f, 0.456f, 0.406f};
+    private static final float[] MEAN = {0.485f, 0.456f, 0.406f};
 
     /**
-     * ImageNet standard deviation values per channel (RGB order).
-     * Used to normalize pixel values after converting to [0,1].
-     * Must match Python training: std=[0.229, 0.224, 0.225]
+     * ImageNet standard deviation per channel (RGB order).
+     * Must match Python training exactly.
      */
-    private static final float[] IMAGENET_STD =
-            {0.229f, 0.224f, 0.225f};
+    private static final float[] STD  = {0.229f, 0.224f, 0.225f};
 
     /**
-     * Loads a DJL Image from a file path on disk.
-     * Converts to RGB automatically — handles both JPG and PNG.
-     *
-     * @param imagePath path to the image file
-     * @return DJL Image object ready for preprocessing
-     * @throws Exception if the file cannot be read
-     */
-    public Image loadFromFile(Path imagePath) throws Exception {
-        return ImageFactory.getInstance().fromFile(imagePath);
-    }
-
-    /**
-     * Loads a DJL Image from a Java BufferedImage.
-     * Used when receiving frames from the webcam or
-     * drag-and-drop events in the JavaFX GUI.
-     *
-     * @param bufferedImage Java AWT BufferedImage
-     * @return DJL Image object ready for preprocessing
-     */
-    public Image loadFromBufferedImage(BufferedImage bufferedImage) {
-        return ImageFactory.getInstance().fromImage(bufferedImage);
-    }
-
-    /**
-     * Preprocesses a DJL Image into a normalized NDArray tensor.
-     * This is the exact same preprocessing applied during Python training.
-     *
-     * Steps performed:
-     * 1. Resize image to IMAGE_SIZE x IMAGE_SIZE (380x380)
-     * 2. Convert pixels from [0,255] integers to [0,1] floats
-     * 3. Normalize: output = (pixel - mean) / std per channel
+     * Loads an image from disk, preprocesses it, and returns
+     * an NDArray tensor ready for ONNX model inference.
      *
      * Output tensor shape: [1, 3, 380, 380]
      * (batch=1, channels=3, height=380, width=380)
      *
-     * @param manager DJL NDManager for tensor allocation
-     * @param image   DJL Image to preprocess
-     * @return NDArray tensor ready for ONNX model inference
-     * @throws Exception if preprocessing fails
+     * @param manager   DJL NDManager for tensor creation
+     * @param imagePath path to the image file on disk
+     * @return NDArray tensor [1, 3, 380, 380] float32
+     * @throws Exception if image cannot be read or processed
      */
-    public NDArray preprocess(NDManager manager, Image image)
+    public NDArray preprocessFromFile(NDManager manager,
+                                      Path imagePath)
             throws Exception {
 
-        // Step 1 — Resize to 380x380
-        // Uses bilinear interpolation matching Python's transforms.Resize
-        image = image.resize(IMAGE_SIZE, IMAGE_SIZE, false);
+        // Step 1 — Load image from disk
+        BufferedImage original = ImageIO.read(imagePath.toFile());
+        if (original == null) {
+            throw new IllegalArgumentException(
+                    "Cannot read image: " + imagePath +
+                            ". Make sure it is a valid JPG or PNG file."
+            );
+        }
 
-        // Step 2 — Convert image to NDArray tensor
-        // DJL converts pixel values from [0,255] to [0,1] automatically
-        // Output shape: [3, 380, 380] (channels, height, width)
-        NDArray tensor = image.toNDArray(manager, Image.Flag.COLOR);
+        // Step 2 — Resize to 380x380 using bilinear interpolation
+        // Matches Python: transforms.Resize((380, 380))
+        BufferedImage resized = new BufferedImage(
+                IMAGE_SIZE, IMAGE_SIZE, BufferedImage.TYPE_INT_RGB
+        );
+        Graphics2D g2d = resized.createGraphics();
+        g2d.setRenderingHint(
+                RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BILINEAR
+        );
+        g2d.setRenderingHint(
+                RenderingHints.KEY_RENDERING,
+                RenderingHints.VALUE_RENDER_QUALITY
+        );
+        g2d.drawImage(original, 0, 0, IMAGE_SIZE, IMAGE_SIZE, null);
+        g2d.dispose();
 
-        // Step 3 — Normalize using ImageNet mean and std
-        // Formula per channel: normalized = (pixel - mean) / std
-        // This matches Python: transforms.Normalize(mean, std)
-        NDArray mean = manager.create(IMAGENET_MEAN)
-                .reshape(3, 1, 1);
-        NDArray std  = manager.create(IMAGENET_STD)
-                .reshape(3, 1, 1);
+        // Step 3 — Convert pixels to normalized float array
+        // Layout: [batch, channel, height, width] = [1, 3, 380, 380]
+        // Total elements: 1 × 3 × 380 × 380 = 433,200
+        int totalElements = 3 * IMAGE_SIZE * IMAGE_SIZE;
+        float[] floatArray = new float[totalElements];
 
-        // Apply normalization: (tensor - mean) / std
-        tensor = tensor.sub(mean).div(std);
+        // Offset for each channel in the flat array
+        // Channel 0 (Red):   indices 0         to 380*380-1
+        // Channel 1 (Green): indices 380*380   to 2*380*380-1
+        // Channel 2 (Blue):  indices 2*380*380 to 3*380*380-1
+        int channelSize = IMAGE_SIZE * IMAGE_SIZE;
 
-        // Step 4 — Add batch dimension
-        // Model expects [batch, channels, height, width]
-        // expandDims(0) converts [3, 380, 380] to [1, 3, 380, 380]
-        tensor = tensor.expandDims(0);
+        for (int y = 0; y < IMAGE_SIZE; y++) {
+            for (int x = 0; x < IMAGE_SIZE; x++) {
+                int rgb = resized.getRGB(x, y);
+                int pixelIndex = y * IMAGE_SIZE + x;
+
+                // Extract RGB components from packed int
+                // Each component is in range [0, 255]
+                float r = ((rgb >> 16) & 0xFF) / 255.0f;
+                float g = ((rgb >> 8)  & 0xFF) / 255.0f;
+                float b = (rgb & 0xFF)          / 255.0f;
+
+                // Apply ImageNet normalization per channel
+                // Formula: normalized = (pixel - mean) / std
+                // This matches Python:
+                //   transforms.Normalize(mean, std)
+                floatArray[0 * channelSize + pixelIndex] =
+                        (r - MEAN[0]) / STD[0];  // Red channel
+                floatArray[1 * channelSize + pixelIndex] =
+                        (g - MEAN[1]) / STD[1];  // Green channel
+                floatArray[2 * channelSize + pixelIndex] =
+                        (b - MEAN[2]) / STD[2];  // Blue channel
+            }
+        }
+
+        // Step 4 — Wrap float array in NDArray
+        // Shape [1, 3, 380, 380] matches ONNX model input spec
+        NDArray tensor = manager.create(
+                floatArray,
+                new Shape(1, 3, IMAGE_SIZE, IMAGE_SIZE)
+        );
 
         return tensor;
-    }
-
-    /**
-     * Convenience method: loads a file and preprocesses it in one call.
-     * Used by ClassifyController when user uploads an image.
-     *
-     * @param manager   DJL NDManager for tensor allocation
-     * @param imagePath path to the image file on disk
-     * @return preprocessed NDArray tensor [1, 3, 380, 380]
-     * @throws Exception if loading or preprocessing fails
-     */
-    public NDArray preprocessFromFile(NDManager manager, Path imagePath)
-            throws Exception {
-        Image image = loadFromFile(imagePath);
-        return preprocess(manager, image);
     }
 }

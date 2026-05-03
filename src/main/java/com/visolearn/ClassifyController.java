@@ -11,7 +11,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.embed.swing.SwingFXUtils;
-
+import javafx.scene.layout.HBox;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -43,7 +43,7 @@ public class ClassifyController implements Initializable {
     @FXML private Button    uploadButton;
     @FXML private Button    clearButton;
     @FXML private CheckBox  gradCamToggle;
-    @FXML private VBox      loadingBox;
+    @FXML private HBox      loadingBox;
     @FXML private Label     loadingLabel;
 
     // Prediction result labels

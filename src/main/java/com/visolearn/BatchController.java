@@ -8,6 +8,7 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
+import javafx.scene.layout.HBox;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -45,7 +46,7 @@ public class BatchController implements Initializable {
     @FXML private ProgressBar  batchProgressBar;
     @FXML private Label        progressLabel;
     @FXML private Label        progressCountLabel;
-    @FXML private VBox         summaryBox;
+    @FXML private HBox         summaryBox;
     @FXML private Label        totalImagesLabel;
     @FXML private Label        topClassLabel;
     @FXML private Label        avgConfidenceLabel;

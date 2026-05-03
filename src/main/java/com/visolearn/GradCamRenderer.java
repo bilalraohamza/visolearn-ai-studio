@@ -237,12 +237,38 @@ public class GradCamRenderer {
             for (int x = 0; x < width; x++) {
                 float value = data[y][x];
 
-                // Map activation value to RGB color (jet colormap)
-                int[] rgb = jetColormap(value);
+                // Only colorize pixels above threshold
+                // Below threshold = fully transparent (no green tint)
+                if (value < 0.15f) {
+                    heatmap.setRGB(x, y, 0x00000000);
+                    continue;
+                }
 
-                // Set pixel with full opacity
-                int argb = (255 << 24) | (rgb[0] << 16) |
-                        (rgb[1] << 8) | rgb[2];
+                // Map value to red-yellow color only (no green)
+                // 0.15 - 0.5 = yellow to orange
+                // 0.5  - 1.0 = orange to red
+                int r, g, b, a;
+
+                // Normalize to 0-1 range above threshold
+                float normalized = (value - 0.15f) / 0.85f;
+                normalized = Math.min(1.0f, Math.max(0.0f, normalized));
+
+                if (normalized < 0.5f) {
+                    // Yellow to orange
+                    r = 255;
+                    g = (int)(255 - normalized * 2 * 100);
+                    b = 0;
+                } else {
+                    // Orange to red
+                    r = 255;
+                    g = (int)(155 - (normalized - 0.5f) * 2 * 155);
+                    b = 0;
+                }
+
+                // Alpha increases with value — more activated = more visible
+                a = (int)(normalized * 200);
+
+                int argb = (a << 24) | (r << 16) | (g << 8) | b;
                 heatmap.setRGB(x, y, argb);
             }
         }
@@ -302,14 +328,15 @@ public class GradCamRenderer {
         );
 
         Graphics2D g2d = blended.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_RENDERING,
+                RenderingHints.VALUE_RENDER_QUALITY);
 
         // Draw original image at full opacity
         g2d.drawImage(original, 0, 0, null);
 
-        // Draw heatmap on top with specified opacity
-        g2d.setComposite(
-                AlphaComposite.getInstance(AlphaComposite.SRC_OVER, opacity)
-        );
+        // Draw heatmap using its own per-pixel alpha
+        // SRC_OVER respects the ARGB alpha channel we set
+        g2d.setComposite(AlphaComposite.SrcOver);
         g2d.drawImage(heatmap, 0, 0, null);
 
         g2d.dispose();

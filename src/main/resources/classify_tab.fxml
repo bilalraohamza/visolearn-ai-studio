@@ -72,13 +72,13 @@
                 <!-- Image view -->
                 <ImageView fx:id="inputImageView"
                            fitWidth="362" fitHeight="362"
-                           preserveRatio="true"
+                           preserveRatio="false"
                            visible="false"/>
 
                 <!-- Grad-CAM overlay -->
                 <ImageView fx:id="heatmapImageView"
                            fitWidth="362" fitHeight="362"
-                           preserveRatio="true"
+                           preserveRatio="false"
                            visible="false"
                            opacity="0.5"/>
 

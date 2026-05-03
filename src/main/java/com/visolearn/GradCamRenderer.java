@@ -1,12 +1,8 @@
 package com.visolearn;
 
-import ai.djl.ndarray.NDArray;
-import ai.djl.ndarray.NDManager;
-
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.nio.file.Path;
 
 /**

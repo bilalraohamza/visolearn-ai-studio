@@ -1,11 +1,11 @@
 package com.visolearn;
 
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import javafx.concurrent.Task;
-import javafx.application.Platform;
 
 import java.io.IOException;
 import java.util.Objects;

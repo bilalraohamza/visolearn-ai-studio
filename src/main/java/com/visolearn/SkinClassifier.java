@@ -1,18 +1,13 @@
 package com.visolearn;
 
 import ai.djl.Device;
-import ai.djl.MalformedModelException;
 import ai.djl.inference.Predictor;
-import ai.djl.modality.cv.Image;
 import ai.djl.ndarray.NDArray;
 import ai.djl.ndarray.NDList;
 import ai.djl.ndarray.NDManager;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ModelZoo;
 import ai.djl.repository.zoo.ZooModel;
-import ai.djl.translate.NoBatchifyTranslator;
-import ai.djl.translate.TranslateException;
-import ai.djl.translate.TranslatorContext;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -20,7 +15,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**

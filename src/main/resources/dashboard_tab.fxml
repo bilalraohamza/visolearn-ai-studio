@@ -3,119 +3,198 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.chart.*?>
-<?import javafx.scene.text.*?>
 <?import javafx.geometry.*?>
 
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.visolearn.DashboardController"
-      style="-fx-background-color: #1a1a2e; -fx-padding: 20;"
-      spacing="16">
+      style="-fx-background-color: #111127; -fx-padding: 18;"
+      spacing="14">
 
     <!-- ===== HEADER ===== -->
     <HBox alignment="CENTER_LEFT" spacing="16">
-        <Label text="Training Dashboard"
-               style="-fx-font-size: 16px;
-                      -fx-font-weight: bold;
-                      -fx-text-fill: #e0e0e0;"/>
-        <Label text="EfficientNet-B4 trained on HAM10000 — 25 epochs"
-               style="-fx-font-size: 11px;
-                      -fx-text-fill: #666666;"/>
+        <VBox spacing="2">
+            <Label text="Training Dashboard"
+                   style="-fx-font-size: 16px;
+                          -fx-font-weight: bold;
+                          -fx-text-fill: #f0f0fa;"/>
+            <Label text="EfficientNet-B4 trained on HAM10000 — 25 epochs"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #606080;"/>
+        </VBox>
         <Region HBox.hgrow="ALWAYS"/>
         <Button fx:id="reloadButton"
-                text="Reload Log"
+                text="Reload Metrics"
                 onAction="#handleReload"
-                style="-fx-background-color: #2a2a4a;
-                       -fx-text-fill: #888888;
+                style="-fx-background-color: transparent;
+                       -fx-text-fill: #a0a0c0;
                        -fx-font-size: 11px;
-                       -fx-background-radius: 6;
+                       -fx-background-radius: 7;
+                       -fx-border-color: rgba(255,255,255,0.12);
+                       -fx-border-radius: 7;
+                       -fx-border-width: 1;
                        -fx-padding: 6 12 6 12;
                        -fx-cursor: hand;"/>
     </HBox>
 
-    <!-- ===== METRIC CARDS ROW ===== -->
-    <HBox spacing="12">
+    <!-- ===== METRIC CARDS ===== -->
+    <HBox spacing="10">
 
-        <VBox style="-fx-background-color: #16213e;
-                     -fx-padding: 12 16 12 16;
-                     -fx-background-radius: 8;"
-              spacing="4" HBox.hgrow="ALWAYS">
-            <Label text="Best Val Accuracy"
+        <!-- Best Val Accuracy -->
+        <VBox HBox.hgrow="ALWAYS"
+              style="-fx-background-color: #1a1a35;
+                     -fx-background-radius: 10;
+                     -fx-border-color: rgba(255,255,255,0.07);
+                     -fx-border-radius: 10;
+                     -fx-border-width: 1;
+                     -fx-padding: 14 16 14 16;">
+            <Region style="-fx-background-color: #22c55e;
+                           -fx-min-height: 2;
+                           -fx-max-height: 2;
+                           -fx-background-radius: 2;
+                           -fx-translate-y: -14;"/>
+            <Label text="BEST VAL ACCURACY"
                    style="-fx-font-size: 10px;
-                          -fx-text-fill: #888888;"/>
+                          -fx-font-weight: bold;
+                          -fx-text-fill: #606080;
+                          -fx-letter-spacing: 1.4px;
+                          -fx-padding: 0 0 8 0;"/>
             <Label fx:id="bestAccLabel"
                    text="81.76%"
-                   style="-fx-font-size: 22px;
+                   style="-fx-font-size: 24px;
                           -fx-font-weight: bold;
-                          -fx-text-fill: #1D9E75;"/>
-            <Label fx:id="bestEpochLabel"
-                   text="Epoch 14 of 25"
-                   style="-fx-font-size: 10px;
-                          -fx-text-fill: #666666;"/>
+                          -fx-text-fill: #4ade80;"/>
+            <HBox style="-fx-padding: 6 0 0 0;">
+                <Label fx:id="bestEpochLabel"
+                       text="Epoch 14 of 25"
+                       style="-fx-font-size: 10px;
+                              -fx-text-fill: #606080;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label text="best"
+                       style="-fx-font-size: 10px;
+                              -fx-text-fill: #22c55e;
+                              -fx-font-weight: bold;"/>
+            </HBox>
         </VBox>
 
-        <VBox style="-fx-background-color: #16213e;
-                     -fx-padding: 12 16 12 16;
-                     -fx-background-radius: 8;"
-              spacing="4" HBox.hgrow="ALWAYS">
-            <Label text="Test Accuracy"
+        <!-- Test Accuracy -->
+        <VBox HBox.hgrow="ALWAYS"
+              style="-fx-background-color: #1a1a35;
+                     -fx-background-radius: 10;
+                     -fx-border-color: rgba(255,255,255,0.07);
+                     -fx-border-radius: 10;
+                     -fx-border-width: 1;
+                     -fx-padding: 14 16 14 16;">
+            <Region style="-fx-background-color: #4d9de0;
+                           -fx-min-height: 2;
+                           -fx-max-height: 2;
+                           -fx-background-radius: 2;
+                           -fx-translate-y: -14;"/>
+            <Label text="TEST ACCURACY"
                    style="-fx-font-size: 10px;
-                          -fx-text-fill: #888888;"/>
+                          -fx-font-weight: bold;
+                          -fx-text-fill: #606080;
+                          -fx-letter-spacing: 1.4px;
+                          -fx-padding: 0 0 8 0;"/>
             <Label text="80.99%"
-                   style="-fx-font-size: 22px;
+                   style="-fx-font-size: 24px;
                           -fx-font-weight: bold;
-                          -fx-text-fill: #378ADD;"/>
-            <Label text="989 test images"
-                   style="-fx-font-size: 10px;
-                          -fx-text-fill: #666666;"/>
+                          -fx-text-fill: #6fb4f0;"/>
+            <HBox style="-fx-padding: 6 0 0 0;">
+                <Label text="989 test images"
+                       style="-fx-font-size: 10px;
+                              -fx-text-fill: #606080;"/>
+            </HBox>
         </VBox>
 
-        <VBox style="-fx-background-color: #16213e;
-                     -fx-padding: 12 16 12 16;
-                     -fx-background-radius: 8;"
-              spacing="4" HBox.hgrow="ALWAYS">
-            <Label text="Macro F1 Score"
+        <!-- Macro F1 -->
+        <VBox HBox.hgrow="ALWAYS"
+              style="-fx-background-color: #1a1a35;
+                     -fx-background-radius: 10;
+                     -fx-border-color: rgba(255,255,255,0.07);
+                     -fx-border-radius: 10;
+                     -fx-border-width: 1;
+                     -fx-padding: 14 16 14 16;">
+            <Region style="-fx-background-color: #a855f7;
+                           -fx-min-height: 2;
+                           -fx-max-height: 2;
+                           -fx-background-radius: 2;
+                           -fx-translate-y: -14;"/>
+            <Label text="MACRO F1"
                    style="-fx-font-size: 10px;
-                          -fx-text-fill: #888888;"/>
+                          -fx-font-weight: bold;
+                          -fx-text-fill: #606080;
+                          -fx-letter-spacing: 1.4px;
+                          -fx-padding: 0 0 8 0;"/>
             <Label text="0.710"
-                   style="-fx-font-size: 22px;
+                   style="-fx-font-size: 24px;
                           -fx-font-weight: bold;
-                          -fx-text-fill: #378ADD;"/>
-            <Label text="Weighted F1: 0.816"
-                   style="-fx-font-size: 10px;
-                          -fx-text-fill: #666666;"/>
+                          -fx-text-fill: #c084fc;"/>
+            <HBox style="-fx-padding: 6 0 0 0;">
+                <Label text="weighted: 0.816"
+                       style="-fx-font-size: 10px;
+                              -fx-text-fill: #606080;"/>
+            </HBox>
         </VBox>
 
-        <VBox style="-fx-background-color: #16213e;
-                     -fx-padding: 12 16 12 16;
-                     -fx-background-radius: 8;"
-              spacing="4" HBox.hgrow="ALWAYS">
-            <Label text="Training Epochs"
+        <!-- Training Epochs -->
+        <VBox HBox.hgrow="ALWAYS"
+              style="-fx-background-color: #1a1a35;
+                     -fx-background-radius: 10;
+                     -fx-border-color: rgba(255,255,255,0.07);
+                     -fx-border-radius: 10;
+                     -fx-border-width: 1;
+                     -fx-padding: 14 16 14 16;">
+            <Region style="-fx-background-color: #4d9de0;
+                           -fx-min-height: 2;
+                           -fx-max-height: 2;
+                           -fx-background-radius: 2;
+                           -fx-translate-y: -14;"/>
+            <Label text="TRAINING EPOCHS"
                    style="-fx-font-size: 10px;
-                          -fx-text-fill: #888888;"/>
+                          -fx-font-weight: bold;
+                          -fx-text-fill: #606080;
+                          -fx-letter-spacing: 1.4px;
+                          -fx-padding: 0 0 8 0;"/>
             <Label text="25"
-                   style="-fx-font-size: 22px;
+                   style="-fx-font-size: 24px;
                           -fx-font-weight: bold;
-                          -fx-text-fill: #378ADD;"/>
-            <Label text="Phase 1: 1-5  |  Phase 2: 6-25"
-                   style="-fx-font-size: 10px;
-                          -fx-text-fill: #666666;"/>
+                          -fx-text-fill: #f0f0fa;"/>
+            <HBox style="-fx-padding: 6 0 0 0;">
+                <Label text="2 phases · cosine LR"
+                       style="-fx-font-size: 10px;
+                              -fx-text-fill: #606080;"/>
+            </HBox>
         </VBox>
 
-        <VBox style="-fx-background-color: #16213e;
-                     -fx-padding: 12 16 12 16;
-                     -fx-background-radius: 8;"
-              spacing="4" HBox.hgrow="ALWAYS">
-            <Label text="Model Parameters"
+        <!-- Parameters -->
+        <VBox HBox.hgrow="ALWAYS"
+              style="-fx-background-color: #1a1a35;
+                     -fx-background-radius: 10;
+                     -fx-border-color: rgba(255,255,255,0.07);
+                     -fx-border-radius: 10;
+                     -fx-border-width: 1;
+                     -fx-padding: 14 16 14 16;">
+            <Region style="-fx-background-color: #4d9de0;
+                           -fx-min-height: 2;
+                           -fx-max-height: 2;
+                           -fx-background-radius: 2;
+                           -fx-translate-y: -14;"/>
+            <Label text="PARAMETERS"
                    style="-fx-font-size: 10px;
-                          -fx-text-fill: #888888;"/>
-            <Label text="17.5M"
-                   style="-fx-font-size: 22px;
                           -fx-font-weight: bold;
-                          -fx-text-fill: #378ADD;"/>
-            <Label text="EfficientNet-B4"
-                   style="-fx-font-size: 10px;
-                          -fx-text-fill: #666666;"/>
+                          -fx-text-fill: #606080;
+                          -fx-letter-spacing: 1.4px;
+                          -fx-padding: 0 0 8 0;"/>
+            <Label text="17.5M"
+                   style="-fx-font-size: 24px;
+                          -fx-font-weight: bold;
+                          -fx-text-fill: #f0f0fa;"/>
+            <HBox style="-fx-padding: 6 0 0 0;">
+                <Label text="EfficientNet-B4"
+                       style="-fx-font-size: 10px;
+                              -fx-text-fill: #606080;"/>
+            </HBox>
         </VBox>
 
     </HBox>
@@ -124,55 +203,119 @@
     <HBox spacing="12" VBox.vgrow="ALWAYS">
 
         <!-- Loss Chart -->
-        <VBox style="-fx-background-color: #16213e;
-                     -fx-padding: 16;
-                     -fx-background-radius: 8;"
-              spacing="8" HBox.hgrow="ALWAYS">
-            <Label text="Training and Validation Loss"
-                   style="-fx-font-size: 12px;
-                          -fx-font-weight: bold;
-                          -fx-text-fill: #aaaaaa;"/>
+        <VBox HBox.hgrow="ALWAYS"
+              style="-fx-background-color: #1a1a35;
+                     -fx-background-radius: 10;
+                     -fx-border-color: rgba(255,255,255,0.07);
+                     -fx-border-radius: 10;
+                     -fx-border-width: 1;
+                     -fx-padding: 14 16 14 16;"
+              spacing="8">
+            <HBox alignment="CENTER_LEFT">
+                <Label text="Training &amp; Validation Loss"
+                       style="-fx-font-size: 13px;
+                              -fx-font-weight: bold;
+                              -fx-text-fill: #f0f0fa;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <HBox spacing="12" alignment="CENTER">
+                    <HBox spacing="5" alignment="CENTER">
+                        <Region style="-fx-background-color: #4d9de0;
+                                       -fx-min-width: 14;
+                                       -fx-max-width: 14;
+                                       -fx-min-height: 2;
+                                       -fx-max-height: 2;"/>
+                        <Label text="Train"
+                               style="-fx-font-size: 10px;
+                                      -fx-text-fill: #a0a0c0;"/>
+                    </HBox>
+                    <HBox spacing="5" alignment="CENTER">
+                        <Region style="-fx-background-color: #ef4444;
+                                       -fx-min-width: 14;
+                                       -fx-max-width: 14;
+                                       -fx-min-height: 2;
+                                       -fx-max-height: 2;"/>
+                        <Label text="Val"
+                               style="-fx-font-size: 10px;
+                                      -fx-text-fill: #a0a0c0;"/>
+                    </HBox>
+                </HBox>
+            </HBox>
             <LineChart fx:id="lossChart"
                        VBox.vgrow="ALWAYS"
                        animated="false"
-                       style="-fx-background-color: transparent;">
+                       style="-fx-background-color: transparent;
+                              -fx-padding: 0;">
                 <xAxis>
                     <NumberAxis label="Epoch"
                                 lowerBound="1"
                                 upperBound="25"
                                 tickUnit="5"
-                                autoRanging="false"/>
+                                autoRanging="false"
+                                style="-fx-tick-label-fill: #606080;"/>
                 </xAxis>
                 <yAxis>
                     <NumberAxis label="Loss"
-                                autoRanging="true"/>
+                                autoRanging="true"
+                                style="-fx-tick-label-fill: #606080;"/>
                 </yAxis>
             </LineChart>
         </VBox>
 
         <!-- Accuracy Chart -->
-        <VBox style="-fx-background-color: #16213e;
-                     -fx-padding: 16;
-                     -fx-background-radius: 8;"
-              spacing="8" HBox.hgrow="ALWAYS">
-            <Label text="Training and Validation Accuracy"
-                   style="-fx-font-size: 12px;
-                          -fx-font-weight: bold;
-                          -fx-text-fill: #aaaaaa;"/>
+        <VBox HBox.hgrow="ALWAYS"
+              style="-fx-background-color: #1a1a35;
+                     -fx-background-radius: 10;
+                     -fx-border-color: rgba(255,255,255,0.07);
+                     -fx-border-radius: 10;
+                     -fx-border-width: 1;
+                     -fx-padding: 14 16 14 16;"
+              spacing="8">
+            <HBox alignment="CENTER_LEFT">
+                <Label text="Training &amp; Validation Accuracy"
+                       style="-fx-font-size: 13px;
+                              -fx-font-weight: bold;
+                              -fx-text-fill: #f0f0fa;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <HBox spacing="12" alignment="CENTER">
+                    <HBox spacing="5" alignment="CENTER">
+                        <Region style="-fx-background-color: #4d9de0;
+                                       -fx-min-width: 14;
+                                       -fx-max-width: 14;
+                                       -fx-min-height: 2;
+                                       -fx-max-height: 2;"/>
+                        <Label text="Train"
+                               style="-fx-font-size: 10px;
+                                      -fx-text-fill: #a0a0c0;"/>
+                    </HBox>
+                    <HBox spacing="5" alignment="CENTER">
+                        <Region style="-fx-background-color: #ef4444;
+                                       -fx-min-width: 14;
+                                       -fx-max-width: 14;
+                                       -fx-min-height: 2;
+                                       -fx-max-height: 2;"/>
+                        <Label text="Val"
+                               style="-fx-font-size: 10px;
+                                      -fx-text-fill: #a0a0c0;"/>
+                    </HBox>
+                </HBox>
+            </HBox>
             <LineChart fx:id="accuracyChart"
                        VBox.vgrow="ALWAYS"
                        animated="false"
-                       style="-fx-background-color: transparent;">
+                       style="-fx-background-color: transparent;
+                              -fx-padding: 0;">
                 <xAxis>
                     <NumberAxis label="Epoch"
                                 lowerBound="1"
                                 upperBound="25"
                                 tickUnit="5"
-                                autoRanging="false"/>
+                                autoRanging="false"
+                                style="-fx-tick-label-fill: #606080;"/>
                 </xAxis>
                 <yAxis>
                     <NumberAxis label="Accuracy (%)"
-                                autoRanging="true"/>
+                                autoRanging="true"
+                                style="-fx-tick-label-fill: #606080;"/>
                 </yAxis>
             </LineChart>
         </VBox>
@@ -180,102 +323,143 @@
     </HBox>
 
     <!-- ===== PER CLASS F1 SCORES ===== -->
-    <VBox style="-fx-background-color: #16213e;
-                 -fx-padding: 16;
-                 -fx-background-radius: 8;"
-          spacing="10">
+    <VBox style="-fx-background-color: #1a1a35;
+                 -fx-background-radius: 10;
+                 -fx-border-color: rgba(255,255,255,0.07);
+                 -fx-border-radius: 10;
+                 -fx-border-width: 1;
+                 -fx-padding: 14 16 14 16;"
+          spacing="12">
 
-        <Label text="Per-Class F1 Scores (Test Set)"
-               style="-fx-font-size: 12px;
-                      -fx-font-weight: bold;
-                      -fx-text-fill: #aaaaaa;"/>
+        <HBox alignment="CENTER_LEFT">
+            <VBox spacing="2">
+                <Label text="Per-Class F1 Score"
+                       style="-fx-font-size: 13px;
+                              -fx-font-weight: bold;
+                              -fx-text-fill: #f0f0fa;"/>
+                <Label text="Test set evaluation · macro F1 = 0.710"
+                       style="-fx-font-size: 11px;
+                              -fx-text-fill: #606080;"/>
+            </VBox>
+        </HBox>
 
-        <GridPane hgap="16" vgap="8">
+        <GridPane hgap="24" vgap="10">
+
+            <!-- Row 0 -->
+            <Label text="Actinic Keratosis"
+                   GridPane.columnIndex="0" GridPane.rowIndex="0"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #a0a0c0;
+                          -fx-min-width: 160px;"/>
+            <ProgressBar progress="0.717"
+                         GridPane.columnIndex="1" GridPane.rowIndex="0"
+                         prefWidth="220" prefHeight="8"
+                         style="-fx-accent: #6b9fe4;
+                                -fx-background-color: rgba(255,255,255,0.05);
+                                -fx-background-radius: 4;"/>
+            <Label text="0.717"
+                   GridPane.columnIndex="2" GridPane.rowIndex="0"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #a0a0c0;
+                          -fx-min-width: 40px;"/>
+
+            <Label text="Basal Cell Carcinoma"
+                   GridPane.columnIndex="3" GridPane.rowIndex="0"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #a0a0c0;
+                          -fx-min-width: 160px;
+                          -fx-padding: 0 0 0 16;"/>
+            <ProgressBar progress="0.735"
+                         GridPane.columnIndex="4" GridPane.rowIndex="0"
+                         prefWidth="220" prefHeight="8"
+                         style="-fx-accent: #f0875a;
+                                -fx-background-color: rgba(255,255,255,0.05);
+                                -fx-background-radius: 4;"/>
+            <Label text="0.735"
+                   GridPane.columnIndex="5" GridPane.rowIndex="0"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #a0a0c0;
+                          -fx-min-width: 40px;"/>
 
             <!-- Row 1 -->
-            <Label text="Actinic Keratosis" GridPane.columnIndex="0"
-                   GridPane.rowIndex="0"
-                   style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;
-                          -fx-min-width: 180px;"/>
-            <ProgressBar progress="0.717" GridPane.columnIndex="1"
-                         GridPane.rowIndex="0"
-                         prefWidth="200" prefHeight="10"
-                         style="-fx-accent: #4C72B0;"/>
-            <Label text="0.717" GridPane.columnIndex="2"
-                   GridPane.rowIndex="0"
-                   style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+            <Label text="Benign Keratosis"
+                   GridPane.columnIndex="0" GridPane.rowIndex="1"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #a0a0c0;"/>
+            <ProgressBar progress="0.696"
+                         GridPane.columnIndex="1" GridPane.rowIndex="1"
+                         prefWidth="220" prefHeight="8"
+                         style="-fx-accent: #5db87a;
+                                -fx-background-color: rgba(255,255,255,0.05);
+                                -fx-background-radius: 4;"/>
+            <Label text="0.696"
+                   GridPane.columnIndex="2" GridPane.rowIndex="1"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #a0a0c0;"/>
 
-            <Label text="Basal Cell Carcinoma" GridPane.columnIndex="3"
-                   GridPane.rowIndex="0"
-                   style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;
-                          -fx-min-width: 180px; -fx-padding: 0 0 0 20;"/>
-            <ProgressBar progress="0.735" GridPane.columnIndex="4"
-                         GridPane.rowIndex="0"
-                         prefWidth="200" prefHeight="10"
-                         style="-fx-accent: #DD8452;"/>
-            <Label text="0.735" GridPane.columnIndex="5"
-                   GridPane.rowIndex="0"
-                   style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+            <Label text="Dermatofibroma"
+                   GridPane.columnIndex="3" GridPane.rowIndex="1"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #a0a0c0;
+                          -fx-padding: 0 0 0 16;"/>
+            <ProgressBar progress="0.500"
+                         GridPane.columnIndex="4" GridPane.rowIndex="1"
+                         prefWidth="220" prefHeight="8"
+                         style="-fx-accent: #e05f64;
+                                -fx-background-color: rgba(255,255,255,0.05);
+                                -fx-background-radius: 4;"/>
+            <Label text="0.500"
+                   GridPane.columnIndex="5" GridPane.rowIndex="1"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #a0a0c0;"/>
 
             <!-- Row 2 -->
-            <Label text="Benign Keratosis" GridPane.columnIndex="0"
-                   GridPane.rowIndex="1"
-                   style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;"/>
-            <ProgressBar progress="0.696" GridPane.columnIndex="1"
-                         GridPane.rowIndex="1"
-                         prefWidth="200" prefHeight="10"
-                         style="-fx-accent: #55A868;"/>
-            <Label text="0.696" GridPane.columnIndex="2"
-                   GridPane.rowIndex="1"
-                   style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+            <Label text="Melanoma"
+                   GridPane.columnIndex="0" GridPane.rowIndex="2"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #a0a0c0;"/>
+            <ProgressBar progress="0.544"
+                         GridPane.columnIndex="1" GridPane.rowIndex="2"
+                         prefWidth="220" prefHeight="8"
+                         style="-fx-accent: #9d7cd8;
+                                -fx-background-color: rgba(255,255,255,0.05);
+                                -fx-background-radius: 4;"/>
+            <Label text="0.544"
+                   GridPane.columnIndex="2" GridPane.rowIndex="2"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #a0a0c0;"/>
 
-            <Label text="Dermatofibroma" GridPane.columnIndex="3"
-                   GridPane.rowIndex="1"
-                   style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;
-                          -fx-padding: 0 0 0 20;"/>
-            <ProgressBar progress="0.500" GridPane.columnIndex="4"
-                         GridPane.rowIndex="1"
-                         prefWidth="200" prefHeight="10"
-                         style="-fx-accent: #C44E52;"/>
-            <Label text="0.500" GridPane.columnIndex="5"
-                   GridPane.rowIndex="1"
-                   style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+            <Label text="Melanocytic Nevus"
+                   GridPane.columnIndex="3" GridPane.rowIndex="2"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #a0a0c0;
+                          -fx-padding: 0 0 0 16;"/>
+            <ProgressBar progress="0.897"
+                         GridPane.columnIndex="4" GridPane.rowIndex="2"
+                         prefWidth="220" prefHeight="8"
+                         style="-fx-accent: #b09060;
+                                -fx-background-color: rgba(255,255,255,0.05);
+                                -fx-background-radius: 4;"/>
+            <Label text="0.897"
+                   GridPane.columnIndex="5" GridPane.rowIndex="2"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #a0a0c0;"/>
 
             <!-- Row 3 -->
-            <Label text="Melanoma" GridPane.columnIndex="0"
-                   GridPane.rowIndex="2"
-                   style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;"/>
-            <ProgressBar progress="0.544" GridPane.columnIndex="1"
-                         GridPane.rowIndex="2"
-                         prefWidth="200" prefHeight="10"
-                         style="-fx-accent: #8172B2;"/>
-            <Label text="0.544" GridPane.columnIndex="2"
-                   GridPane.rowIndex="2"
-                   style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
-
-            <Label text="Melanocytic Nevus" GridPane.columnIndex="3"
-                   GridPane.rowIndex="2"
-                   style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;
-                          -fx-padding: 0 0 0 20;"/>
-            <ProgressBar progress="0.897" GridPane.columnIndex="4"
-                         GridPane.rowIndex="2"
-                         prefWidth="200" prefHeight="10"
-                         style="-fx-accent: #937860;"/>
-            <Label text="0.897" GridPane.columnIndex="5"
-                   GridPane.rowIndex="2"
-                   style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
-
-            <!-- Row 4 -->
-            <Label text="Vascular Lesion" GridPane.columnIndex="0"
-                   GridPane.rowIndex="3"
-                   style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;"/>
-            <ProgressBar progress="0.882" GridPane.columnIndex="1"
-                         GridPane.rowIndex="3"
-                         prefWidth="200" prefHeight="10"
-                         style="-fx-accent: #DA8BC3;"/>
-            <Label text="0.882" GridPane.columnIndex="2"
-                   GridPane.rowIndex="3"
-                   style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+            <Label text="Vascular Lesion"
+                   GridPane.columnIndex="0" GridPane.rowIndex="3"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #a0a0c0;"/>
+            <ProgressBar progress="0.882"
+                         GridPane.columnIndex="1" GridPane.rowIndex="3"
+                         prefWidth="220" prefHeight="8"
+                         style="-fx-accent: #e87ab8;
+                                -fx-background-color: rgba(255,255,255,0.05);
+                                -fx-background-radius: 4;"/>
+            <Label text="0.882"
+                   GridPane.columnIndex="5" GridPane.rowIndex="3"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #a0a0c0;"/>
 
         </GridPane>
 

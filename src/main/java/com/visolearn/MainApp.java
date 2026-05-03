@@ -72,6 +72,11 @@ public class MainApp extends Application {
 
         // Create the scene with the loaded layout
         Scene scene = new Scene(loader.load(), MIN_WIDTH, MIN_HEIGHT);
+        scene.getStylesheets().add(
+                Objects.requireNonNull(
+                        getClass().getResource("/styles.css")
+                ).toExternalForm()
+        );
 
         // Configure the primary stage (main window)
         primaryStage.setTitle(APP_TITLE);

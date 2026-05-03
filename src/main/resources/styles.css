@@ -1,0 +1,234 @@
+/* ===== Tab Pane ===== */
+.tab-pane {
+    -fx-tab-min-height: 42px;
+    -fx-tab-max-height: 42px;
+    -fx-background-color: #111127;
+}
+
+.tab-pane .tab-header-area {
+    -fx-background-color: #111127;
+    -fx-padding: 0 0 0 0;
+}
+
+.tab-pane .tab-header-background {
+    -fx-background-color: #111127;
+    -fx-border-color: rgba(255,255,255,0.07);
+    -fx-border-width: 0 0 1 0;
+}
+
+.tab-pane .tab {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 10 18 10 18;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.tab-pane .tab .tab-label {
+    -fx-text-fill: #606080;
+    -fx-font-size: 12px;
+    -fx-font-weight: normal;
+}
+
+.tab-pane .tab:hover .tab-label {
+    -fx-text-fill: #a0a0c0;
+}
+
+.tab-pane .tab:selected {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent #4d9de0 transparent;
+    -fx-border-width: 0 0 2 0;
+}
+
+.tab-pane .tab:selected .tab-label {
+    -fx-text-fill: #6fb4f0;
+    -fx-font-weight: bold;
+}
+
+.tab-pane .tab-header-area .headers-region .tab .focus-indicator {
+    -fx-border-color: transparent;
+}
+
+/* ===== Line Chart dark theme ===== */
+.chart {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.chart-plot-background {
+    -fx-background-color: rgba(255,255,255,0.02);
+    -fx-background-radius: 6;
+}
+
+.chart-vertical-grid-lines {
+    -fx-stroke: rgba(255,255,255,0.04);
+}
+
+.chart-horizontal-grid-lines {
+    -fx-stroke: rgba(255,255,255,0.04);
+}
+
+.chart-alternative-row-fill {
+    -fx-fill: transparent;
+}
+
+.chart-legend {
+    -fx-background-color: transparent;
+}
+
+.axis {
+    -fx-tick-label-fill: #606080;
+    -fx-font-size: 10px;
+}
+
+.axis-label {
+    -fx-text-fill: #606080;
+    -fx-font-size: 10px;
+}
+
+/* Train series — blue solid */
+.default-color0.chart-series-line {
+    -fx-stroke: #4d9de0;
+    -fx-stroke-width: 2;
+}
+
+/* Val series — red dashed */
+.default-color1.chart-series-line {
+    -fx-stroke: #ef4444;
+    -fx-stroke-width: 2;
+    -fx-stroke-dash-array: 6 4;
+}
+
+.default-color0.chart-line-symbol {
+    -fx-background-color: #4d9de0, white;
+    -fx-background-radius: 4;
+    -fx-padding: 3;
+}
+
+.default-color1.chart-line-symbol {
+    -fx-background-color: #ef4444, white;
+    -fx-background-radius: 4;
+    -fx-padding: 3;
+}
+
+/* ===== TableView dark theme ===== */
+.table-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-table-cell-border-color: rgba(255,255,255,0.03);
+    -fx-control-inner-background: transparent;
+    -fx-control-inner-background-alt: rgba(255,255,255,0.01);
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #161630;
+    -fx-border-color: rgba(255,255,255,0.07);
+    -fx-border-width: 0 0 1 0;
+}
+
+.table-view .column-header {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: #606080;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 9 16 9 16;
+}
+
+.table-view .table-cell {
+    -fx-text-fill: #a0a0c0;
+    -fx-font-size: 12px;
+    -fx-padding: 10 16 10 16;
+    -fx-border-color: transparent transparent rgba(255,255,255,0.03) transparent;
+    -fx-border-width: 1;
+    -fx-background-color: transparent;
+}
+
+.table-row-cell {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.table-row-cell:hover {
+    -fx-background-color: rgba(255,255,255,0.02);
+}
+
+.table-row-cell:selected {
+    -fx-background-color: rgba(77,157,224,0.12);
+}
+
+.table-row-cell:selected .table-cell {
+    -fx-text-fill: #f0f0fa;
+}
+
+/* ===== ScrollBar dark theme ===== */
+.scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .track {
+    -fx-background-color: rgba(255,255,255,0.03);
+    -fx-border-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: rgba(255,255,255,0.12);
+    -fx-background-radius: 4;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: rgba(255,255,255,0.2);
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+/* ===== ProgressBar dark theme ===== */
+.progress-bar {
+    -fx-background-color: rgba(255,255,255,0.05);
+    -fx-background-radius: 4;
+}
+
+.progress-bar .track {
+    -fx-background-color: rgba(255,255,255,0.05);
+    -fx-background-radius: 4;
+}
+
+.progress-bar .bar {
+    -fx-background-radius: 4;
+    -fx-background-insets: 0;
+}
+
+/* ===== CheckBox dark theme ===== */
+.check-box .box {
+    -fx-background-color: #0d0d1a;
+    -fx-border-color: #606080;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.check-box:selected .box {
+    -fx-background-color: #2d7abf;
+    -fx-border-color: #2d7abf;
+}
+
+.check-box:selected .mark {
+    -fx-background-color: white;
+}
+
+/* ===== Button hover effects ===== */
+.button:hover {
+    -fx-opacity: 0.85;
+}
+
+.button:pressed {
+    -fx-opacity: 0.7;
+}

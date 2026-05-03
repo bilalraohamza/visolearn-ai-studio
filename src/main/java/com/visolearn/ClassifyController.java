@@ -52,6 +52,7 @@ public class ClassifyController implements Initializable {
     // Prediction result labels
     @FXML private Label predictionLabel;
     @FXML private Label confidenceLabel;
+    @FXML private Label confidenceStatLabel;
     @FXML private Label inferenceTimeLabel;
     @FXML private Label descriptionLabel;
 
@@ -324,6 +325,8 @@ public class ClassifyController implements Initializable {
 
         confidenceLabel.setText(
                 String.format("Confidence: %.2f%%", result.confidence));
+        confidenceStatLabel.setText(
+                String.format("%.1f%%", result.confidence));
         inferenceTimeLabel.setText(
                 String.format("Inference time: %d ms",
                         result.inferenceTimeMs));

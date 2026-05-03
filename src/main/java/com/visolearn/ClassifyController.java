@@ -1,4 +1,422 @@
 package com.visolearn;
 
-public class ClassifyController {
+import javafx.application.Platform;
+import javafx.concurrent.Task;
+import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
+import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
+import javafx.embed.swing.SwingFXUtils;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.net.URL;
+import java.nio.file.Path;
+import java.util.ResourceBundle;
+
+/**
+ * ClassifyController controls Tab 1 of the VisoLearn AI Studio GUI.
+ * Handles image upload, inference, confidence bar updates,
+ * and Grad-CAM heatmap overlay toggle.
+ *
+ * Threading model:
+ * All DJL inference runs on a background Task thread.
+ * All UI updates run on the JavaFX Application Thread
+ * via Platform.runLater() to prevent freezing.
+ *
+ * @author Rao Hamza Bilal
+ * @version 1.0
+ */
+public class ClassifyController implements Initializable {
+
+    // ===== FXML UI Elements =====
+
+    @FXML private StackPane imageContainer;
+    @FXML private VBox      placeholderBox;
+    @FXML private ImageView inputImageView;
+    @FXML private ImageView heatmapImageView;
+    @FXML private Button    uploadButton;
+    @FXML private Button    clearButton;
+    @FXML private CheckBox  gradCamToggle;
+    @FXML private VBox      loadingBox;
+    @FXML private Label     loadingLabel;
+
+    // Prediction result labels
+    @FXML private Label predictionLabel;
+    @FXML private Label confidenceLabel;
+    @FXML private Label inferenceTimeLabel;
+    @FXML private Label descriptionLabel;
+
+    // Confidence bars for all 7 classes
+    @FXML private ProgressBar bar0, bar1, bar2, bar3,
+            bar4, bar5, bar6;
+
+    // Confidence percentage labels
+    @FXML private Label pct0, pct1, pct2, pct3,
+            pct4, pct5, pct6;
+
+    // ===== Backend components =====
+
+    /** Skin lesion classifier using EfficientNet-B4 ONNX model. */
+    private SkinClassifier classifier;
+
+    /** Grad-CAM heatmap renderer. */
+    private GradCamRenderer gradCamRenderer;
+
+    /** Currently loaded image file path. */
+    private Path currentImagePath;
+
+    /** Latest prediction result for Grad-CAM generation. */
+    private SkinClassifier.PredictionResult lastResult;
+
+    /** Whether the Grad-CAM heatmap is currently visible. */
+    private boolean heatmapVisible = false;
+
+    /**
+     * Full names for display in the UI.
+     * Index matches class label order in labels.txt.
+     */
+    private static final String[] CLASS_FULL_NAMES = {
+            "Actinic Keratosis",
+            "Basal Cell Carcinoma",
+            "Benign Keratosis",
+            "Dermatofibroma",
+            "Melanoma",
+            "Melanocytic Nevus",
+            "Vascular Lesion"
+    };
+
+    /**
+     * Short descriptions for each skin lesion class.
+     * Shown in the description box after classification.
+     */
+    private static final String[] CLASS_DESCRIPTIONS = {
+            "Actinic Keratosis (AKIEC): A rough, scaly patch caused by " +
+                    "years of sun exposure. Can develop into skin cancer if untreated.",
+            "Basal Cell Carcinoma (BCC): The most common form of skin cancer. " +
+                    "Rarely spreads but can be locally destructive if ignored.",
+            "Benign Keratosis (BKL): A non-cancerous skin growth. " +
+                    "Includes seborrheic keratoses and similar harmless lesions.",
+            "Dermatofibroma (DF): A common benign skin nodule. " +
+                    "Usually harmless and does not require treatment.",
+            "Melanoma (MEL): The most dangerous form of skin cancer. " +
+                    "Early detection is critical — consult a dermatologist immediately.",
+            "Melanocytic Nevus (NV): A common mole. " +
+                    "Usually benign but monitor for changes in size, shape, or color.",
+            "Vascular Lesion (VASC): Lesions of blood vessels in the skin. " +
+                    "Usually benign, including angiomas and pyogenic granulomas."
+    };
+
+    /**
+     * Called automatically by JavaFX after FXML is loaded.
+     * Initializes the classifier and drag-and-drop support.
+     *
+     * @param url      not used
+     * @param rb       not used
+     */
+    @Override
+    public void initialize(URL url, ResourceBundle rb) {
+        gradCamRenderer = new GradCamRenderer();
+
+        // Initialize classifier on background thread
+        // Model loading takes 2-5 seconds — must not block UI
+        Task<Void> initTask = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                classifier = new SkinClassifier();
+                classifier.initialize();
+                return null;
+            }
+        };
+
+        initTask.setOnSucceeded(e -> {
+            Platform.runLater(() -> {
+                uploadButton.setDisable(false);
+                predictionLabel.setText("Model ready. Upload an image.");
+                System.out.println("ClassifyController: " +
+                        "model initialized successfully.");
+            });
+        });
+
+        initTask.setOnFailed(e -> {
+            Platform.runLater(() -> {
+                predictionLabel.setText("Model failed to load.");
+                predictionLabel.setStyle(
+                        "-fx-text-fill: #E24B4A; -fx-font-size: 14px;");
+                System.err.println("Model init failed: " +
+                        initTask.getException().getMessage());
+            });
+        });
+
+        // Disable upload button until model is ready
+        uploadButton.setDisable(true);
+        predictionLabel.setText("Loading model...");
+
+        // Start model loading on background thread
+        Thread initThread = new Thread(initTask);
+        initThread.setDaemon(true);
+        initThread.start();
+
+        // Setup drag and drop on image container
+        setupDragAndDrop();
+    }
+
+    /**
+     * Handles the Upload Image button click.
+     * Opens a file chooser and runs inference on the selected image.
+     */
+    @FXML
+    private void handleUpload() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Select Skin Lesion Image");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter(
+                        "Image Files", "*.jpg", "*.jpeg", "*.png")
+        );
+
+        File selected = fileChooser.showOpenDialog(
+                uploadButton.getScene().getWindow()
+        );
+
+        if (selected != null) {
+            loadAndClassify(selected.toPath());
+        }
+    }
+
+    /**
+     * Handles the Clear button click.
+     * Resets the UI to its initial empty state.
+     */
+    @FXML
+    private void handleClear() {
+        // Reset image views
+        inputImageView.setImage(null);
+        inputImageView.setVisible(false);
+        heatmapImageView.setImage(null);
+        heatmapImageView.setVisible(false);
+        placeholderBox.setVisible(true);
+
+        // Reset prediction labels
+        predictionLabel.setText("Upload an image to classify");
+        predictionLabel.setStyle(
+                "-fx-font-size: 20px; -fx-font-weight: bold; " +
+                        "-fx-text-fill: #e0e0e0;");
+        confidenceLabel.setText("");
+        inferenceTimeLabel.setText("");
+        descriptionLabel.setText(
+                "Upload a dermoscopy image to see classification " +
+                        "results and Grad-CAM explanation.");
+
+        // Reset confidence bars
+        resetBars();
+
+        // Reset state
+        currentImagePath = null;
+        lastResult       = null;
+        heatmapVisible   = false;
+        gradCamToggle.setSelected(false);
+    }
+
+    /**
+     * Handles the Grad-CAM toggle checkbox.
+     * Shows or hides the heatmap overlay on the image.
+     */
+    @FXML
+    private void handleGradCamToggle() {
+        if (gradCamToggle.isSelected() && lastResult != null) {
+            // Generate and show heatmap
+            generateAndShowHeatmap();
+        } else {
+            // Hide heatmap
+            heatmapImageView.setVisible(false);
+            heatmapVisible = false;
+        }
+    }
+
+    /**
+     * Loads an image from the given path, displays it in the
+     * image view, and runs inference on a background thread.
+     *
+     * @param imagePath path to the image file
+     */
+    private void loadAndClassify(Path imagePath) {
+        currentImagePath = imagePath;
+
+        // Display the original image immediately
+        try {
+            Image fxImage = new Image(imagePath.toUri().toString());
+            inputImageView.setImage(fxImage);
+            inputImageView.setVisible(true);
+            placeholderBox.setVisible(false);
+            heatmapImageView.setVisible(false);
+            gradCamToggle.setSelected(false);
+        } catch (Exception e) {
+            predictionLabel.setText("Cannot load image.");
+            return;
+        }
+
+        // Show loading indicator
+        loadingBox.setVisible(true);
+        loadingLabel.setText("Running inference...");
+        uploadButton.setDisable(true);
+
+        // Run inference on background thread
+        Task<SkinClassifier.PredictionResult> inferTask = new Task<>() {
+            @Override
+            protected SkinClassifier.PredictionResult call()
+                    throws Exception {
+                return classifier.predict(imagePath);
+            }
+        };
+
+        // Update UI when inference completes
+        inferTask.setOnSucceeded(e -> {
+            Platform.runLater(() -> {
+                lastResult = inferTask.getValue();
+                updateUIWithResult(lastResult);
+                loadingBox.setVisible(false);
+                uploadButton.setDisable(false);
+            });
+        });
+
+        inferTask.setOnFailed(e -> {
+            Platform.runLater(() -> {
+                predictionLabel.setText("Inference failed.");
+                loadingBox.setVisible(false);
+                uploadButton.setDisable(false);
+                System.err.println("Inference error: " +
+                        inferTask.getException().getMessage());
+            });
+        });
+
+        Thread inferThread = new Thread(inferTask);
+        inferThread.setDaemon(true);
+        inferThread.start();
+    }
+
+    /**
+     * Updates all UI elements with the prediction result.
+     * Always called on the JavaFX Application Thread.
+     *
+     * @param result the prediction result from SkinClassifier
+     */
+    private void updateUIWithResult(
+            SkinClassifier.PredictionResult result) {
+
+        // Update top prediction display
+        String fullName = CLASS_FULL_NAMES[result.classIndex];
+        predictionLabel.setText(fullName);
+        predictionLabel.setStyle(
+                "-fx-font-size: 18px; -fx-font-weight: bold; " +
+                        "-fx-text-fill: #1D9E75;");
+
+        confidenceLabel.setText(
+                String.format("Confidence: %.2f%%", result.confidence));
+        inferenceTimeLabel.setText(
+                String.format("Inference time: %d ms",
+                        result.inferenceTimeMs));
+
+        // Update class description
+        descriptionLabel.setText(
+                CLASS_DESCRIPTIONS[result.classIndex]);
+
+        // Update all 7 confidence bars
+        ProgressBar[] bars = {bar0,bar1,bar2,bar3,bar4,bar5,bar6};
+        Label[]       pcts = {pct0,pct1,pct2,pct3,pct4,pct5,pct6};
+
+        for (int i = 0; i < 7; i++) {
+            float prob = result.allProbabilities[i];
+            bars[i].setProgress(prob);
+            pcts[i].setText(String.format("%.1f%%", prob * 100));
+        }
+    }
+
+    /**
+     * Generates the Grad-CAM heatmap on a background thread
+     * and overlays it on the input image when ready.
+     */
+    private void generateAndShowHeatmap() {
+        if (currentImagePath == null || lastResult == null) return;
+
+        loadingLabel.setText("Generating Grad-CAM...");
+        loadingBox.setVisible(true);
+
+        Task<BufferedImage> heatmapTask = new Task<>() {
+            @Override
+            protected BufferedImage call() throws Exception {
+                return gradCamRenderer.generateHeatmap(
+                        currentImagePath, lastResult);
+            }
+        };
+
+        heatmapTask.setOnSucceeded(e -> {
+            Platform.runLater(() -> {
+                BufferedImage heatmapImg = heatmapTask.getValue();
+                Image fxHeatmap = SwingFXUtils.toFXImage(
+                        heatmapImg, null);
+                heatmapImageView.setImage(fxHeatmap);
+                heatmapImageView.setVisible(true);
+                heatmapVisible = true;
+                loadingBox.setVisible(false);
+            });
+        });
+
+        heatmapTask.setOnFailed(e -> {
+            Platform.runLater(() -> {
+                loadingBox.setVisible(false);
+                System.err.println("Grad-CAM error: " +
+                        heatmapTask.getException().getMessage());
+            });
+        });
+
+        Thread heatmapThread = new Thread(heatmapTask);
+        heatmapThread.setDaemon(true);
+        heatmapThread.start();
+    }
+
+    /**
+     * Sets up drag and drop support on the image container.
+     * Users can drag image files directly onto the image panel.
+     */
+    private void setupDragAndDrop() {
+        imageContainer.setOnDragOver(event -> {
+            if (event.getDragboard().hasFiles()) {
+                event.acceptTransferModes(
+                        javafx.scene.input.TransferMode.COPY);
+            }
+            event.consume();
+        });
+
+        imageContainer.setOnDragDropped(event -> {
+            var files = event.getDragboard().getFiles();
+            if (!files.isEmpty()) {
+                File dropped = files.get(0);
+                String name  = dropped.getName().toLowerCase();
+                if (name.endsWith(".jpg") ||
+                        name.endsWith(".jpeg") ||
+                        name.endsWith(".png")) {
+                    loadAndClassify(dropped.toPath());
+                }
+            }
+            event.consume();
+        });
+    }
+
+    /**
+     * Resets all confidence bars to zero progress.
+     * Called when clearing the current image.
+     */
+    private void resetBars() {
+        ProgressBar[] bars = {bar0,bar1,bar2,bar3,bar4,bar5,bar6};
+        Label[]       pcts = {pct0,pct1,pct2,pct3,pct4,pct5,pct6};
+        for (int i = 0; i < 7; i++) {
+            bars[i].setProgress(0);
+            pcts[i].setText("0%");
+        }
+    }
 }

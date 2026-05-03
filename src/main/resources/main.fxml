@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            style="-fx-background-color: #1a1a2e;">
+
+    <!-- ===== TOP HEADER BAR ===== -->
+    <top>
+        <VBox style="-fx-background-color: #16213e; -fx-padding: 12 20 12 20;">
+            <HBox alignment="CENTER_LEFT" spacing="12">
+                <Label text="VisoLearn AI Studio"
+                       style="-fx-font-size: 20px;
+                              -fx-font-weight: bold;
+                              -fx-text-fill: #e0e0e0;"/>
+                <Label text="Skin Lesion Classification with Grad-CAM"
+                       style="-fx-font-size: 12px;
+                              -fx-text-fill: #888888;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label text="EfficientNet-B4  |  HAM10000  |  80.99% Test Accuracy"
+                       style="-fx-font-size: 11px;
+                              -fx-text-fill: #378ADD;"/>
+            </HBox>
+        </VBox>
+    </top>
+
+    <!-- ===== MAIN CONTENT — TAB PANE ===== -->
+    <center>
+        <TabPane fx:id="mainTabPane"
+                 tabClosingPolicy="UNAVAILABLE"
+                 style="-fx-background-color: #1a1a2e;
+                        -fx-tab-min-height: 40px;">
+
+            <!-- ==================== TAB 1 — CLASSIFY ==================== -->
+            <Tab text="Classify">
+                <fx:include source="classify_tab.fxml"
+                            fx:id="classifyTab"/>
+            </Tab>
+
+            <!-- ==================== TAB 2 — TRAINING DASHBOARD ========== -->
+            <Tab text="Training Dashboard">
+                <fx:include source="dashboard_tab.fxml"
+                            fx:id="dashboardTab"/>
+            </Tab>
+
+            <!-- ==================== TAB 3 — BATCH ANALYSIS ============== -->
+            <Tab text="Batch Analysis">
+                <fx:include source="batch_tab.fxml"
+                            fx:id="batchTab"/>
+            </Tab>
+
+        </TabPane>
+    </center>
+
+    <!-- ===== BOTTOM STATUS BAR ===== -->
+    <bottom>
+        <HBox style="-fx-background-color: #16213e;
+                     -fx-padding: 6 20 6 20;"
+              alignment="CENTER_LEFT"
+              spacing="20">
+            <Label text="Model: EfficientNet-B4"
+                   style="-fx-font-size: 10px; -fx-text-fill: #666666;"/>
+            <Label text="|"
+                   style="-fx-font-size: 10px; -fx-text-fill: #444444;"/>
+            <Label text="Dataset: HAM10000 (10,015 images)"
+                   style="-fx-font-size: 10px; -fx-text-fill: #666666;"/>
+            <Label text="|"
+                   style="-fx-font-size: 10px; -fx-text-fill: #444444;"/>
+            <Label text="Classes: 7 skin lesion types"
+                   style="-fx-font-size: 10px; -fx-text-fill: #666666;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label text="VisoLearn AI Studio v1.0  |  Rao Hamza Bilal"
+                   style="-fx-font-size: 10px; -fx-text-fill: #444444;"/>
+        </HBox>
+    </bottom>
+
+</BorderPane>

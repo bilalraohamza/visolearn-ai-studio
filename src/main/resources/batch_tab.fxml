@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.visolearn.BatchController"
+      style="-fx-background-color: #1a1a2e; -fx-padding: 20;"
+      spacing="16">
+
+    <!-- ===== HEADER ===== -->
+    <HBox alignment="CENTER_LEFT" spacing="16">
+        <Label text="Batch Analysis"
+               style="-fx-font-size: 16px;
+                      -fx-font-weight: bold;
+                      -fx-text-fill: #e0e0e0;"/>
+        <Label text="Run inference on an entire folder of images"
+               style="-fx-font-size: 11px;
+                      -fx-text-fill: #666666;"/>
+    </HBox>
+
+    <!-- ===== FOLDER SELECTION ROW ===== -->
+    <HBox spacing="12" alignment="CENTER_LEFT"
+          style="-fx-background-color: #16213e;
+                 -fx-padding: 16;
+                 -fx-background-radius: 8;">
+        <Label text="Image Folder:"
+               style="-fx-font-size: 12px;
+                      -fx-text-fill: #aaaaaa;"/>
+        <TextField fx:id="folderPathField"
+                   promptText="Select a folder containing JPG or PNG images..."
+                   HBox.hgrow="ALWAYS"
+                   editable="false"
+                   style="-fx-background-color: #0f3460;
+                          -fx-text-fill: #e0e0e0;
+                          -fx-font-size: 12px;
+                          -fx-padding: 8;
+                          -fx-background-radius: 6;
+                          -fx-border-color: #378ADD;
+                          -fx-border-radius: 6;"/>
+        <Button fx:id="selectFolderButton"
+                text="Browse Folder"
+                onAction="#handleSelectFolder"
+                style="-fx-background-color: #378ADD;
+                       -fx-text-fill: white;
+                       -fx-font-size: 12px;
+                       -fx-font-weight: bold;
+                       -fx-background-radius: 6;
+                       -fx-padding: 8 16 8 16;
+                       -fx-cursor: hand;"/>
+        <Button fx:id="runBatchButton"
+                text="Run Analysis"
+                onAction="#handleRunBatch"
+                disable="true"
+                style="-fx-background-color: #1D9E75;
+                       -fx-text-fill: white;
+                       -fx-font-size: 12px;
+                       -fx-font-weight: bold;
+                       -fx-background-radius: 6;
+                       -fx-padding: 8 16 8 16;
+                       -fx-cursor: hand;"/>
+        <Button fx:id="exportCsvButton"
+                text="Export CSV"
+                onAction="#handleExportCsv"
+                disable="true"
+                style="-fx-background-color: #2a2a4a;
+                       -fx-text-fill: #888888;
+                       -fx-font-size: 12px;
+                       -fx-background-radius: 6;
+                       -fx-padding: 8 16 8 16;
+                       -fx-cursor: hand;"/>
+    </HBox>
+
+    <!-- ===== PROGRESS BAR ===== -->
+    <VBox spacing="6"
+          fx:id="progressBox"
+          visible="false"
+          style="-fx-background-color: #16213e;
+                 -fx-padding: 12 16 12 16;
+                 -fx-background-radius: 8;">
+        <HBox alignment="CENTER_LEFT" spacing="12">
+            <Label fx:id="progressLabel"
+                   text="Processing images..."
+                   style="-fx-font-size: 12px;
+                          -fx-text-fill: #aaaaaa;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="progressCountLabel"
+                   text="0 / 0"
+                   style="-fx-font-size: 12px;
+                          -fx-text-fill: #378ADD;"/>
+        </HBox>
+        <ProgressBar fx:id="batchProgressBar"
+                     progress="0"
+                     maxWidth="Infinity"
+                     prefHeight="10"
+                     style="-fx-accent: #378ADD;"/>
+    </VBox>
+
+    <!-- ===== SUMMARY STATS ROW ===== -->
+    <HBox spacing="12" fx:id="summaryBox" visible="false">
+
+        <VBox style="-fx-background-color: #16213e;
+                     -fx-padding: 12 16 12 16;
+                     -fx-background-radius: 8;"
+              spacing="4" HBox.hgrow="ALWAYS">
+            <Label text="Total Images"
+                   style="-fx-font-size: 10px;
+                          -fx-text-fill: #888888;"/>
+            <Label fx:id="totalImagesLabel"
+                   text="0"
+                   style="-fx-font-size: 22px;
+                          -fx-font-weight: bold;
+                          -fx-text-fill: #e0e0e0;"/>
+        </VBox>
+
+        <VBox style="-fx-background-color: #16213e;
+                     -fx-padding: 12 16 12 16;
+                     -fx-background-radius: 8;"
+              spacing="4" HBox.hgrow="ALWAYS">
+            <Label text="Most Common Class"
+                   style="-fx-font-size: 10px;
+                          -fx-text-fill: #888888;"/>
+            <Label fx:id="topClassLabel"
+                   text="—"
+                   style="-fx-font-size: 18px;
+                          -fx-font-weight: bold;
+                          -fx-text-fill: #378ADD;"/>
+        </VBox>
+
+        <VBox style="-fx-background-color: #16213e;
+                     -fx-padding: 12 16 12 16;
+                     -fx-background-radius: 8;"
+              spacing="4" HBox.hgrow="ALWAYS">
+            <Label text="Average Confidence"
+                   style="-fx-font-size: 10px;
+                          -fx-text-fill: #888888;"/>
+            <Label fx:id="avgConfidenceLabel"
+                   text="—"
+                   style="-fx-font-size: 22px;
+                          -fx-font-weight: bold;
+                          -fx-text-fill: #1D9E75;"/>
+        </VBox>
+
+        <VBox style="-fx-background-color: #16213e;
+                     -fx-padding: 12 16 12 16;
+                     -fx-background-radius: 8;"
+              spacing="4" HBox.hgrow="ALWAYS">
+            <Label text="Processing Time"
+                   style="-fx-font-size: 10px;
+                          -fx-text-fill: #888888;"/>
+            <Label fx:id="processingTimeLabel"
+                   text="—"
+                   style="-fx-font-size: 22px;
+                          -fx-font-weight: bold;
+                          -fx-text-fill: #e0e0e0;"/>
+        </VBox>
+
+    </HBox>
+
+    <!-- ===== RESULTS TABLE ===== -->
+    <VBox VBox.vgrow="ALWAYS"
+          style="-fx-background-color: #16213e;
+                 -fx-padding: 16;
+                 -fx-background-radius: 8;"
+          spacing="8">
+
+        <Label text="Results"
+               style="-fx-font-size: 12px;
+                      -fx-font-weight: bold;
+                      -fx-text-fill: #aaaaaa;"/>
+
+        <TableView fx:id="resultsTable"
+                   VBox.vgrow="ALWAYS"
+                   style="-fx-background-color: #0f3460;
+                          -fx-border-color: transparent;">
+
+            <columns>
+
+                <TableColumn fx:id="fileNameColumn"
+                             text="File Name"
+                             prefWidth="250"/>
+
+                <TableColumn fx:id="predictedClassColumn"
+                             text="Predicted Class"
+                             prefWidth="180"/>
+
+                <TableColumn fx:id="confidenceColumn"
+                             text="Confidence"
+                             prefWidth="120"/>
+
+                <TableColumn fx:id="inferenceTimeColumn"
+                             text="Time (ms)"
+                             prefWidth="100"/>
+
+            </columns>
+
+            <placeholder>
+                <Label text="Select a folder and click Run Analysis to begin"
+                       style="-fx-text-fill: #666666;
+                              -fx-font-size: 12px;"/>
+            </placeholder>
+
+        </TableView>
+
+    </VBox>
+
+</VBox>

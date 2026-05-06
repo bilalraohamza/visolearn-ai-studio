@@ -125,7 +125,7 @@ public class ClassifyController implements Initializable {
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        gradCamRenderer = new GradCamRenderer();
+        // GradCamRenderer constructed after classifier is ready (see initTask.setOnSucceeded)
 
         // Use shared classifier from MainApp
         // Avoids loading ONNX model twice
@@ -149,6 +149,7 @@ public class ClassifyController implements Initializable {
 
         initTask.setOnSucceeded(e -> {
             Platform.runLater(() -> {
+                gradCamRenderer = new GradCamRenderer(classifier);
                 uploadButton.setDisable(false);
                 predictionLabel.setText("Model ready. Upload an image.");
                 System.out.println("ClassifyController: " +
@@ -353,14 +354,21 @@ public class ClassifyController implements Initializable {
     private void generateAndShowHeatmap() {
         if (currentImagePath == null || lastResult == null) return;
 
-        loadingLabel.setText("Generating Grad-CAM...");
+        loadingLabel.setText("Generating saliency map (0 / 49)...");
         loadingBox.setVisible(true);
 
         Task<BufferedImage> heatmapTask = new Task<>() {
             @Override
             protected BufferedImage call() throws Exception {
                 return gradCamRenderer.generateHeatmap(
-                        currentImagePath, lastResult);
+                        currentImagePath,
+                        lastResult,
+                        (completed, total) -> Platform.runLater(() ->
+                                loadingLabel.setText(String.format(
+                                        "Saliency map... (%d / %d)",
+                                        completed, total))
+                        )
+                );
             }
         };
 

@@ -13,6 +13,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -145,6 +146,66 @@ public class SkinClassifier implements AutoCloseable {
         predictor = model.newPredictor();
 
         System.out.println("SkinClassifier: model loaded successfully.");
+    }
+
+    /**
+     * Runs inference on an already-loaded BufferedImage.
+     * Used by GradCamRenderer's occlusion sensitivity loop
+     * to avoid writing 49 temp files to disk.
+     *
+     * The normalization and tensor layout are identical to
+     * predict(Path). Always call this on a background thread.
+     *
+     * @param image the image to classify (any size)
+     * @return PredictionResult with all 7 class probabilities
+     * @throws Exception if inference fails
+     */
+    public PredictionResult predictFromImage(BufferedImage image)
+            throws Exception {
+
+        long startTime = System.currentTimeMillis();
+
+        try (NDManager predictionManager = NDManager.newBaseManager()) {
+
+            NDArray inputTensor = preprocessor.preprocessFromImage(
+                    predictionManager, image);
+
+            NDList inputList  = new NDList(inputTensor);
+            NDList outputList = predictor.predict(inputList);
+            NDArray logits    = outputList.get(0);
+            float[] rawLogits = logits.toFloatArray();
+
+            // Numerically stable softmax
+            float maxLogit = rawLogits[0];
+            for (float v : rawLogits) {
+                if (v > maxLogit) maxLogit = v;
+            }
+            float[] probabilities = new float[NUM_CLASSES];
+            float   sumExp        = 0f;
+            for (int i = 0; i < NUM_CLASSES; i++) {
+                probabilities[i] = (float) Math.exp(rawLogits[i] - maxLogit);
+                sumExp += probabilities[i];
+            }
+            for (int i = 0; i < NUM_CLASSES; i++) {
+                probabilities[i] /= sumExp;
+            }
+
+            int   bestIndex = 0;
+            float bestProb  = probabilities[0];
+            for (int i = 1; i < NUM_CLASSES; i++) {
+                if (probabilities[i] > bestProb) {
+                    bestProb  = probabilities[i];
+                    bestIndex = i;
+                }
+            }
+
+            long   inferenceTime = System.currentTimeMillis() - startTime;
+            String className     = classLabels.get(bestIndex);
+            return new PredictionResult(
+                    bestIndex, className, bestProb * 100f,
+                    probabilities, inferenceTime
+            );
+        }
     }
 
     /**

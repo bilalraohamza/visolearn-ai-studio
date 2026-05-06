@@ -48,6 +48,83 @@ public class ImagePreprocessor {
     private static final float[] STD  = {0.229f, 0.224f, 0.225f};
 
     /**
+     * Preprocesses an already-loaded BufferedImage and returns
+     * an NDArray tensor ready for ONNX model inference.
+     *
+     * This overload is used by GradCamRenderer's occlusion loop
+     * to avoid re-reading from disk for each of the 49 occluded
+     * variants. The normalization pipeline is identical to
+     * preprocessFromFile — same mean, std, channel order, and size.
+     *
+     * Output tensor shape: [1, 3, 380, 380]
+     *
+     * @param manager DJL NDManager for tensor creation
+     * @param image   already-loaded image (any size)
+     * @return NDArray tensor [1, 3, 380, 380] float32
+     * @throws Exception if tensor creation fails
+     */
+    public NDArray preprocessFromImage(NDManager manager,
+                                       BufferedImage image)
+            throws Exception {
+
+        if (image == null) {
+            throw new IllegalArgumentException(
+                    "Input image must not be null."
+            );
+        }
+
+        // Resize to 380x380 if not already that size
+        BufferedImage resized;
+        if (image.getWidth() == IMAGE_SIZE &&
+                image.getHeight() == IMAGE_SIZE &&
+                image.getType() == BufferedImage.TYPE_INT_RGB) {
+            resized = image;
+        } else {
+            resized = new BufferedImage(
+                    IMAGE_SIZE, IMAGE_SIZE, BufferedImage.TYPE_INT_RGB
+            );
+            Graphics2D g2d = resized.createGraphics();
+            g2d.setRenderingHint(
+                    RenderingHints.KEY_INTERPOLATION,
+                    RenderingHints.VALUE_INTERPOLATION_BILINEAR
+            );
+            g2d.setRenderingHint(
+                    RenderingHints.KEY_RENDERING,
+                    RenderingHints.VALUE_RENDER_QUALITY
+            );
+            g2d.drawImage(image, 0, 0, IMAGE_SIZE, IMAGE_SIZE, null);
+            g2d.dispose();
+        }
+
+        // Same normalization as preprocessFromFile
+        int     channelSize  = IMAGE_SIZE * IMAGE_SIZE;
+        float[] floatArray   = new float[3 * channelSize];
+
+        for (int y = 0; y < IMAGE_SIZE; y++) {
+            for (int x = 0; x < IMAGE_SIZE; x++) {
+                int rgb        = resized.getRGB(x, y);
+                int pixelIndex = y * IMAGE_SIZE + x;
+
+                float r = ((rgb >> 16) & 0xFF) / 255.0f;
+                float g = ((rgb >> 8)  & 0xFF) / 255.0f;
+                float b = (rgb & 0xFF)          / 255.0f;
+
+                floatArray[0 * channelSize + pixelIndex] =
+                        (r - MEAN[0]) / STD[0];
+                floatArray[1 * channelSize + pixelIndex] =
+                        (g - MEAN[1]) / STD[1];
+                floatArray[2 * channelSize + pixelIndex] =
+                        (b - MEAN[2]) / STD[2];
+            }
+        }
+
+        return manager.create(
+                floatArray,
+                new ai.djl.ndarray.types.Shape(1, 3, IMAGE_SIZE, IMAGE_SIZE)
+        );
+    }
+
+    /**
      * Loads an image from disk, preprocesses it, and returns
      * an NDArray tensor ready for ONNX model inference.
      *

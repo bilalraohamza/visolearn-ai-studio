@@ -140,6 +140,20 @@
     -fx-padding: 9 16 9 16;
 }
 
+/* Top-right corner cell between column headers and scrollbar */
+.table-view .corner {
+    -fx-background-color: #161630;
+    -fx-border-color: rgba(255,255,255,0.07);
+    -fx-border-width: 0 0 1 0;
+}
+
+/* Filler that extends the header row when columns don't fill full width */
+.table-view .column-header-background .filler {
+    -fx-background-color: #161630;
+    -fx-border-color: rgba(255,255,255,0.07);
+    -fx-border-width: 0 0 1 0;
+}
+
 .table-view .table-cell {
     -fx-text-fill: #a0a0c0;
     -fx-font-size: 12px;

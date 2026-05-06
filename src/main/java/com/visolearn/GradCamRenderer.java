@@ -6,208 +6,307 @@ import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 
 /**
- * GradCamRenderer generates Grad-CAM (Gradient-weighted Class
- * Activation Mapping) heatmap overlays for skin lesion images.
+ * GradCamRenderer generates occlusion sensitivity saliency maps
+ * for skin lesion images classified by the EfficientNet-B4 model.
  *
- * Grad-CAM highlights which regions of the input image were most
- * important for the model's prediction. In dermatology context,
- * this shows which part of the lesion the model focused on —
- * directly comparable to how a dermatologist reasons.
+ * <h2>Method: Occlusion Sensitivity Analysis</h2>
+ * Reference: Zeiler and Fergus, "Visualizing and Understanding
+ * Convolutional Networks", ECCV 2014, Section 3.2.
  *
- * How it works:
- * 1. The model's last convolutional layer produces feature maps
- *    capturing spatial patterns detected in the image
- * 2. We compute which feature map channels matter most for the
- *    predicted class by averaging their spatial activations
- * 3. A weighted sum of feature maps produces a coarse heatmap
- * 4. ReLU removes negative values (we only care about what
- *    activates the prediction, not what suppresses it)
- * 5. The heatmap is upsampled to 380x380 and colorized
- * 6. The colorized heatmap is blended with the original image
+ * Algorithm:
+ * 1. Record the model's baseline confidence for the predicted class.
+ * 2. Divide the 380x380 image into a 7x7 grid of patches (~54x54 px).
+ * 3. For each patch, replace it with the ImageNet mean color (neutral
+ *    gray) and run a fresh inference pass.
+ * 4. Compute the confidence drop: baseline - occluded_confidence.
+ *    Large drop = this region was important to the prediction.
+ *    No drop (or gain) = the model did not rely on this region.
+ * 5. Apply ReLU to keep only regions that positively supported
+ *    the prediction.
+ * 6. Normalize to [0, 1], apply Gaussian smoothing, then colorize
+ *    with a jet colormap (blue -> cyan -> yellow -> red).
+ * 7. Blend the colorized saliency map over the original image.
  *
- * Note: Full gradient-based Grad-CAM requires access to model
- * internals not exposed by ONNX Runtime. This implementation
- * uses a simplified but visually effective approximation based
- * on the final feature map activations, which produces
- * meaningful and explainable overlays for the GUI.
+ * <h2>Why this is better than the previous version</h2>
+ * The previous implementation used HSV hue matching against
+ * hard-coded color signatures per class. It highlighted pixels
+ * that matched the programmer's color assumptions, not what the
+ * model actually learned. The result was decoupled from model behavior.
+ *
+ * Occlusion sensitivity is model-agnostic and genuinely measures
+ * which image regions the model depends on. Hiding an important
+ * region causes a measurable confidence drop. The heatmap reflects
+ * actual model behavior.
+ *
+ * <h2>Cost</h2>
+ * 7x7 = 49 forward passes, each ~100-160 ms on CPU.
+ * Total: approximately 5-8 seconds. Runs on a background thread.
  *
  * @author Rao Hamza Bilal
- * @version 1.0
+ * @version 2.0
  */
 public class GradCamRenderer {
 
-    /** Output image size matching EfficientNet-B4 input size. */
+    /**
+     * Callback interface for reporting per-pass progress.
+     * Invoked after each of the 49 inference passes completes.
+     */
+    @FunctionalInterface
+    public interface ProgressCallback {
+        /**
+         * @param completed number of passes completed so far
+         * @param total     total number of passes (49 for a 7x7 grid)
+         */
+        void onProgress(int completed, int total);
+    }
+
+    /** Input/output size matching EfficientNet-B4's native resolution. */
     private static final int OUTPUT_SIZE = 380;
 
-    /** Opacity of the heatmap overlay blended onto original image.
-     *  0.0 = fully transparent, 1.0 = fully opaque heatmap. */
-    private static final float HEATMAP_OPACITY = 0.45f;
+    /**
+     * Grid dimension for occlusion patches.
+     * 7x7 = 49 patches, each approximately 54x54 pixels.
+     */
+    private static final int GRID_SIZE = 7;
+
+    /** Total inference passes = GRID_SIZE squared. */
+    private static final int TOTAL_PATCHES = GRID_SIZE * GRID_SIZE;
+
+    /** Opacity of saliency overlay blended onto the original image. */
+    private static final float HEATMAP_OPACITY = 0.5f;
 
     /**
-     * Generates a Grad-CAM heatmap overlay for a given image
-     * and prediction result.
+     * ImageNet mean color in integer pixel space, used as the
+     * neutral fill for occluded patches.
+     * R = round(0.485 * 255) = 124
+     * G = round(0.456 * 255) = 116
+     * B = round(0.406 * 255) = 104
+     * After normalization these become 0.0 in all channels.
+     */
+    private static final int OCCLUDE_COLOR =
+            (0xFF << 24) | (124 << 16) | (116 << 8) | 104;
+
+    /** Gaussian blur kernel radius for smoothing the saliency map. */
+    private static final int BLUR_RADIUS = 22;
+
+    /** Classifier used to run inference on occluded image variants. */
+    private final SkinClassifier classifier;
+
+    /**
+     * Constructs a GradCamRenderer backed by the given classifier.
      *
-     * The heatmap uses a red-yellow-green color scale:
-     * Red   = high activation (model focused here strongly)
-     * Yellow = medium activation
-     * Green = low activation (model did not focus here)
+     * @param classifier the shared SkinClassifier from MainApp
+     */
+    public GradCamRenderer(SkinClassifier classifier) {
+        this.classifier = classifier;
+    }
+
+    /**
+     * Generates an occlusion sensitivity saliency map and blends it
+     * onto the original image. Always call this on a background thread.
      *
-     * @param originalImagePath path to the original input image
-     * @param result            prediction result from SkinClassifier
-     * @return BufferedImage with heatmap blended onto original
-     * @throws Exception if image cannot be read or processed
+     * @param originalImagePath path to the skin lesion image
+     * @param result            the baseline prediction from SkinClassifier
+     * @param callback          optional progress listener (may be null)
+     * @return BufferedImage with saliency heatmap blended onto original
+     * @throws Exception if image loading or any inference pass fails
      */
     public BufferedImage generateHeatmap(
             Path originalImagePath,
-            SkinClassifier.PredictionResult result) throws Exception {
+            SkinClassifier.PredictionResult result,
+            ProgressCallback callback) throws Exception {
 
-        // Load the original image
+        // Load and resize original image to 380x380
         BufferedImage original = ImageIO.read(originalImagePath.toFile());
         if (original == null) {
             throw new IllegalArgumentException(
                     "Cannot read image: " + originalImagePath
             );
         }
-
-        // Resize original to 380x380 for consistent overlay
         BufferedImage resized = resizeImage(original, OUTPUT_SIZE);
 
-        // Generate activation heatmap based on prediction confidence
-        // We use the class probabilities to weight a spatial attention
-        // map derived from the image's color and texture patterns
-        float[][] heatmapData = generateActivationMap(
-                resized, result.allProbabilities, result.classIndex
+        // Run 49 occlusion inference passes
+        float[][] importanceMap = computeOcclusionSensitivity(
+                resized, result, callback
         );
 
-        // Apply ReLU — zero out negative activations
-        // We only care about features that support the prediction
-        applyReLU(heatmapData);
+        // ReLU: keep only positive drops (regions that helped the prediction)
+        applyReLU(importanceMap);
 
-        // Normalize heatmap values to [0, 1] range
-        normalizeHeatmap(heatmapData);
+        // Normalize to [0, 1] for colormap input
+        normalizeMap(importanceMap);
 
-        // Convert heatmap data to colorized BufferedImage
-        BufferedImage heatmapImage = colorizeHeatmap(heatmapData);
+        // Smooth the blocky patch values into a continuous gradient
+        float[][] smoothed = gaussianBlur(
+                importanceMap, OUTPUT_SIZE, OUTPUT_SIZE, BLUR_RADIUS
+        );
 
-        // Blend heatmap with original image
+        // Re-normalize after blur (smoothing shifts the range)
+        normalizeMap(smoothed);
+
+        // Colorize and blend
+        BufferedImage heatmapImage = colorizeHeatmap(smoothed);
         return blendImages(resized, heatmapImage, HEATMAP_OPACITY);
     }
 
+    // ===== Core algorithm =====
+
     /**
-     * Generates a spatial activation map approximating which image
-     * regions contributed most to the predicted class.
+     * Runs 49 inference passes with different patches occluded.
+     * Records the confidence drop per patch into a 380x380 map.
      *
-     * This uses color saliency weighted by class probabilities:
-     * regions with high saturation and class-discriminative colors
-     * receive higher activation scores, simulating what the
-     * convolutional feature maps would highlight.
-     *
-     * @param image         resized input image (380x380)
-     * @param probabilities class probabilities from model output
-     * @param classIndex    predicted class index
-     * @return 2D float array of activation values
+     * @param resized  380x380 image to analyze
+     * @param baseline the original un-occluded prediction
+     * @param callback optional progress listener (may be null)
+     * @return 380x380 importance map with patch-resolution values
+     * @throws Exception if any inference pass fails
      */
-    private float[][] generateActivationMap(
-            BufferedImage image,
-            float[] probabilities,
-            int classIndex) {
+    private float[][] computeOcclusionSensitivity(
+            BufferedImage resized,
+            SkinClassifier.PredictionResult baseline,
+            ProgressCallback callback) throws Exception {
 
-        int width  = image.getWidth();
-        int height = image.getHeight();
+        float[][] importance = new float[OUTPUT_SIZE][OUTPUT_SIZE];
 
-        float[][] activation = new float[height][width];
+        float baselineConf = baseline.allProbabilities[baseline.classIndex];
+        int   targetClass  = baseline.classIndex;
+        int   baseStep     = OUTPUT_SIZE / GRID_SIZE;
+        int   patchIdx     = 0;
 
-        // Class-specific color signatures for skin lesions
-        // These represent the dominant color features each
-        // lesion type exhibits in dermoscopy images
-        float[] hueTarget = {
-                0.08f,  // akiec — brownish-red
-                0.95f,  // bcc   — pale pink
-                0.07f,  // bkl   — brown
-                0.06f,  // df    — dark brown
-                0.0f,   // mel   — very dark / black
-                0.05f,  // nv    — medium brown
-                0.85f   // vasc  — reddish-purple
-        };
+        for (int row = 0; row < GRID_SIZE; row++) {
+            for (int col = 0; col < GRID_SIZE; col++) {
 
-        float targetHue = hueTarget[classIndex];
+                // Patch bounds — last row/col absorbs remainder pixels
+                int x0 = col * baseStep;
+                int y0 = row * baseStep;
+                int x1 = (col == GRID_SIZE - 1) ? OUTPUT_SIZE : x0 + baseStep;
+                int y1 = (row == GRID_SIZE - 1) ? OUTPUT_SIZE : y0 + baseStep;
 
-        // Compute activation for each pixel based on how well
-        // its color matches the predicted class signature
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int rgb = image.getRGB(x, y);
+                // Create occluded copy and fill the patch with mean color
+                BufferedImage occluded = copyImage(resized);
+                fillPatch(occluded, x0, y0, x1, y1);
 
-                // Extract RGB components normalized to [0,1]
-                float r = ((rgb >> 16) & 0xFF) / 255f;
-                float g = ((rgb >> 8)  & 0xFF) / 255f;
-                float b = (rgb & 0xFF)          / 255f;
+                // Run inference on the occluded image
+                SkinClassifier.PredictionResult occResult =
+                        classifier.predictFromImage(occluded);
 
-                // Convert RGB to HSV to analyze color properties
-                float[] hsv = rgbToHsv(r, g, b);
-                float hue = hsv[0];        // 0-1 hue
-                float sat = hsv[1];        // 0-1 saturation
-                float val = hsv[2];        // 0-1 brightness
+                // Confidence drop for the target class
+                float drop = baselineConf -
+                        occResult.allProbabilities[targetClass];
 
-                // Compute hue similarity to target class color
-                float hueDiff = Math.abs(hue - targetHue);
-                // Handle circular hue distance
-                if (hueDiff > 0.5f) hueDiff = 1.0f - hueDiff;
-                float hueSimilarity = 1.0f - (hueDiff * 2.0f);
-                hueSimilarity = Math.max(0, hueSimilarity);
+                // Write drop value into every pixel in this patch
+                for (int y = y0; y < y1; y++) {
+                    for (int x = x0; x < x1; x++) {
+                        importance[y][x] = drop;
+                    }
+                }
 
-                // Activation = color match × saturation × brightness
-                // High saturation + class-matching color = high activation
-                float act = hueSimilarity * sat * val;
-
-                // Weight by prediction confidence for this class
-                act *= probabilities[classIndex];
-
-                activation[y][x] = act;
+                patchIdx++;
+                if (callback != null) {
+                    callback.onProgress(patchIdx, TOTAL_PATCHES);
+                }
             }
         }
 
-        // Apply Gaussian blur to smooth the activation map
-        // This makes the heatmap look more natural and less noisy
-        return gaussianBlur(activation, width, height, 15);
+        return importance;
+    }
+
+    // ===== Image manipulation =====
+
+    /**
+     * Creates a deep pixel copy of the given BufferedImage.
+     *
+     * @param source image to copy
+     * @return independent RGB copy
+     */
+    private BufferedImage copyImage(BufferedImage source) {
+        BufferedImage copy = new BufferedImage(
+                source.getWidth(), source.getHeight(),
+                BufferedImage.TYPE_INT_RGB
+        );
+        Graphics2D g2d = copy.createGraphics();
+        g2d.drawImage(source, 0, 0, null);
+        g2d.dispose();
+        return copy;
     }
 
     /**
-     * Applies ReLU activation: sets all negative values to zero.
-     * We only visualize features that positively contribute
-     * to the prediction, not features that suppress it.
+     * Fills a rectangular patch with the ImageNet mean color.
+     * After normalization this maps to 0.0 in all channels —
+     * the center of the model's expected input distribution.
      *
-     * @param data 2D activation map to modify in place
+     * @param image image to modify in place
+     * @param x0    left edge (inclusive)
+     * @param y0    top edge (inclusive)
+     * @param x1    right edge (exclusive)
+     * @param y1    bottom edge (exclusive)
+     */
+    private void fillPatch(BufferedImage image,
+                           int x0, int y0, int x1, int y1) {
+        for (int y = y0; y < y1; y++) {
+            for (int x = x0; x < x1; x++) {
+                image.setRGB(x, y, OCCLUDE_COLOR);
+            }
+        }
+    }
+
+    /**
+     * Resizes an image to a square target size using bilinear interpolation.
+     *
+     * @param image      source image
+     * @param targetSize target width and height in pixels
+     * @return resized TYPE_INT_RGB copy
+     */
+    private BufferedImage resizeImage(BufferedImage image, int targetSize) {
+        BufferedImage resized = new BufferedImage(
+                targetSize, targetSize, BufferedImage.TYPE_INT_RGB
+        );
+        Graphics2D g2d = resized.createGraphics();
+        g2d.setRenderingHint(
+                RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BILINEAR
+        );
+        g2d.setRenderingHint(
+                RenderingHints.KEY_RENDERING,
+                RenderingHints.VALUE_RENDER_QUALITY
+        );
+        g2d.drawImage(image, 0, 0, targetSize, targetSize, null);
+        g2d.dispose();
+        return resized;
+    }
+
+    // ===== Post-processing =====
+
+    /**
+     * ReLU: sets all negative values to zero.
+     * Negative importance means hiding the patch increased confidence,
+     * indicating the region was suppressing the prediction — not
+     * meaningful for our visualization.
+     *
+     * @param data 2D map to modify in place
      */
     private void applyReLU(float[][] data) {
         for (float[] row : data) {
             for (int x = 0; x < row.length; x++) {
-                // ReLU: f(x) = max(0, x)
-                row[x] = Math.max(0, row[x]);
+                if (row[x] < 0f) row[x] = 0f;
             }
         }
     }
 
     /**
-     * Normalizes heatmap values to [0, 1] range.
-     * Divides all values by the maximum value found in the map.
-     * If all values are zero (blank prediction), leaves as-is.
+     * Normalizes all values in the map to [0, 1].
+     * No-op if all values are zero (flat prediction).
      *
-     * @param data 2D activation map to normalize in place
+     * @param data 2D map to normalize in place
      */
-    private void normalizeHeatmap(float[][] data) {
-        // Find maximum value
-        float max = 0;
+    private void normalizeMap(float[][] data) {
+        float max = 0f;
         for (float[] row : data) {
             for (float v : row) {
                 if (v > max) max = v;
             }
         }
-
-        // Avoid division by zero
-        if (max == 0) return;
-
-        // Divide all values by max to normalize to [0, 1]
+        if (max == 0f) return;
         for (float[] row : data) {
             for (int x = 0; x < row.length; x++) {
                 row[x] /= max;
@@ -216,14 +315,54 @@ public class GradCamRenderer {
     }
 
     /**
-     * Converts normalized activation values to a colorized image.
-     * Uses a red-yellow-green color scale (jet colormap):
-     * 0.0 → green (low activation, model did not focus here)
-     * 0.5 → yellow (medium activation)
-     * 1.0 → red (high activation, model focused here strongly)
+     * Applies box blur approximating Gaussian smoothing.
+     * Converts blocky patch-resolution values into a smooth gradient.
      *
-     * @param data normalized 2D heatmap values [0, 1]
-     * @return colorized BufferedImage of the heatmap
+     * @param data   input 2D map
+     * @param width  map width
+     * @param height map height
+     * @param radius blur half-kernel radius
+     * @return smoothed copy (input unchanged)
+     */
+    private float[][] gaussianBlur(float[][] data,
+                                   int width, int height, int radius) {
+        float[][] result = new float[height][width];
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+
+                float sum   = 0f;
+                int   count = 0;
+
+                int y0 = Math.max(0, y - radius);
+                int y1 = Math.min(height - 1, y + radius);
+                int x0 = Math.max(0, x - radius);
+                int x1 = Math.min(width - 1, x + radius);
+
+                for (int ky = y0; ky <= y1; ky++) {
+                    for (int kx = x0; kx <= x1; kx++) {
+                        sum += data[ky][kx];
+                        count++;
+                    }
+                }
+                result[y][x] = (count > 0) ? sum / count : 0f;
+            }
+        }
+        return result;
+    }
+
+    // ===== Visualization =====
+
+    /**
+     * Converts the normalized importance map to a colorized ARGB image
+     * using the jet colormap: blue -> cyan -> green -> yellow -> red.
+     *
+     * Values below 0.10 are rendered transparent to suppress noise
+     * in low-importance background regions. Alpha increases linearly
+     * with importance.
+     *
+     * @param data normalized 2D importance values [0, 1]
+     * @return ARGB colorized saliency image
      */
     private BufferedImage colorizeHeatmap(float[][] data) {
         int height = data.length;
@@ -233,43 +372,31 @@ public class GradCamRenderer {
                 width, height, BufferedImage.TYPE_INT_ARGB
         );
 
+        final float THRESHOLD = 0.10f;
+
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                float value = data[y][x];
+                float v = data[y][x];
 
-                // Only colorize pixels above threshold
-                // Below threshold = fully transparent (no green tint)
-                if (value < 0.15f) {
+                if (v < THRESHOLD) {
                     heatmap.setRGB(x, y, 0x00000000);
                     continue;
                 }
 
-                // Map value to red-yellow color only (no green)
-                // 0.15 - 0.5 = yellow to orange
-                // 0.5  - 1.0 = orange to red
-                int r, g, b, a;
+                // Remap above-threshold values to [0, 1]
+                float t = (v - THRESHOLD) / (1.0f - THRESHOLD);
+                t = Math.min(1.0f, Math.max(0.0f, t));
 
-                // Normalize to 0-1 range above threshold
-                float normalized = (value - 0.15f) / 0.85f;
-                normalized = Math.min(1.0f, Math.max(0.0f, normalized));
+                // Jet colormap
+                int r = clamp255(jetR(t));
+                int g = clamp255(jetG(t));
+                int b = clamp255(jetB(t));
 
-                if (normalized < 0.5f) {
-                    // Yellow to orange
-                    r = 255;
-                    g = (int)(255 - normalized * 2 * 100);
-                    b = 0;
-                } else {
-                    // Orange to red
-                    r = 255;
-                    g = (int)(155 - (normalized - 0.5f) * 2 * 155);
-                    b = 0;
-                }
+                // Alpha: 120-230 range so background context stays visible
+                int a = 120 + (int)(t * 110f);
+                a = Math.min(230, Math.max(0, a));
 
-                // Alpha increases with value — more activated = more visible
-                a = (int)(normalized * 200);
-
-                int argb = (a << 24) | (r << 16) | (g << 8) | b;
-                heatmap.setRGB(x, y, argb);
+                heatmap.setRGB(x, y, (a << 24) | (r << 16) | (g << 8) | b);
             }
         }
 
@@ -277,45 +404,58 @@ public class GradCamRenderer {
     }
 
     /**
-     * Maps a normalized value [0,1] to RGB color using jet colormap.
-     * Jet colormap: blue → cyan → green → yellow → red
-     * We use the upper half: green → yellow → red
-     * for a cleaner medical visualization.
-     *
-     * @param value normalized activation value [0, 1]
-     * @return int array [r, g, b] with values [0, 255]
+     * Jet colormap red channel. Rises from 0 to 1 in the 0.375-0.625 range.
+     * @param t [0, 1]
+     * @return red float [0, 1]
      */
-    private int[] jetColormap(float value) {
-        int r, g, b;
-
-        if (value < 0.5f) {
-            // Green to yellow: increase red, keep green high
-            r = (int)(value * 2 * 255);
-            g = 255;
-            b = 0;
-        } else {
-            // Yellow to red: decrease green, keep red high
-            r = 255;
-            g = (int)((1.0f - (value - 0.5f) * 2) * 255);
-            b = 0;
-        }
-
-        return new int[]{
-                Math.max(0, Math.min(255, r)),
-                Math.max(0, Math.min(255, g)),
-                Math.max(0, Math.min(255, b))
-        };
+    private float jetR(float t) {
+        if (t < 0.375f) return 0f;
+        if (t < 0.625f) return (t - 0.375f) * 4f;
+        return 1f;
     }
 
     /**
-     * Blends the heatmap image onto the original image.
-     * Uses alpha compositing:
-     * output = original × (1 - opacity) + heatmap × opacity
+     * Jet colormap green channel. Peaks at t=0.5 (full green).
+     * @param t [0, 1]
+     * @return green float [0, 1]
+     */
+    private float jetG(float t) {
+        if (t < 0.125f) return 0f;
+        if (t < 0.375f) return (t - 0.125f) * 4f;
+        if (t < 0.625f) return 1f;
+        if (t < 0.875f) return 1f - (t - 0.625f) * 4f;
+        return 0f;
+    }
+
+    /**
+     * Jet colormap blue channel. Full at t=0.125-0.375, fades to 0 at t=0.625.
+     * @param t [0, 1]
+     * @return blue float [0, 1]
+     */
+    private float jetB(float t) {
+        if (t < 0.125f) return 0.5f + t * 4f;
+        if (t < 0.375f) return 1f;
+        if (t < 0.625f) return 1f - (t - 0.375f) * 4f;
+        return 0f;
+    }
+
+    /**
+     * Converts a [0, 1] float to an integer [0, 255] clamped byte.
+     * @param v float [0, 1]
+     * @return integer [0, 255]
+     */
+    private int clamp255(float v) {
+        return Math.min(255, Math.max(0, (int)(v * 255f)));
+    }
+
+    /**
+     * Blends the ARGB heatmap onto the original RGB image.
+     * Uses SRC_OVER alpha compositing.
      *
-     * @param original    original skin lesion image (380x380)
-     * @param heatmap     colorized heatmap image (380x380)
-     * @param opacity     heatmap opacity (0=transparent, 1=opaque)
-     * @return blended BufferedImage
+     * @param original original 380x380 skin lesion image
+     * @param heatmap  ARGB colorized saliency map
+     * @param opacity  global scale factor applied on top of per-pixel alpha
+     * @return blended RGB image
      */
     private BufferedImage blendImages(BufferedImage original,
                                       BufferedImage heatmap,
@@ -326,132 +466,17 @@ public class GradCamRenderer {
         BufferedImage blended = new BufferedImage(
                 width, height, BufferedImage.TYPE_INT_RGB
         );
-
         Graphics2D g2d = blended.createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_RENDERING,
                 RenderingHints.VALUE_RENDER_QUALITY);
 
-        // Draw original image at full opacity
         g2d.drawImage(original, 0, 0, null);
 
-        // Draw heatmap using its own per-pixel alpha
-        // SRC_OVER respects the ARGB alpha channel we set
-        g2d.setComposite(AlphaComposite.SrcOver);
+        g2d.setComposite(AlphaComposite.getInstance(
+                AlphaComposite.SRC_OVER, opacity));
         g2d.drawImage(heatmap, 0, 0, null);
 
         g2d.dispose();
         return blended;
-    }
-
-    /**
-     * Applies a simple box blur approximating Gaussian blur.
-     * Smooths the activation map to remove pixel-level noise.
-     * The kernel size controls the smoothing radius.
-     *
-     * @param data       input 2D activation map
-     * @param width      map width in pixels
-     * @param height     map height in pixels
-     * @param kernelSize blur radius (must be odd number)
-     * @return smoothed activation map
-     */
-    private float[][] gaussianBlur(float[][] data,
-                                   int width,
-                                   int height,
-                                   int kernelSize) {
-        float[][] result = new float[height][width];
-        int       half   = kernelSize / 2;
-
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                float sum   = 0;
-                int   count = 0;
-
-                // Average all pixels within the kernel window
-                for (int ky = -half; ky <= half; ky++) {
-                    for (int kx = -half; kx <= half; kx++) {
-                        int ny = y + ky;
-                        int nx = x + kx;
-
-                        // Skip pixels outside image bounds
-                        if (ny >= 0 && ny < height &&
-                                nx >= 0 && nx < width) {
-                            sum += data[ny][nx];
-                            count++;
-                        }
-                    }
-                }
-
-                result[y][x] = sum / count;
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * Converts RGB color values to HSV (Hue, Saturation, Value).
-     * Used to analyze the dominant color of each image region
-     * when generating the activation map.
-     *
-     * @param r red component [0, 1]
-     * @param g green component [0, 1]
-     * @param b blue component [0, 1]
-     * @return float array [hue, saturation, value] all in [0, 1]
-     */
-    private float[] rgbToHsv(float r, float g, float b) {
-        float max   = Math.max(r, Math.max(g, b));
-        float min   = Math.min(r, Math.min(g, b));
-        float delta = max - min;
-
-        float hue = 0;
-        float sat = (max == 0) ? 0 : delta / max;
-        float val = max;
-
-        if (delta != 0) {
-            if (max == r) {
-                hue = ((g - b) / delta) % 6;
-            } else if (max == g) {
-                hue = (b - r) / delta + 2;
-            } else {
-                hue = (r - g) / delta + 4;
-            }
-            hue /= 6.0f;
-            if (hue < 0) hue += 1.0f;
-        }
-
-        return new float[]{hue, sat, val};
-    }
-
-    /**
-     * Resizes a BufferedImage to the specified dimensions.
-     * Uses bilinear interpolation for smooth scaling,
-     * matching Python's transforms.Resize behavior.
-     *
-     * @param image      source image to resize
-     * @param targetSize target width and height in pixels
-     * @return resized BufferedImage
-     */
-    private BufferedImage resizeImage(BufferedImage image,
-                                      int targetSize) {
-        BufferedImage resized = new BufferedImage(
-                targetSize, targetSize, BufferedImage.TYPE_INT_RGB
-        );
-
-        Graphics2D g2d = resized.createGraphics();
-
-        // Use bilinear interpolation for quality scaling
-        g2d.setRenderingHint(
-                RenderingHints.KEY_INTERPOLATION,
-                RenderingHints.VALUE_INTERPOLATION_BILINEAR
-        );
-        g2d.setRenderingHint(
-                RenderingHints.KEY_RENDERING,
-                RenderingHints.VALUE_RENDER_QUALITY
-        );
-
-        g2d.drawImage(image, 0, 0, targetSize, targetSize, null);
-        g2d.dispose();
-
-        return resized;
     }
 }

@@ -15,6 +15,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javax.imageio.ImageIO;
+import javafx.scene.control.Alert;
 
 import java.awt.image.BufferedImage;
 import java.io.File;

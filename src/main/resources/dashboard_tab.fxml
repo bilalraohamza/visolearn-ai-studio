@@ -31,11 +31,10 @@
         <VBox HBox.hgrow="ALWAYS" styleClass="glass-card" style="-fx-padding: 16;">
             <Label text="BEST VAL ACCURACY"
                    style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.4px; -fx-padding: 0 0 8 0;"/>
-            <Label fx:id="bestAccLabel"
-                   text="81.76%"
+            <Label fx:id="bestAccLabel" text="—"
                    style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #10B981;"/>
             <HBox alignment="CENTER_LEFT" style="-fx-padding: 8 0 0 0;">
-                <Label fx:id="bestEpochLabel" text="Epoch 14 of 35" style="-fx-font-size: 11px; -fx-text-fill: #6B7280;"/>
+                <Label fx:id="bestEpochLabel" text="Loading data..." style="-fx-font-size: 11px; -fx-text-fill: #6B7280;"/>
                 <Region HBox.hgrow="ALWAYS"/>
                 <Label text="peak" style="-fx-font-size: 11px; -fx-text-fill: #10B981; -fx-font-weight: bold;"/>
             </HBox>
@@ -44,7 +43,7 @@
         <VBox HBox.hgrow="ALWAYS" styleClass="glass-card" style="-fx-padding: 16;">
             <Label text="TEST ACCURACY"
                    style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.4px; -fx-padding: 0 0 8 0;"/>
-            <Label text="80.99%"
+            <Label fx:id="testAccLabel" text="—"
                    style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #00B4D8;"/>
             <HBox style="-fx-padding: 8 0 0 0;">
                 <Label text="ensemble evaluation" style="-fx-font-size: 11px; -fx-text-fill: #6B7280;"/>
@@ -54,7 +53,7 @@
         <VBox HBox.hgrow="ALWAYS" styleClass="glass-card" style="-fx-padding: 16;">
             <Label text="MACRO F1"
                    style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.4px; -fx-padding: 0 0 8 0;"/>
-            <Label text="0.710"
+            <Label fx:id="macroF1Label" text="—"
                    style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #A78BFA;"/>
             <HBox style="-fx-padding: 8 0 0 0;">
                 <Label text="weighted: 0.816" style="-fx-font-size: 11px; -fx-text-fill: #6B7280;"/>
@@ -74,100 +73,57 @@
     </HBox>
 
     <HBox spacing="16" VBox.vgrow="ALWAYS">
-
         <VBox HBox.hgrow="ALWAYS" styleClass="glass-card" style="-fx-padding: 16;" spacing="8">
-            <HBox alignment="CENTER_LEFT">
-                <Label text="Training &amp; Validation Loss" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
-                <Region HBox.hgrow="ALWAYS"/>
-                <HBox spacing="12" alignment="CENTER">
-                    <HBox spacing="6" alignment="CENTER">
-                        <Region style="-fx-background-color: #00B4D8; -fx-min-width: 14; -fx-max-width: 14; -fx-min-height: 2; -fx-max-height: 2;"/>
-                        <Label text="Train" style="-fx-font-size: 11px; -fx-text-fill: #9CA3AF;"/>
-                    </HBox>
-                    <HBox spacing="6" alignment="CENTER">
-                        <Region style="-fx-background-color: #F43F5E; -fx-min-width: 14; -fx-max-width: 14; -fx-min-height: 2; -fx-max-height: 2;"/>
-                        <Label text="Val" style="-fx-font-size: 11px; -fx-text-fill: #9CA3AF;"/>
-                    </HBox>
-                </HBox>
-            </HBox>
+            <Label text="Training &amp; Validation Loss" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
             <LineChart fx:id="lossChart" VBox.vgrow="ALWAYS" animated="false" style="-fx-background-color: transparent; -fx-padding: 0;">
-                <xAxis>
-                    <NumberAxis label="Epoch" lowerBound="1" upperBound="35" tickUnit="5" autoRanging="false" style="-fx-tick-label-fill: #9CA3AF;"/>
-                </xAxis>
-                <yAxis>
-                    <NumberAxis label="Loss" autoRanging="true" style="-fx-tick-label-fill: #9CA3AF;"/>
-                </yAxis>
+                <xAxis><NumberAxis label="Epoch" lowerBound="1" upperBound="35" tickUnit="5" autoRanging="false" style="-fx-tick-label-fill: #9CA3AF;"/></xAxis>
+                <yAxis><NumberAxis label="Loss" autoRanging="true" style="-fx-tick-label-fill: #9CA3AF;"/></yAxis>
             </LineChart>
         </VBox>
 
         <VBox HBox.hgrow="ALWAYS" styleClass="glass-card" style="-fx-padding: 16;" spacing="8">
-            <HBox alignment="CENTER_LEFT">
-                <Label text="Training &amp; Validation Accuracy" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
-                <Region HBox.hgrow="ALWAYS"/>
-                <HBox spacing="12" alignment="CENTER">
-                    <HBox spacing="6" alignment="CENTER">
-                        <Region style="-fx-background-color: #00B4D8; -fx-min-width: 14; -fx-max-width: 14; -fx-min-height: 2; -fx-max-height: 2;"/>
-                        <Label text="Train" style="-fx-font-size: 11px; -fx-text-fill: #9CA3AF;"/>
-                    </HBox>
-                    <HBox spacing="6" alignment="CENTER">
-                        <Region style="-fx-background-color: #F43F5E; -fx-min-width: 14; -fx-max-width: 14; -fx-min-height: 2; -fx-max-height: 2;"/>
-                        <Label text="Val" style="-fx-font-size: 11px; -fx-text-fill: #9CA3AF;"/>
-                    </HBox>
-                </HBox>
-            </HBox>
+            <Label text="Training &amp; Validation Accuracy" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
             <LineChart fx:id="accuracyChart" VBox.vgrow="ALWAYS" animated="false" style="-fx-background-color: transparent; -fx-padding: 0;">
-                <xAxis>
-                    <NumberAxis label="Epoch" lowerBound="1" upperBound="35" tickUnit="5" autoRanging="false" style="-fx-tick-label-fill: #9CA3AF;"/>
-                </xAxis>
-                <yAxis>
-                    <NumberAxis label="Accuracy (%)" autoRanging="true" style="-fx-tick-label-fill: #9CA3AF;"/>
-                </yAxis>
+                <xAxis><NumberAxis label="Epoch" lowerBound="1" upperBound="35" tickUnit="5" autoRanging="false" style="-fx-tick-label-fill: #9CA3AF;"/></xAxis>
+                <yAxis><NumberAxis label="Accuracy (%)" autoRanging="true" style="-fx-tick-label-fill: #9CA3AF;"/></yAxis>
             </LineChart>
         </VBox>
-
     </HBox>
 
     <VBox styleClass="glass-card" style="-fx-padding: 20;" spacing="16">
-
-        <HBox alignment="CENTER_LEFT">
-            <VBox spacing="4">
-                <Label text="ENSEMBLE PER-CLASS F1 SCORE" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.5px;"/>
-                <Label text="Test set evaluation · macro F1 = 0.710" style="-fx-font-size: 12px; -fx-text-fill: #6B7280;"/>
-            </VBox>
-        </HBox>
+        <VBox spacing="4">
+            <Label text="ENSEMBLE PER-CLASS F1 SCORE" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.5px;"/>
+            <Label text="Averaged results from ensemble evaluation" style="-fx-font-size: 12px; -fx-text-fill: #6B7280;"/>
+        </VBox>
 
         <GridPane hgap="32" vgap="14">
-
             <Label text="Actinic Keratosis" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-size: 12px; -fx-text-fill: #D1D5DB; -fx-min-width: 160px;"/>
-            <ProgressBar progress="0.717" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="250" prefHeight="8" style="-fx-accent: #38BDF8;"/>
-            <Label text="0.717" GridPane.columnIndex="2" GridPane.rowIndex="0" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-min-width: 40px; -fx-font-weight: bold;"/>
+            <ProgressBar fx:id="bar0" progress="0" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="250" prefHeight="8" style="-fx-accent: #38BDF8;"/>
+            <Label fx:id="pct0" text="0.000" GridPane.columnIndex="2" GridPane.rowIndex="0" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-font-weight: bold;"/>
 
             <Label text="Basal Cell Carcinoma" GridPane.columnIndex="3" GridPane.rowIndex="0" style="-fx-font-size: 12px; -fx-text-fill: #D1D5DB; -fx-min-width: 160px; -fx-padding: 0 0 0 16;"/>
-            <ProgressBar progress="0.735" GridPane.columnIndex="4" GridPane.rowIndex="0" prefWidth="250" prefHeight="8" style="-fx-accent: #F472B6;"/>
-            <Label text="0.735" GridPane.columnIndex="5" GridPane.rowIndex="0" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-min-width: 40px; -fx-font-weight: bold;"/>
+            <ProgressBar fx:id="bar1" progress="0" GridPane.columnIndex="4" GridPane.rowIndex="0" prefWidth="250" prefHeight="8" style="-fx-accent: #F472B6;"/>
+            <Label fx:id="pct1" text="0.000" GridPane.columnIndex="5" GridPane.rowIndex="0" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-font-weight: bold;"/>
 
             <Label text="Benign Keratosis" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-size: 12px; -fx-text-fill: #D1D5DB;"/>
-            <ProgressBar progress="0.696" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="250" prefHeight="8" style="-fx-accent: #A78BFA;"/>
-            <Label text="0.696" GridPane.columnIndex="2" GridPane.rowIndex="1" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-font-weight: bold;"/>
+            <ProgressBar fx:id="bar2" progress="0" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="250" prefHeight="8" style="-fx-accent: #A78BFA;"/>
+            <Label fx:id="pct2" text="0.000" GridPane.columnIndex="2" GridPane.rowIndex="1" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-font-weight: bold;"/>
 
             <Label text="Dermatofibroma" GridPane.columnIndex="3" GridPane.rowIndex="1" style="-fx-font-size: 12px; -fx-text-fill: #D1D5DB; -fx-padding: 0 0 0 16;"/>
-            <ProgressBar progress="0.500" GridPane.columnIndex="4" GridPane.rowIndex="1" prefWidth="250" prefHeight="8" style="-fx-accent: #FB923C;"/>
-            <Label text="0.500" GridPane.columnIndex="5" GridPane.rowIndex="1" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-font-weight: bold;"/>
+            <ProgressBar fx:id="bar3" progress="0" GridPane.columnIndex="4" GridPane.rowIndex="1" prefWidth="250" prefHeight="8" style="-fx-accent: #FB923C;"/>
+            <Label fx:id="pct3" text="0.000" GridPane.columnIndex="5" GridPane.rowIndex="1" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-font-weight: bold;"/>
 
             <Label text="Melanoma" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-font-size: 12px; -fx-text-fill: #F87171; -fx-font-weight: bold;"/>
-            <ProgressBar progress="0.544" GridPane.columnIndex="1" GridPane.rowIndex="2" prefWidth="250" prefHeight="8" style="-fx-accent: #EF4444;"/>
-            <Label text="0.544" GridPane.columnIndex="2" GridPane.rowIndex="2" style="-fx-font-size: 12px; -fx-text-fill: #EF4444; -fx-font-weight: bold;"/>
+            <ProgressBar fx:id="bar4" progress="0" GridPane.columnIndex="1" GridPane.rowIndex="2" prefWidth="250" prefHeight="8" style="-fx-accent: #EF4444;"/>
+            <Label fx:id="pct4" text="0.000" GridPane.columnIndex="2" GridPane.rowIndex="2" style="-fx-font-size: 12px; -fx-text-fill: #EF4444; -fx-font-weight: bold;"/>
 
             <Label text="Melanocytic Nevus" GridPane.columnIndex="3" GridPane.rowIndex="2" style="-fx-font-size: 12px; -fx-text-fill: #10B981; -fx-font-weight: bold; -fx-padding: 0 0 0 16;"/>
-            <ProgressBar progress="0.897" GridPane.columnIndex="4" GridPane.rowIndex="2" prefWidth="250" prefHeight="8" style="-fx-accent: #10B981;"/>
-            <Label text="0.897" GridPane.columnIndex="5" GridPane.rowIndex="2" style="-fx-font-size: 12px; -fx-text-fill: #10B981; -fx-font-weight: bold;"/>
+            <ProgressBar fx:id="bar5" progress="0" GridPane.columnIndex="4" GridPane.rowIndex="2" prefWidth="250" prefHeight="8" style="-fx-accent: #10B981;"/>
+            <Label fx:id="pct5" text="0.000" GridPane.columnIndex="5" GridPane.rowIndex="2" style="-fx-font-size: 12px; -fx-text-fill: #10B981; -fx-font-weight: bold;"/>
 
             <Label text="Vascular Lesion" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-font-size: 12px; -fx-text-fill: #D1D5DB;"/>
-            <ProgressBar progress="0.882" GridPane.columnIndex="1" GridPane.rowIndex="3" prefWidth="250" prefHeight="8" style="-fx-accent: #FBBF24;"/>
-            <Label text="0.882" GridPane.columnIndex="2" GridPane.rowIndex="3" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-font-weight: bold;"/>
-
+            <ProgressBar fx:id="bar6" progress="0" GridPane.columnIndex="1" GridPane.rowIndex="3" prefWidth="250" prefHeight="8" style="-fx-accent: #FBBF24;"/>
+            <Label fx:id="pct6" text="0.000" GridPane.columnIndex="2" GridPane.rowIndex="3" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-font-weight: bold;"/>
         </GridPane>
-
     </VBox>
-
 </VBox>

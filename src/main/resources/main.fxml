@@ -7,17 +7,15 @@
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
-            style="-fx-background-color: #111127;">
+            style="-fx-background-color: #1A1A24;">
 
-    <!-- TOP HEADER BAR -->
     <top>
-        <VBox style="-fx-background-color: #161630;
+        <VBox style="-fx-background-color: #1E1E2A;
                      -fx-padding: 12 20 12 20;
-                     -fx-border-color: rgba(255,255,255,0.07);
+                     -fx-border-color: rgba(255,255,255,0.05);
                      -fx-border-width: 0 0 1 0;">
             <HBox alignment="CENTER_LEFT" spacing="14">
 
-                <!-- Brand icon + name -->
                 <HBox alignment="CENTER_LEFT" spacing="12">
                     <StackPane style="-fx-background-color: linear-gradient(to bottom right, #4d9de0, #22c55e);
                                      -fx-background-radius: 9;
@@ -37,35 +35,34 @@
                                       -fx-text-fill: #f0f0fa;"/>
                         <Label text="Skin Lesion Classification with Grad-CAM Explanation"
                                style="-fx-font-size: 11px;
-                                      -fx-text-fill: #606080;"/>
+                                      -fx-text-fill: #9CA3AF;"/>
                     </VBox>
                 </HBox>
 
                 <Region HBox.hgrow="ALWAYS"/>
 
-                <!-- Meta chips -->
                 <HBox alignment="CENTER" spacing="8">
-                    <Label text="EfficientNet-B4"
+                    <Label text="EfficientNet-B4 + DenseNet-169"
                            style="-fx-font-size: 11px;
-                                  -fx-text-fill: #a0a0c0;
+                                  -fx-text-fill: #9CA3AF;
                                   -fx-background-color: transparent;
-                                  -fx-border-color: rgba(255,255,255,0.12);
+                                  -fx-border-color: rgba(255,255,255,0.15);
                                   -fx-border-radius: 20;
                                   -fx-background-radius: 20;
                                   -fx-padding: 4 10 4 10;"/>
-                    <Label text="HAM10000"
+                    <Label text="HAM10000 + ISIC2019"
                            style="-fx-font-size: 11px;
-                                  -fx-text-fill: #a0a0c0;
-                                  -fx-border-color: rgba(255,255,255,0.12);
+                                  -fx-text-fill: #9CA3AF;
+                                  -fx-border-color: rgba(255,255,255,0.15);
                                   -fx-border-radius: 20;
                                   -fx-background-radius: 20;
                                   -fx-padding: 4 10 4 10;"/>
-                    <Label text="80.99% Test Accuracy"
+                    <Label text="Dual-Model Ensemble"
                            style="-fx-font-size: 11px;
                                   -fx-font-weight: bold;
-                                  -fx-text-fill: #6fb4f0;
-                                  -fx-background-color: rgba(77,157,224,0.12);
-                                  -fx-border-color: rgba(77,157,224,0.3);
+                                  -fx-text-fill: #10B981;
+                                  -fx-background-color: rgba(16, 185, 129, 0.12);
+                                  -fx-border-color: rgba(16, 185, 129, 0.3);
                                   -fx-border-radius: 20;
                                   -fx-background-radius: 20;
                                   -fx-padding: 4 12 4 12;"/>
@@ -75,68 +72,72 @@
         </VBox>
     </top>
 
-    <!-- MAIN TAB PANE -->
     <center>
         <TabPane fx:id="mainTabPane"
                  tabClosingPolicy="UNAVAILABLE"
-                 style="-fx-background-color: #111127;
+                 style="-fx-background-color: #1A1A24;
                         -fx-tab-min-height: 42px;
                         -fx-tab-max-height: 42px;">
 
             <Tab text="Classify">
-                <fx:include source="classify_tab.fxml"/>
+                <ScrollPane fitToWidth="true" style="-fx-border-color: transparent;">
+                    <fx:include source="classify_tab.fxml"/>
+                </ScrollPane>
             </Tab>
 
             <Tab text="Training Dashboard">
-                <fx:include source="dashboard_tab.fxml"/>
+                <ScrollPane fitToWidth="true" style="-fx-border-color: transparent;">
+                    <fx:include source="dashboard_tab.fxml"/>
+                </ScrollPane>
             </Tab>
 
             <Tab text="Batch Analysis">
-                <fx:include source="batch_tab.fxml"/>
+                <ScrollPane fitToWidth="true" style="-fx-border-color: transparent;">
+                    <fx:include source="batch_tab.fxml"/>
+                </ScrollPane>
             </Tab>
 
         </TabPane>
     </center>
 
-    <!-- STATUS BAR -->
     <bottom>
-        <HBox style="-fx-background-color: #161630;
+        <HBox style="-fx-background-color: #1E1E2A;
                      -fx-padding: 6 18 6 18;
-                     -fx-border-color: rgba(255,255,255,0.07);
+                     -fx-border-color: rgba(255,255,255,0.05);
                      -fx-border-width: 1 0 0 0;"
               alignment="CENTER_LEFT"
               spacing="12">
 
             <HBox alignment="CENTER_LEFT" spacing="6">
-                <StackPane style="-fx-background-color: #22c55e;
+                <StackPane style="-fx-background-color: #10B981;
                                   -fx-background-radius: 50;
                                   -fx-min-width: 7;
                                   -fx-min-height: 7;
                                   -fx-max-width: 7;
                                   -fx-max-height: 7;"/>
-                <Label text="Model loaded"
+                <Label text="Ensemble loaded"
                        style="-fx-font-size: 11px;
-                              -fx-text-fill: #606080;"/>
+                              -fx-text-fill: #9CA3AF;"/>
             </HBox>
 
             <Label text="|"
                    style="-fx-font-size: 11px;
                           -fx-text-fill: rgba(255,255,255,0.1);"/>
-            <Label text="EfficientNet-B4 · 17.5M params"
+            <Label text="EfficientNet + DenseNet"
                    style="-fx-font-size: 11px;
-                          -fx-text-fill: #606080;"/>
+                          -fx-text-fill: #9CA3AF;"/>
             <Label text="|"
                    style="-fx-font-size: 11px;
                           -fx-text-fill: rgba(255,255,255,0.1);"/>
-            <Label text="HAM10000 · 7 classes"
+            <Label text="7 Clinical Classes"
                    style="-fx-font-size: 11px;
-                          -fx-text-fill: #606080;"/>
+                          -fx-text-fill: #9CA3AF;"/>
 
             <Region HBox.hgrow="ALWAYS"/>
 
-            <Label text="VisoLearn AI Studio v1.0  |  Rao Hamza Bilal"
+            <Label text="VisoLearn AI Studio v2.0 | Rao Hamza Bilal"
                    style="-fx-font-size: 11px;
-                          -fx-text-fill: #606080;"/>
+                          -fx-text-fill: #9CA3AF;"/>
         </HBox>
     </bottom>
 

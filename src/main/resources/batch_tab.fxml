@@ -7,299 +7,143 @@
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.visolearn.BatchController"
-      style="-fx-background-color: #111127; -fx-padding: 18;"
-      spacing="14">
+      style="-fx-background-color: #1A1A24; -fx-padding: 24;"
+      spacing="20">
 
-    <!-- ===== HEADER ===== -->
     <HBox alignment="CENTER_LEFT" spacing="16">
-        <VBox spacing="2">
+        <VBox spacing="4">
             <Label text="Batch Analysis"
-                   style="-fx-font-size: 16px;
-                          -fx-font-weight: bold;
-                          -fx-text-fill: #f0f0fa;"/>
-            <Label text="Run inference on an entire folder of images at once"
-                   style="-fx-font-size: 11px;
-                          -fx-text-fill: #606080;"/>
+                   style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
+            <Label text="Run ensemble inference on an entire folder of dermoscopy images"
+                   style="-fx-font-size: 13px; -fx-text-fill: #9CA3AF;"/>
         </VBox>
     </HBox>
 
-    <!-- ===== FOLDER SELECTION ===== -->
-    <HBox spacing="8" alignment="CENTER_LEFT"
-          style="-fx-background-color: #1a1a35;
-                 -fx-background-radius: 10;
-                 -fx-border-color: rgba(255,255,255,0.07);
-                 -fx-border-radius: 10;
-                 -fx-border-width: 1;
-                 -fx-padding: 14 16 14 16;">
+    <HBox spacing="12" alignment="CENTER_LEFT" styleClass="glass-card" style="-fx-padding: 16;">
 
         <TextField fx:id="folderPathField"
                    promptText="Select a folder containing JPG or PNG images..."
                    HBox.hgrow="ALWAYS"
                    editable="false"
-                   style="-fx-background-color: #0d0d1a;
-                          -fx-text-fill: #f0f0fa;
-                          -fx-font-size: 12px;
+                   style="-fx-background-color: #1A1A24;
+                          -fx-text-fill: #F8F9FA;
+                          -fx-font-size: 13px;
                           -fx-font-family: monospace;
-                          -fx-padding: 9 13 9 13;
-                          -fx-background-radius: 7;
-                          -fx-border-color: rgba(255,255,255,0.12);
-                          -fx-border-radius: 7;
+                          -fx-padding: 10 14 10 14;
+                          -fx-background-radius: 8;
+                          -fx-border-color: rgba(255,255,255,0.1);
+                          -fx-border-radius: 8;
                           -fx-border-width: 1;"/>
 
         <Button fx:id="selectFolderButton"
                 text="Browse Folder"
                 onAction="#handleSelectFolder"
-                style="-fx-background-color: transparent;
-                       -fx-text-fill: #a0a0c0;
-                       -fx-font-size: 12px;
-                       -fx-background-radius: 7;
-                       -fx-border-color: rgba(255,255,255,0.12);
-                       -fx-border-radius: 7;
-                       -fx-border-width: 1;
-                       -fx-padding: 9 14 9 14;
-                       -fx-cursor: hand;"/>
+                styleClass="secondary-btn"
+                style="-fx-padding: 10 16 10 16;"/>
 
         <Button fx:id="runBatchButton"
                 text="Run Analysis"
                 onAction="#handleRunBatch"
                 disable="true"
-                style="-fx-background-color: #16a34a;
-                       -fx-text-fill: white;
-                       -fx-font-size: 12px;
-                       -fx-font-weight: bold;
-                       -fx-background-radius: 7;
-                       -fx-border-color: transparent;
-                       -fx-padding: 9 16 9 16;
-                       -fx-cursor: hand;"/>
+                styleClass="primary-btn"
+                style="-fx-padding: 10 20 10 20;"/>
 
         <Button fx:id="exportCsvButton"
                 text="Export CSV"
                 onAction="#handleExportCsv"
                 disable="true"
-                style="-fx-background-color: transparent;
-                       -fx-text-fill: #a0a0c0;
-                       -fx-font-size: 12px;
-                       -fx-background-radius: 7;
-                       -fx-border-color: rgba(255,255,255,0.12);
-                       -fx-border-radius: 7;
-                       -fx-border-width: 1;
-                       -fx-padding: 9 14 9 14;
-                       -fx-cursor: hand;"/>
+                styleClass="secondary-btn"
+                style="-fx-padding: 10 16 10 16;"/>
     </HBox>
 
-    <!-- ===== PROGRESS BAR ===== -->
     <VBox fx:id="progressBox"
           visible="false"
-          style="-fx-background-color: #1a1a35;
-                 -fx-background-radius: 10;
-                 -fx-border-color: rgba(255,255,255,0.07);
-                 -fx-border-radius: 10;
-                 -fx-border-width: 1;
-                 -fx-padding: 14 16 14 16;"
-          spacing="8">
+          styleClass="glass-card"
+          style="-fx-padding: 16;"
+          spacing="12">
 
         <HBox alignment="CENTER_LEFT" spacing="12">
             <Label fx:id="progressLabel"
                    text="Classifying images in batch..."
-                   style="-fx-font-size: 12px;
-                          -fx-text-fill: #a0a0c0;"/>
+                   style="-fx-font-size: 13px; -fx-text-fill: #9CA3AF;"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Label fx:id="progressCountLabel"
                    text="0 / 0"
-                   style="-fx-font-size: 12px;
-                          -fx-font-weight: bold;
-                          -fx-text-fill: #f0f0fa;"/>
+                   style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
         </HBox>
 
         <ProgressBar fx:id="batchProgressBar"
                      progress="0"
                      maxWidth="Infinity"
-                     prefHeight="6"
-                     style="-fx-accent: #4d9de0;
-                            -fx-background-color: rgba(255,255,255,0.05);
-                            -fx-background-radius: 3;"/>
+                     prefHeight="8"
+                     style="-fx-accent: #10B981;"/>
 
     </VBox>
 
-    <!-- ===== SUMMARY STATS ===== -->
-    <HBox fx:id="summaryBox"
-          visible="false"
-          spacing="10">
+    <HBox fx:id="summaryBox" visible="false" spacing="16">
 
-        <!-- Total Images -->
-        <VBox HBox.hgrow="ALWAYS"
-              style="-fx-background-color: #1a1a35;
-                     -fx-background-radius: 10;
-                     -fx-border-color: rgba(255,255,255,0.07);
-                     -fx-border-radius: 10;
-                     -fx-border-width: 1;
-                     -fx-padding: 14 16 14 16;">
-            <Region style="-fx-background-color: #4d9de0;
-                           -fx-min-height: 2;
-                           -fx-max-height: 2;
-                           -fx-background-radius: 2;
-                           -fx-translate-y: -14;"/>
+        <VBox HBox.hgrow="ALWAYS" styleClass="glass-card" style="-fx-padding: 16;">
             <Label text="TOTAL IMAGES"
-                   style="-fx-font-size: 10px;
-                          -fx-font-weight: bold;
-                          -fx-text-fill: #606080;
-                          -fx-letter-spacing: 1.4px;
-                          -fx-padding: 0 0 6 0;"/>
-            <Label fx:id="totalImagesLabel"
-                   text="0"
-                   style="-fx-font-size: 24px;
-                          -fx-font-weight: bold;
-                          -fx-text-fill: #f0f0fa;"/>
+                   style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.4px; -fx-padding: 0 0 8 0;"/>
+            <Label fx:id="totalImagesLabel" text="0"
+                   style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
         </VBox>
 
-        <!-- Most Common Class -->
-        <VBox HBox.hgrow="ALWAYS"
-              style="-fx-background-color: #1a1a35;
-                     -fx-background-radius: 10;
-                     -fx-border-color: rgba(255,255,255,0.07);
-                     -fx-border-radius: 10;
-                     -fx-border-width: 1;
-                     -fx-padding: 14 16 14 16;">
-            <Region style="-fx-background-color: #4d9de0;
-                           -fx-min-height: 2;
-                           -fx-max-height: 2;
-                           -fx-background-radius: 2;
-                           -fx-translate-y: -14;"/>
+        <VBox HBox.hgrow="ALWAYS" styleClass="glass-card" style="-fx-padding: 16;">
             <Label text="MOST COMMON CLASS"
-                   style="-fx-font-size: 10px;
-                          -fx-font-weight: bold;
-                          -fx-text-fill: #606080;
-                          -fx-letter-spacing: 1.4px;
-                          -fx-padding: 0 0 6 0;"/>
-            <Label fx:id="topClassLabel"
-                   text="—"
-                   style="-fx-font-size: 16px;
-                          -fx-font-weight: bold;
-                          -fx-text-fill: #6fb4f0;"/>
+                   style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.4px; -fx-padding: 0 0 8 0;"/>
+            <Label fx:id="topClassLabel" text="—"
+                   style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #00B4D8; -fx-padding: 4 0 0 0;"/>
         </VBox>
 
-        <!-- Average Confidence -->
-        <VBox HBox.hgrow="ALWAYS"
-              style="-fx-background-color: #1a1a35;
-                     -fx-background-radius: 10;
-                     -fx-border-color: rgba(255,255,255,0.07);
-                     -fx-border-radius: 10;
-                     -fx-border-width: 1;
-                     -fx-padding: 14 16 14 16;">
-            <Region style="-fx-background-color: #22c55e;
-                           -fx-min-height: 2;
-                           -fx-max-height: 2;
-                           -fx-background-radius: 2;
-                           -fx-translate-y: -14;"/>
+        <VBox HBox.hgrow="ALWAYS" styleClass="glass-card" style="-fx-padding: 16;">
             <Label text="AVG CONFIDENCE"
-                   style="-fx-font-size: 10px;
-                          -fx-font-weight: bold;
-                          -fx-text-fill: #606080;
-                          -fx-letter-spacing: 1.4px;
-                          -fx-padding: 0 0 6 0;"/>
-            <Label fx:id="avgConfidenceLabel"
-                   text="—"
-                   style="-fx-font-size: 24px;
-                          -fx-font-weight: bold;
-                          -fx-text-fill: #4ade80;"/>
+                   style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.4px; -fx-padding: 0 0 8 0;"/>
+            <Label fx:id="avgConfidenceLabel" text="—"
+                   style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #10B981;"/>
         </VBox>
 
-        <!-- Processing Time -->
-        <VBox HBox.hgrow="ALWAYS"
-              style="-fx-background-color: #1a1a35;
-                     -fx-background-radius: 10;
-                     -fx-border-color: rgba(255,255,255,0.07);
-                     -fx-border-radius: 10;
-                     -fx-border-width: 1;
-                     -fx-padding: 14 16 14 16;">
-            <Region style="-fx-background-color: #4d9de0;
-                           -fx-min-height: 2;
-                           -fx-max-height: 2;
-                           -fx-background-radius: 2;
-                           -fx-translate-y: -14;"/>
+        <VBox HBox.hgrow="ALWAYS" styleClass="glass-card" style="-fx-padding: 16;">
             <Label text="PROCESSING TIME"
-                   style="-fx-font-size: 10px;
-                          -fx-font-weight: bold;
-                          -fx-text-fill: #606080;
-                          -fx-letter-spacing: 1.4px;
-                          -fx-padding: 0 0 6 0;"/>
-            <Label fx:id="processingTimeLabel"
-                   text="—"
-                   style="-fx-font-size: 24px;
-                          -fx-font-weight: bold;
-                          -fx-text-fill: #6fb4f0;"/>
+                   style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.4px; -fx-padding: 0 0 8 0;"/>
+            <Label fx:id="processingTimeLabel" text="—"
+                   style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #A78BFA;"/>
         </VBox>
 
     </HBox>
 
-    <!-- ===== RESULTS TABLE ===== -->
-    <VBox VBox.vgrow="ALWAYS"
-          style="-fx-background-color: #1a1a35;
-                 -fx-background-radius: 10;
-                 -fx-border-color: rgba(255,255,255,0.07);
-                 -fx-border-radius: 10;
-                 -fx-border-width: 1;"
-          spacing="0">
+    <VBox VBox.vgrow="ALWAYS" styleClass="glass-card" style="-fx-padding: 0; -fx-overflow: hidden;" spacing="0">
 
-        <!-- Table header bar -->
         <HBox alignment="CENTER_LEFT"
-              style="-fx-padding: 12 16 12 16;
-                     -fx-border-color: rgba(255,255,255,0.07);
-                     -fx-border-width: 0 0 1 0;">
-            <Label text="Results"
-                   style="-fx-font-size: 13px;
-                          -fx-font-weight: bold;
-                          -fx-text-fill: #f0f0fa;"/>
+              style="-fx-padding: 16 20 16 20;
+                     -fx-border-color: rgba(255,255,255,0.05);
+                     -fx-border-width: 0 0 1 0;
+                     -fx-background-color: #1E1E2A;
+                     -fx-background-radius: 12 12 0 0;">
+            <Label text="Analysis Results"
+                   style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Label text="Sorted by file name"
-                   style="-fx-font-size: 11px;
-                          -fx-text-fill: #404060;"/>
+                   style="-fx-font-size: 12px; -fx-text-fill: #6B7280;"/>
         </HBox>
 
-        <!-- TableView -->
         <TableView fx:id="resultsTable"
                    VBox.vgrow="ALWAYS"
-                   style="-fx-background-color: transparent;
-                          -fx-border-color: transparent;
-                          -fx-table-cell-border-color: rgba(255,255,255,0.03);
-                          -fx-control-inner-background: transparent;
-                          -fx-control-inner-background-alt: rgba(255,255,255,0.01);">
+                   style="-fx-background-color: transparent; -fx-border-color: transparent;">
 
             <columns>
-                <TableColumn fx:id="fileNameColumn"
-                             text="FILE NAME"
-                             prefWidth="260"
-                             style="-fx-text-fill: #606080;
-                                    -fx-font-size: 10px;"/>
-
-                <TableColumn fx:id="predictedClassColumn"
-                             text="PREDICTED CLASS"
-                             prefWidth="200"
-                             style="-fx-text-fill: #606080;
-                                    -fx-font-size: 10px;"/>
-
-                <TableColumn fx:id="confidenceColumn"
-                             text="CONFIDENCE"
-                             prefWidth="120"
-                             style="-fx-text-fill: #606080;
-                                    -fx-font-size: 10px;"/>
-
-                <TableColumn fx:id="inferenceTimeColumn"
-                             text="TIME (MS)"
-                             prefWidth="100"
-                             style="-fx-text-fill: #606080;
-                                    -fx-font-size: 10px;"/>
+                <TableColumn fx:id="fileNameColumn" text="FILE NAME" prefWidth="280" />
+                <TableColumn fx:id="predictedClassColumn" text="PREDICTED CLASS" prefWidth="220" />
+                <TableColumn fx:id="confidenceColumn" text="CONFIDENCE" prefWidth="140" />
+                <TableColumn fx:id="inferenceTimeColumn" text="TIME (MS)" prefWidth="120" />
             </columns>
 
             <placeholder>
-                <VBox alignment="CENTER" spacing="8">
+                <VBox alignment="CENTER" spacing="12">
                     <Label text="No results yet"
-                           style="-fx-font-size: 14px;
-                                  -fx-text-fill: #404060;
-                                  -fx-font-weight: bold;"/>
-                    <Label text="Select a folder and click Run Analysis to begin"
-                           style="-fx-font-size: 12px;
-                                  -fx-text-fill: #404060;"/>
+                           style="-fx-font-size: 15px; -fx-text-fill: #9CA3AF; -fx-font-weight: bold;"/>
+                    <Label text="Select a folder and click Run Analysis to begin processing"
+                           style="-fx-font-size: 13px; -fx-text-fill: #6B7280;"/>
                 </VBox>
             </placeholder>
 

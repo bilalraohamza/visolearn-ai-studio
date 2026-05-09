@@ -73,7 +73,7 @@ public class GradCamRenderer {
     private static final int TOTAL_PATCHES = GRID_SIZE * GRID_SIZE;
 
     /** Opacity of saliency overlay blended onto the original image. */
-    private static final float HEATMAP_OPACITY = 0.5f;
+    private static final float HEATMAP_OPACITY = 0.55f;
 
     /**
      * ImageNet mean color in integer pixel space, used as the
@@ -87,7 +87,7 @@ public class GradCamRenderer {
             (0xFF << 24) | (124 << 16) | (116 << 8) | 104;
 
     /** Gaussian blur kernel radius for smoothing the saliency map. */
-    private static final int BLUR_RADIUS = 22;
+    private static final int BLUR_RADIUS = 45;
 
     /** Classifier used to run inference on occluded image variants. */
     private final SkinClassifier classifier;
@@ -372,7 +372,7 @@ public class GradCamRenderer {
                 width, height, BufferedImage.TYPE_INT_ARGB
         );
 
-        final float THRESHOLD = 0.10f;
+        final float THRESHOLD = 0.28f;
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {

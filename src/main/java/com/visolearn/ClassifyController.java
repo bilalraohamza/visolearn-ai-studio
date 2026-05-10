@@ -18,6 +18,7 @@ import javafx.stage.FileChooser;
 import javax.imageio.ImageIO;
 import javafx.scene.control.Alert;
 import com.visolearn.utils.AnimationUtil;
+import com.visolearn.utils.ReportExportUtil;
 import javafx.animation.PauseTransition;
 import javafx.util.Duration;
 
@@ -50,6 +51,7 @@ public class ClassifyController implements Initializable {
     @FXML private ImageView heatmapImageView;
     @FXML private Button    uploadButton;
     @FXML private Button    clearButton;
+    @FXML private Button    exportReportButton;
     @FXML private CheckBox  gradCamToggle;
     @FXML private HBox      loadingBox;
     @FXML private Label     loadingLabel;
@@ -171,6 +173,7 @@ public class ClassifyController implements Initializable {
         });
 
         uploadButton.setDisable(true);
+        if (exportReportButton != null) exportReportButton.setDisable(true);
         predictionLabel.setText("Loading model...");
 
         Thread initThread = new Thread(initTask);
@@ -235,12 +238,38 @@ public class ClassifyController implements Initializable {
         lastResult       = null;
         heatmapVisible   = false;
         gradCamToggle.setSelected(false);
+        if (exportReportButton != null) exportReportButton.setDisable(true);
 
         predictionLabel.setOpacity(0);
         confidenceLabel.setOpacity(0);
         confidenceStatLabel.setOpacity(0);
         inferenceTimeLabel.setOpacity(0);
         descriptionLabel.setOpacity(0);
+    }
+
+    /**
+     * Handles the Export Report button click.
+     * Generates a high-resolution PNG clinical report using ReportExportUtil.
+     */
+    @FXML
+    private void handleExportReport() {
+        if (lastResult == null || currentImagePath == null) return;
+
+        Image original = inputImageView.getImage();
+        Image heatmap = heatmapImageView.getImage();
+
+        String topClass = CLASS_FULL_NAMES[lastResult.classIndex];
+        double confidence = lastResult.confidence;
+        String inferenceMs = lastResult.inferenceTimeMs + " ms";
+
+        ReportExportUtil.saveReportAsImage(
+                exportReportButton.getScene().getWindow(),
+                original,
+                heatmap,
+                topClass,
+                confidence,
+                inferenceMs
+        );
     }
 
     /**
@@ -277,6 +306,7 @@ public class ClassifyController implements Initializable {
             placeholderBox.setVisible(false);
             heatmapImageView.setVisible(false);
             gradCamToggle.setSelected(false);
+            if (exportReportButton != null) exportReportButton.setDisable(true);
         } catch (Exception e) {
             predictionLabel.setText("Cannot load image.");
             return;
@@ -373,6 +403,8 @@ public class ClassifyController implements Initializable {
             );
             pcts[i].setText(String.format("%.1f%%", prob * 100));
         }
+
+        if (exportReportButton != null) exportReportButton.setDisable(false);
     }
 
     /**
@@ -459,6 +491,7 @@ public class ClassifyController implements Initializable {
         AnimationUtil.fadeIn(imageContainer, 700);
         AnimationUtil.applyButtonHover(uploadButton);
         AnimationUtil.applyButtonHover(clearButton);
+        if (exportReportButton != null) AnimationUtil.applyButtonHover(exportReportButton);
         AnimationUtil.fadeIn(predictionLabel, 800);
     }
 

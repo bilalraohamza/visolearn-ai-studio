@@ -17,6 +17,9 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javax.imageio.ImageIO;
 import javafx.scene.control.Alert;
+import com.visolearn.utils.AnimationUtil;
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -111,7 +114,7 @@ public class ClassifyController implements Initializable {
             "Dermatofibroma (DF): A common benign skin nodule. " +
                     "Usually harmless and does not require treatment.",
             "Melanoma (MEL): The most dangerous form of skin cancer. " +
-                    "Early detection is critical — consult a dermatologist immediately.",
+                    "Early detection is critical - consult a dermatologist immediately.",
             "Melanocytic Nevus (NV): A common mole. " +
                     "Usually benign but monitor for changes in size, shape, or color.",
             "Vascular Lesion (VASC): Lesions of blood vessels in the skin. " +
@@ -175,6 +178,7 @@ public class ClassifyController implements Initializable {
         initThread.start();
 
         setupDragAndDrop();
+        setupAnimations();
     }
 
     /**
@@ -263,6 +267,7 @@ public class ClassifyController implements Initializable {
             Image fxImage = new Image(imagePath.toUri().toString());
             inputImageView.setImage(fxImage);
             inputImageView.setVisible(true);
+            AnimationUtil.fadeIn(inputImageView, 500);
             placeholderBox.setVisible(false);
             heatmapImageView.setVisible(false);
             gradCamToggle.setSelected(false);
@@ -273,6 +278,7 @@ public class ClassifyController implements Initializable {
 
         // Show loading indicator
         loadingBox.setVisible(true);
+        AnimationUtil.fadeIn(loadingBox, 300);
         loadingLabel.setText("Running inference...");
         uploadButton.setDisable(true);
 
@@ -289,7 +295,11 @@ public class ClassifyController implements Initializable {
         inferTask.setOnSucceeded(e -> {
             Platform.runLater(() -> {
                 lastResult = inferTask.getValue();
-                updateUIWithResult(lastResult);
+
+                PauseTransition delay = new PauseTransition(Duration.millis(250));
+                delay.setOnFinished(ev -> updateUIWithResult(lastResult));
+                delay.play();
+
                 loadingBox.setVisible(false);
                 uploadButton.setDisable(false);
             });
@@ -322,6 +332,7 @@ public class ClassifyController implements Initializable {
         // Update top prediction display
         String fullName = CLASS_FULL_NAMES[result.classIndex];
         predictionLabel.setText(fullName);
+        AnimationUtil.slideUp(predictionLabel, 500);
         predictionLabel.setStyle(
                 "-fx-font-size: 18px; -fx-font-weight: bold; " +
                         "-fx-text-fill: #1D9E75;");
@@ -338,13 +349,22 @@ public class ClassifyController implements Initializable {
         descriptionLabel.setText(
                 CLASS_DESCRIPTIONS[result.classIndex]);
 
+        AnimationUtil.fadeIn(confidenceLabel, 700);
+        AnimationUtil.fadeIn(confidenceStatLabel, 800);
+        AnimationUtil.fadeIn(inferenceTimeLabel, 900);
+        AnimationUtil.fadeIn(descriptionLabel, 1000);
+
         // Update all 7 confidence bars
         ProgressBar[] bars = {bar0,bar1,bar2,bar3,bar4,bar5,bar6};
         Label[]       pcts = {pct0,pct1,pct2,pct3,pct4,pct5,pct6};
 
         for (int i = 0; i < 7; i++) {
             float prob = result.allProbabilities[i];
-            bars[i].setProgress(prob);
+            AnimationUtil.animateProgressBar(
+                    bars[i],
+                    prob,
+                    900
+            );
             pcts[i].setText(String.format("%.1f%%", prob * 100));
         }
     }
@@ -358,6 +378,7 @@ public class ClassifyController implements Initializable {
 
         loadingLabel.setText("Generating saliency map (0 / 49)...");
         loadingBox.setVisible(true);
+        AnimationUtil.fadeIn(loadingBox, 300);
 
         Task<BufferedImage> heatmapTask = new Task<>() {
             @Override
@@ -381,6 +402,7 @@ public class ClassifyController implements Initializable {
                         heatmapImg, null);
                 heatmapImageView.setImage(fxHeatmap);
                 heatmapImageView.setVisible(true);
+                AnimationUtil.fadeIn(heatmapImageView, 600);
                 heatmapVisible = true;
                 loadingBox.setVisible(false);
             });
@@ -425,6 +447,13 @@ public class ClassifyController implements Initializable {
             }
             event.consume();
         });
+    }
+
+    private void setupAnimations() {
+        AnimationUtil.fadeIn(imageContainer, 700);
+        AnimationUtil.applyButtonHover(uploadButton);
+        AnimationUtil.applyButtonHover(clearButton);
+        AnimationUtil.fadeIn(predictionLabel, 800);
     }
 
     /**

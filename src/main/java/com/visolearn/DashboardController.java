@@ -11,6 +11,9 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import com.visolearn.utils.AnimationUtil;
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
 
 import java.io.InputStream;
 import java.net.URL;
@@ -53,7 +56,12 @@ public class DashboardController implements Initializable {
     public void initialize(URL url, ResourceBundle rb) {
         lossChart.setCreateSymbols(false);
         accuracyChart.setCreateSymbols(false);
+
+        lossChart.setAnimated(false);
+        accuracyChart.setAnimated(false);
+
         loadEnsembleData();
+        setupDashboardAnimations();
     }
 
     @FXML
@@ -61,6 +69,9 @@ public class DashboardController implements Initializable {
         lossChart.getData().clear();
         accuracyChart.getData().clear();
         loadEnsembleData();
+
+        AnimationUtil.slideUp(lossChart, 600);
+        AnimationUtil.slideUp(accuracyChart, 800);
     }
 
     private void loadEnsembleData() {
@@ -81,6 +92,17 @@ public class DashboardController implements Initializable {
                 JsonNode metricsRoot = mapper.readTree(metricStream);
 
                 Platform.runLater(() -> {
+
+                    PauseTransition chartDelay =
+                            new PauseTransition(Duration.millis(300));
+
+                    chartDelay.setOnFinished(ev -> {
+                        AnimationUtil.fadeIn(lossChart, 800);
+                        AnimationUtil.fadeIn(accuracyChart, 1000);
+                    });
+
+                    chartDelay.play();
+
                     // Update Charts
                     populateChartWithModel(effNetData, "EffNet-B4", "#00B4D8");
                     populateChartWithModel(denseNetData, "DenseNet-169", "#F43F5E");
@@ -90,14 +112,37 @@ public class DashboardController implements Initializable {
                     TrainingLogLoader.EpochData bestEff = logLoader.getBestEpoch(effNetData);
                     TrainingLogLoader.EpochData bestDense = logLoader.getBestEpoch(denseNetData);
                     double avgBestAcc = (bestEff.valAcc + bestDense.valAcc) / 2.0;
-                    bestAccLabel.setText(String.format("%.2f%%", avgBestAcc));
+
+                    AnimationUtil.animateCounter(
+                            bestAccLabel,
+                            0,
+                            avgBestAcc,
+                            1400,
+                            "%"
+                    );
+
                     bestEpochLabel.setText("Combined Ensemble Peak");
 
                     // Update Test Accuracy & Macro F1 from ensemble_metrics.json
-                    if (testAccLabel != null)
-                        testAccLabel.setText(String.format("%.2f%%", metricsRoot.get("test_accuracy").asDouble()));
-                    if (macroF1Label != null)
-                        macroF1Label.setText(String.format("%.3f", metricsRoot.get("macro_f1").asDouble()));
+                    if (testAccLabel != null) {
+                        AnimationUtil.animateCounter(
+                                testAccLabel,
+                                0,
+                                metricsRoot.get("test_accuracy").asDouble(),
+                                1500,
+                                "%"
+                        );
+                    }
+
+                    if (macroF1Label != null) {
+                        AnimationUtil.animateCounter(
+                                macroF1Label,
+                                0,
+                                metricsRoot.get("macro_f1").asDouble(),
+                                1600,
+                                ""
+                        );
+                    }
 
                     // 4. UPDATE PER-CLASS F1 BARS AND LABELS
                     JsonNode f1 = metricsRoot.get("per_class_f1");
@@ -108,8 +153,15 @@ public class DashboardController implements Initializable {
                     for (int i = 0; i < 7; i++) {
                         if (bars[i] != null && f1.has(keys[i])) {
                             double score = f1.get(keys[i]).asDouble();
-                            bars[i].setProgress(score); // Set the bar length
-                            pcts[i].setText(String.format("%.3f", score)); // Set the text label
+
+                            AnimationUtil.animateProgressBar(
+                                    bars[i],
+                                    score,
+                                    1200
+                            );
+
+                            pcts[i].setText(String.format("%.3f", score));
+                            AnimationUtil.fadeIn(pcts[i], 900);
                         }
                     }
                 });
@@ -120,6 +172,25 @@ public class DashboardController implements Initializable {
         Thread loadThread = new Thread(loadTask);
         loadThread.setDaemon(true);
         loadThread.start();
+    }
+
+    private void setupDashboardAnimations() {
+        // Fade charts on startup
+        AnimationUtil.fadeIn(lossChart, 900);
+        AnimationUtil.fadeIn(accuracyChart, 1100);
+
+        // Button hover
+        AnimationUtil.applyButtonHover(reloadButton);
+
+        // Initial metric fade
+        AnimationUtil.fadeIn(bestAccLabel, 700);
+        AnimationUtil.fadeIn(bestEpochLabel, 900);
+
+        if (testAccLabel != null)
+            AnimationUtil.fadeIn(testAccLabel, 1000);
+
+        if (macroF1Label != null)
+            AnimationUtil.fadeIn(macroF1Label, 1200);
     }
 
     private void populateChartWithModel(List<TrainingLogLoader.EpochData> data, String modelName, String color) {

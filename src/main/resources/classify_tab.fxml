@@ -18,20 +18,22 @@
                    style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.5px; -fx-padding: 0 0 12 0;"/>
 
             <StackPane fx:id="imageContainer"
-                       prefWidth="350" prefHeight="350" minWidth="350" minHeight="350"
+                       prefWidth="350" prefHeight="350"
+                       minWidth="350" minHeight="350"
                        style="-fx-background-color: #1E1E2A; -fx-background-radius: 8; -fx-border-color: #4B5563; -fx-border-width: 2; -fx-border-radius: 8; -fx-border-style: dashed; -fx-cursor: hand;">
 
                 <VBox fx:id="placeholderBox" alignment="CENTER" spacing="12">
-                    <StackPane style="-fx-background-color: rgba(16, 185, 129, 0.1); -fx-background-radius: 50; -fx-min-width: 60; -fx-min-height: 60; -fx-max-width: 60; -fx-max-height: 60;" alignment="CENTER">
+                    <StackPane style="-fx-background-color: rgba(16, 185, 129, 0.1); -fx-background-radius: 50; -fx-min-width: 60; -fx-min-height: 60; -fx-max-width: 60; -fx-max-height: 60;"
+                               alignment="CENTER">
                         <Label text="+" style="-fx-font-size: 28px; -fx-text-fill: #10B981; -fx-font-weight: bold; -fx-translate-y: -2;"/>
                     </StackPane>
                     <Label text="Drop dermoscopy image here" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
                     <Label text="or click to browse files" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF;"/>
                 </VBox>
 
-                <ImageView fx:id="inputImageView" fitWidth="346" fitHeight="346" preserveRatio="false" visible="false"/>
+                <ImageView fx:id="inputImageView" opacity="0" fitWidth="346" fitHeight="346" preserveRatio="false" visible="false"/>
 
-                <ImageView fx:id="heatmapImageView" fitWidth="346" fitHeight="346" preserveRatio="false" visible="false" opacity="0.6"/>
+                <ImageView fx:id="heatmapImageView" opacity="0" fitWidth="346" fitHeight="346" preserveRatio="false" visible="false"/>
             </StackPane>
 
             <HBox spacing="12" style="-fx-padding: 16 0 0 0;">
@@ -42,7 +44,7 @@
             <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 16 0 0 0;">
                 <CheckBox fx:id="gradCamToggle" text="Overlay Grad-CAM Heatmap" onAction="#handleGradCamToggle" style="-fx-text-fill: #9CA3AF; -fx-font-size: 13px;"/>
                 <Region HBox.hgrow="ALWAYS"/>
-                <HBox alignment="CENTER_RIGHT" spacing="8" fx:id="loadingBox" visible="false">
+                <HBox alignment="CENTER_RIGHT" spacing="8" fx:id="loadingBox" opacity="0" visible="false">
                     <ProgressIndicator fx:id="loadingSpinner" prefWidth="16" prefHeight="16" style="-fx-progress-color: #10B981;"/>
                     <Label fx:id="loadingLabel" text="Analyzing..." style="-fx-font-size: 12px; -fx-text-fill: #10B981; -fx-font-weight: bold;"/>
                 </HBox>
@@ -57,17 +59,17 @@
             <HBox alignment="CENTER_LEFT" spacing="20">
                 <VBox spacing="4" HBox.hgrow="ALWAYS">
                     <Label text="AI DIAGNOSIS" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.5px;"/>
-                    <Label fx:id="predictionLabel" text="Awaiting Image..." style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
-                    <Label fx:id="confidenceLabel" text="Please upload a dermoscopy scan to begin." style="-fx-font-size: 14px; -fx-text-fill: #10B981;"/>
+                    <Label fx:id="predictionLabel" opacity="0" text="Awaiting Image..." style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
+                    <Label fx:id="confidenceLabel" opacity="0" text="Please upload a dermoscopy scan to begin." style="-fx-font-size: 14px; -fx-text-fill: #10B981;"/>
                 </VBox>
 
                 <VBox alignment="CENTER" styleClass="stat-box" style="-fx-padding: 12 20 12 20; -fx-min-width: 100;">
                     <Label text="CONFIDENCE" style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.2px;"/>
-                    <Label fx:id="confidenceStatLabel" text="—" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #10B981;"/>
+                    <Label fx:id="confidenceStatLabel" opacity="0" text="-" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #10B981;"/>
                 </VBox>
                 <VBox alignment="CENTER" styleClass="stat-box" style="-fx-padding: 12 20 12 20; -fx-min-width: 100;">
                     <Label text="LATENCY" style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.2px;"/>
-                    <Label fx:id="inferenceTimeLabel" text="—" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #00B4D8;"/>
+                    <Label fx:id="inferenceTimeLabel" opacity="0" text="-" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #00B4D8;"/>
                 </VBox>
             </HBox>
         </VBox>
@@ -124,7 +126,7 @@
 
         <VBox styleClass="glass-card" style="-fx-padding: 20; -fx-background-color: #1E1E2A;" VBox.vgrow="ALWAYS">
             <Label text="CLINICAL NOTES" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #00B4D8; -fx-letter-spacing: 1.5px; -fx-padding: 0 0 8 0;"/>
-            <Label fx:id="descriptionLabel" text="Upload a dermoscopy image to see classification results and Grad-CAM explanation." wrapText="true" style="-fx-font-size: 13px; -fx-text-fill: #D1D5DB; -fx-line-spacing: 4;"/>
+            <Label fx:id="descriptionLabel" opacity="0" text="Upload a dermoscopy image to see classification results and Grad-CAM explanation." wrapText="true" style="-fx-font-size: 13px; -fx-text-fill: #D1D5DB; -fx-line-spacing: 4;"/>
         </VBox>
 
     </VBox>

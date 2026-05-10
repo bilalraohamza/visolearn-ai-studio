@@ -23,20 +23,29 @@ import java.util.ResourceBundle;
  */
 public class DashboardController implements Initializable {
 
-    @FXML private LineChart<Number, Number> lossChart;
-    @FXML private LineChart<Number, Number> accuracyChart;
-    @FXML private Label bestAccLabel;
-    @FXML private Label bestEpochLabel;
-    @FXML private Button reloadButton;
+    @FXML
+    private LineChart<Number, Number> lossChart;
+    @FXML
+    private LineChart<Number, Number> accuracyChart;
+    @FXML
+    private Label bestAccLabel;
+    @FXML
+    private Label bestEpochLabel;
+    @FXML
+    private Button reloadButton;
 
     // These MUST match the fx:id in your dashboard_tab.fxml
-    @FXML private Label testAccLabel;
-    @FXML private Label macroF1Label;
+    @FXML
+    private Label testAccLabel;
+    @FXML
+    private Label macroF1Label;
 
     // F1 Score Progress Bars
-    @FXML private ProgressBar bar0, bar1, bar2, bar3, bar4, bar5, bar6;
+    @FXML
+    private ProgressBar bar0, bar1, bar2, bar3, bar4, bar5, bar6;
     // F1 Score Percentage Labels
-    @FXML private Label pct0, pct1, pct2, pct3, pct4, pct5, pct6;
+    @FXML
+    private Label pct0, pct1, pct2, pct3, pct4, pct5, pct6;
 
     private final TrainingLogLoader logLoader = new TrainingLogLoader();
 
@@ -85,8 +94,10 @@ public class DashboardController implements Initializable {
                     bestEpochLabel.setText("Combined Ensemble Peak");
 
                     // Update Test Accuracy & Macro F1 from ensemble_metrics.json
-                    if (testAccLabel != null) testAccLabel.setText(String.format("%.2f%%", metricsRoot.get("test_accuracy").asDouble()));
-                    if (macroF1Label != null) macroF1Label.setText(String.format("%.3f", metricsRoot.get("macro_f1").asDouble()));
+                    if (testAccLabel != null)
+                        testAccLabel.setText(String.format("%.2f%%", metricsRoot.get("test_accuracy").asDouble()));
+                    if (macroF1Label != null)
+                        macroF1Label.setText(String.format("%.3f", metricsRoot.get("macro_f1").asDouble()));
 
                     // 4. UPDATE PER-CLASS F1 BARS AND LABELS
                     JsonNode f1 = metricsRoot.get("per_class_f1");
@@ -126,8 +137,14 @@ public class DashboardController implements Initializable {
         lossChart.getData().add(lossSeries);
         accuracyChart.getData().add(accSeries);
 
-        // Styling via code for immediate feedback
-        if (lossSeries.getNode() != null) lossSeries.getNode().setStyle("-fx-stroke: " + color + "; -fx-stroke-width: 2px;");
-        if (accSeries.getNode() != null) accSeries.getNode().setStyle("-fx-stroke: " + color + "; -fx-stroke-width: 2px;");
+        // Apply the color directly to the line node
+        Platform.runLater(() -> {
+            if (lossSeries.getNode() != null) {
+                lossSeries.getNode().setStyle("-fx-stroke: " + color + ";");
+            }
+            if (accSeries.getNode() != null) {
+                accSeries.getNode().setStyle("-fx-stroke: " + color + ";");
+            }
+        });
     }
 }

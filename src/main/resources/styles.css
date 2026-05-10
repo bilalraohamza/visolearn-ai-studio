@@ -94,36 +94,32 @@
     -fx-border-color: #10B981;
 }
 
-/* ===== TableView & Charts ===== */
+/* ===== TableView ===== */
 .table-view {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
     -fx-table-cell-border-color: rgba(255,255,255,0.03);
 }
 
-/* 1. Make the main header strip dark */
 .table-view .column-header-background {
     -fx-background-color: #1E1E2A;
     -fx-border-color: rgba(255,255,255,0.05);
     -fx-border-width: 0 0 1 0;
 }
 
-/* 2. Force the individual cells, the filler space, and the scrollbar corner to be transparent */
 .table-view .column-header,
 .table-view .filler,
 .table-view .corner {
     -fx-background-color: transparent;
     -fx-border-width: 0;
-    -fx-size: 40px; /* Gives the header some nice vertical breathing room */
+    -fx-size: 40px;
 }
 
-/* 3. Style the header text */
 .table-view .column-header .label {
     -fx-text-fill: #9CA3AF;
     -fx-font-weight: bold;
 }
 
-/* 4. Style the data rows */
 .table-cell {
     -fx-text-fill: #D1D5DB;
 }
@@ -137,7 +133,28 @@
     -fx-background-color: rgba(16, 185, 129, 0.15);
 }
 
-/* ===== Fix Chart Legends ===== */
+/* ===== Ensemble Chart Styling ===== */
+
+/* Train series (EffNet-B4) — Cyan */
+.default-color0.chart-series-line {
+    -fx-stroke: #00B4D8;
+    -fx-stroke-width: 2.5;
+}
+
+/* Val series (DenseNet-169) — Rose */
+.default-color1.chart-series-line {
+    -fx-stroke: #F43F5E;
+    -fx-stroke-width: 2.5;
+}
+
+/* Legend Symbols to match the lines */
+.default-color0.chart-line-symbol {
+    -fx-background-color: #00B4D8, white;
+}
+.default-color1.chart-line-symbol {
+    -fx-background-color: #F43F5E, white;
+}
+
 .chart-legend {
     -fx-background-color: transparent;
 }
@@ -146,10 +163,10 @@
     -fx-text-fill: #9CA3AF;
 }
 
-/* ===== Fix ScrollPane Backgrounds (For Step 2) ===== */
+/* ===== Fix ScrollPane Backgrounds ===== */
 .scroll-pane {
     -fx-background-color: transparent;
-    -fx-background: #1A1A24; /* Prevents gray background on empty space */
+    -fx-background: #1A1A24;
 }
 
 .scroll-pane > .viewport {

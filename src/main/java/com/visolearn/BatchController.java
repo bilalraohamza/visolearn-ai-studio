@@ -1,5 +1,6 @@
 package com.visolearn;
 
+import com.visolearn.utils.ToastUtil;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
@@ -7,6 +8,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 
@@ -346,15 +348,22 @@ public class BatchController implements Initializable {
                     );
                 }
 
-                progressLabel.setText(
-                        "CSV saved: " + csvFile.getName());
-                System.out.println("BatchController: " +
-                        "CSV exported to " +
-                        csvFile.getAbsolutePath());
+                // 1. SUCCESS BLOCK
+                progressLabel.setText("CSV saved: " + csvFile.getName());
+                System.out.println("BatchController: CSV exported to " + csvFile.getAbsolutePath());
+
+                // -> Trigger the Success Toast
+                StackPane root = (StackPane) exportCsvButton.getScene().getRoot();
+                ToastUtil.showToast(root, "CSV Exported Successfully!", ToastUtil.ToastType.SUCCESS);
 
             } catch (Exception e) {
+                // 2. ERROR BLOCK
                 progressLabel.setText("CSV export failed.");
                 System.err.println("CSV error: " + e.getMessage());
+
+                // -> Trigger the Error Toast
+                StackPane root = (StackPane) exportCsvButton.getScene().getRoot();
+                ToastUtil.showToast(root, "Failed to export CSV.", ToastUtil.ToastType.ERROR);
             }
         }
     }

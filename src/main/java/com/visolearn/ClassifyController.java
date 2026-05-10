@@ -235,6 +235,12 @@ public class ClassifyController implements Initializable {
         lastResult       = null;
         heatmapVisible   = false;
         gradCamToggle.setSelected(false);
+
+        predictionLabel.setOpacity(0);
+        confidenceLabel.setOpacity(0);
+        confidenceStatLabel.setOpacity(0);
+        inferenceTimeLabel.setOpacity(0);
+        descriptionLabel.setOpacity(0);
     }
 
     /**

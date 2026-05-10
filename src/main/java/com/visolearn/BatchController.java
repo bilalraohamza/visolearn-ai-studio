@@ -348,22 +348,20 @@ public class BatchController implements Initializable {
                     );
                 }
 
-                // 1. SUCCESS BLOCK
                 progressLabel.setText("CSV saved: " + csvFile.getName());
                 System.out.println("BatchController: CSV exported to " + csvFile.getAbsolutePath());
 
-                // -> Trigger the Success Toast
+                // ---> Trigger the Success Toast
                 StackPane root = (StackPane) exportCsvButton.getScene().getRoot();
-                ToastUtil.showToast(root, "CSV Exported Successfully!", ToastUtil.ToastType.SUCCESS);
+                com.visolearn.utils.ToastUtil.showToast(root, "CSV Exported Successfully!", com.visolearn.utils.ToastUtil.ToastType.SUCCESS);
 
             } catch (Exception e) {
-                // 2. ERROR BLOCK
                 progressLabel.setText("CSV export failed.");
                 System.err.println("CSV error: " + e.getMessage());
 
-                // -> Trigger the Error Toast
+                // ---> Trigger the Error Toast
                 StackPane root = (StackPane) exportCsvButton.getScene().getRoot();
-                ToastUtil.showToast(root, "Failed to export CSV.", ToastUtil.ToastType.ERROR);
+                com.visolearn.utils.ToastUtil.showToast(root, "Failed to export CSV.", com.visolearn.utils.ToastUtil.ToastType.ERROR);
             }
         }
     }

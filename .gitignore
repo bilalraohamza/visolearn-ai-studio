@@ -37,3 +37,7 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### ONNX ##
+densenet169_v2.onnx
+efficientnet_b4_v3.onnx

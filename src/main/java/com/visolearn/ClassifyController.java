@@ -158,9 +158,9 @@ public class ClassifyController implements Initializable {
             Platform.runLater(() -> {
                 gradCamRenderer = new GradCamRenderer(classifier);
                 uploadButton.setDisable(false);
-                predictionLabel.setText("Model ready. Upload an image.");
-                System.out.println("ClassifyController: " +
-                        "shared classifier connected.");
+                // Use a shorter string to avoid truncation
+                predictionLabel.setText("Awaiting Image...");
+                predictionLabel.setOpacity(1.0);
             });
         });
 
@@ -212,41 +212,36 @@ public class ClassifyController implements Initializable {
      */
     @FXML
     private void handleClear() {
-        // Reset image views
-        inputImageView.setImage(null);
-        inputImageView.setVisible(false);
-        heatmapImageView.setImage(null);
-        heatmapImageView.setVisible(false);
-        placeholderBox.setVisible(true);
+        // ... (rest of your reset code for ImageViews and placeholderBox) ...
 
-        // Reset prediction labels
-        predictionLabel.setText("Upload an image to classify");
-        predictionLabel.setStyle(
-                "-fx-font-size: 20px; -fx-font-weight: bold; " +
-                        "-fx-text-fill: #e0e0e0;");
+        // 1. Consistency Fix: Match the font size of the result state
+        predictionLabel.setText("Awaiting Image...");
+        predictionLabel.setOpacity(1.0);
+        // We use 18px to match the 'updateUIWithResult' size exactly
+        predictionLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF;");
+
+        // 2. Clear result labels
         confidenceLabel.setText("");
         inferenceTimeLabel.setText("");
-        descriptionLabel.setText(
-                "Upload a dermoscopy image to see classification " +
-                        "results and Grad-CAM explanation.");
 
-        // Reset confidence bars
+        // 3. Reset description with consistent opacity
+        descriptionLabel.setText("Upload a dermoscopy image to see results.");
+        descriptionLabel.setOpacity(1.0);
+        descriptionLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #D1D5DB;");
+
         resetBars();
 
-        // Reset state
         currentImagePath = null;
-        lastResult       = null;
-        heatmapVisible   = false;
+        lastResult = null;
+        heatmapVisible = false;
         gradCamToggle.setSelected(false);
         if (exportReportButton != null) exportReportButton.setDisable(true);
 
-        predictionLabel.setOpacity(0);
+        // Hide only the specific result metrics
         confidenceLabel.setOpacity(0);
         confidenceStatLabel.setOpacity(0);
         inferenceTimeLabel.setOpacity(0);
-        descriptionLabel.setOpacity(0);
     }
-
     /**
      * Handles the Export Report button click.
      * Generates a high-resolution PNG clinical report using ReportExportUtil.

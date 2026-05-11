@@ -124,20 +124,24 @@ public final class AnimationUtil {
             return;
         }
 
+        ScaleTransition scaleIn = new ScaleTransition(Duration.millis(150), node);
+        scaleIn.setToX(HOVER_SCALE);
+        scaleIn.setToY(HOVER_SCALE);
+        scaleIn.setInterpolator(Interpolator.EASE_OUT);
+
+        ScaleTransition scaleOut = new ScaleTransition(Duration.millis(150), node);
+        scaleOut.setToX(1.0);
+        scaleOut.setToY(1.0);
+        scaleOut.setInterpolator(Interpolator.EASE_OUT);
+
         node.setOnMouseEntered(e -> {
-            ScaleTransition scale = new ScaleTransition(Duration.millis(150), node);
-            scale.setToX(HOVER_SCALE);
-            scale.setToY(HOVER_SCALE);
-            scale.setInterpolator(Interpolator.EASE_OUT);
-            scale.play();
+            scaleOut.stop();
+            scaleIn.play();
         });
 
         node.setOnMouseExited(e -> {
-            ScaleTransition scale = new ScaleTransition(Duration.millis(150), node);
-            scale.setToX(1.0);
-            scale.setToY(1.0);
-            scale.setInterpolator(Interpolator.EASE_OUT);
-            scale.play();
+            scaleIn.stop();
+            scaleOut.play();
         });
     }
 

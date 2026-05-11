@@ -246,13 +246,11 @@ public class GradCamRenderer {
      * @param x1    right edge (exclusive)
      * @param y1    bottom edge (exclusive)
      */
-    private void fillPatch(BufferedImage image,
-                           int x0, int y0, int x1, int y1) {
-        for (int y = y0; y < y1; y++) {
-            for (int x = x0; x < x1; x++) {
-                image.setRGB(x, y, OCCLUDE_COLOR);
-            }
-        }
+    private void fillPatch(BufferedImage image, int x0, int y0, int x1, int y1) {
+        Graphics2D g = image.createGraphics();
+        g.setColor(new Color(124, 116, 104));
+        g.fillRect(x0, y0, x1 - x0, y1 - y0);
+        g.dispose();
     }
 
     /**
@@ -329,31 +327,32 @@ public class GradCamRenderer {
      * @param radius blur half-kernel radius
      * @return smoothed copy (input unchanged)
      */
-    private float[][] gaussianBlur(float[][] data,
-                                   int width, int height, int radius) {
-        float[][] result = new float[height][width];
+    private float[][] gaussianBlur(float[][] data, int width, int height, int radius) {
+        float[][] temp = new float[height][width];
+        float[][] out  = new float[height][width];
 
+        // Pass 1: horizontal
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-
-                float sum   = 0f;
-                int   count = 0;
-
-                int y0 = Math.max(0, y - radius);
-                int y1 = Math.min(height - 1, y + radius);
-                int x0 = Math.max(0, x - radius);
-                int x1 = Math.min(width - 1, x + radius);
-
-                for (int ky = y0; ky <= y1; ky++) {
-                    for (int kx = x0; kx <= x1; kx++) {
-                        sum += data[ky][kx];
-                        count++;
-                    }
+                float sum = 0; int count = 0;
+                for (int kx = Math.max(0, x - radius); kx <= Math.min(width - 1, x + radius); kx++) {
+                    sum += data[y][kx]; count++;
                 }
-                result[y][x] = (count > 0) ? sum / count : 0f;
+                temp[y][x] = sum / count;
             }
         }
-        return result;
+
+        // Pass 2: vertical
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                float sum = 0; int count = 0;
+                for (int ky = Math.max(0, y - radius); ky <= Math.min(height - 1, y + radius); ky++) {
+                    sum += temp[ky][x]; count++;
+                }
+                out[y][x] = sum / count;
+            }
+        }
+        return out;
     }
 
     // ===== Visualization =====

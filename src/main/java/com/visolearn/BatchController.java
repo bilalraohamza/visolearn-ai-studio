@@ -25,15 +25,27 @@ import java.util.*;
  * on all of them at once, displaying results in a table
  * and providing CSV export functionality.
  *
- * All inference runs on a background thread using Task
- * to keep the UI responsive during batch processing.
+ * <p>All inference runs on a background thread using {@link Task}
+ * to keep the UI responsive during batch processing.</p>
+ *
+ * <h3>Quality Fixes (v1.1):</h3>
+ * <ul>
+ *   <li><b>Removed duplicated {@code CLASS_FULL_NAMES} array</b> — now uses
+ *       the centralized {@link SkinClassifier#CLASS_FULL_NAMES} constant.</li>
+ *   <li><b>Fixed locale-dependent {@code NumberFormatException}</b> in
+ *       {@link #showSummary} — {@link BatchResult} now stores the raw
+ *       {@code double} confidence value internally, avoiding brittle
+ *       string parsing of percentage-formatted display strings.</li>
+ * </ul>
  *
  * @author Rao Hamza Bilal
- * @version 1.0
+ * @version 1.1 (Quality Improvements)
  */
 public class BatchController implements Initializable {
 
-    // ===== FXML UI Elements =====
+    // ─────────────────────────────────────────────────────────────────────────
+    // FXML UI Elements
+    // ─────────────────────────────────────────────────────────────────────────
 
     @FXML private TextField    folderPathField;
     @FXML private Button       selectFolderButton;
@@ -49,13 +61,15 @@ public class BatchController implements Initializable {
     @FXML private Label        avgConfidenceLabel;
     @FXML private Label        processingTimeLabel;
 
-    @FXML private TableView<BatchResult>          resultsTable;
+    @FXML private TableView<BatchResult>           resultsTable;
     @FXML private TableColumn<BatchResult, String> fileNameColumn;
     @FXML private TableColumn<BatchResult, String> predictedClassColumn;
     @FXML private TableColumn<BatchResult, String> confidenceColumn;
     @FXML private TableColumn<BatchResult, String> inferenceTimeColumn;
 
-    // ===== Backend =====
+    // ─────────────────────────────────────────────────────────────────────────
+    // Backend Fields
+    // ─────────────────────────────────────────────────────────────────────────
 
     /** Classifier shared from the main application. */
     private SkinClassifier classifier;
@@ -63,12 +77,21 @@ public class BatchController implements Initializable {
     /** Selected folder path. */
     private File selectedFolder;
 
-    /** Batch results for CSV export. */
+    /** Batch results for CSV export and summary statistics. */
     private List<BatchResult> batchResults = new ArrayList<>();
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Batch Result Data Model
+    // ─────────────────────────────────────────────────────────────────────────
 
     /**
      * Represents one row in the batch results table.
-     * JavaFX TableView requires public properties with getters.
+     *
+     * <p>JavaFX {@link TableView} requires public properties with getters
+     * matching the {@link PropertyValueFactory} key strings. The raw
+     * {@code rawConfidence} field is stored internally for accurate summary
+     * calculations, while the formatted {@code confidence} string is used
+     * for table display.</p>
      */
     public static class BatchResult {
 
@@ -77,52 +100,62 @@ public class BatchController implements Initializable {
         private final String confidence;
         private final String inferenceTime;
 
+        /** Raw confidence value (0–100) stored for summary aggregation. */
+        private final double rawConfidence;
+
         /**
          * Constructs one batch result row.
          *
-         * @param fileName       image file name
-         * @param predictedClass predicted class name
-         * @param confidence     confidence percentage string
-         * @param inferenceTime  inference time in ms string
+         * @param fileName       Image file name (e.g., {@code "lesion_001.jpg"}).
+         * @param predictedClass Predicted class display name (e.g., {@code "Melanoma"}).
+         * @param rawConfidence  Raw confidence percentage as a {@code double} (0–100).
+         * @param inferenceTime  Inference time in milliseconds as a formatted string.
          */
         public BatchResult(String fileName, String predictedClass,
-                           String confidence, String inferenceTime) {
+                           double rawConfidence, String inferenceTime) {
             this.fileName       = fileName;
             this.predictedClass = predictedClass;
-            this.confidence     = confidence;
+            this.rawConfidence  = rawConfidence;
+            this.confidence     = String.format("%.2f%%", rawConfidence);
             this.inferenceTime  = inferenceTime;
         }
 
-        /** @return image file name */
+        /** @return Image file name. */
         public String getFileName()       { return fileName; }
 
-        /** @return predicted class name */
+        /** @return Predicted class display name. */
         public String getPredictedClass() { return predictedClass; }
 
-        /** @return confidence percentage string */
+        /**
+         * @return Formatted confidence percentage string for {@link TableView}
+         *         display (e.g., {@code "97.34%"}).
+         */
         public String getConfidence()     { return confidence; }
 
-        /** @return inference time string */
+        /** @return Inference time string (e.g., {@code "142 ms"}). */
         public String getInferenceTime()  { return inferenceTime; }
+
+        /**
+         * Returns the raw confidence value as a {@code double} (0–100).
+         *
+         * <p>Used by {@link #showSummary} to compute the average confidence
+         * without parsing the formatted display string, which can fail in
+         * non-US locales where {@link String#format} may produce {@code "97,34%"}
+         * instead of {@code "97.34%"}.</p>
+         *
+         * @return Raw confidence percentage (0.0–100.0).
+         */
+        public double getRawConfidence()  { return rawConfidence; }
     }
 
-    /**
-     * Full class names for display in the results table.
-     * Index matches class label order in labels.txt.
-     */
-    private static final String[] CLASS_FULL_NAMES = {
-            "Actinic Keratosis",
-            "Basal Cell Carcinoma",
-            "Benign Keratosis",
-            "Dermatofibroma",
-            "Melanoma",
-            "Melanocytic Nevus",
-            "Vascular Lesion"
-    };
+    // ─────────────────────────────────────────────────────────────────────────
+    // Initialization
+    // ─────────────────────────────────────────────────────────────────────────
 
     /**
      * Called automatically by JavaFX after FXML loads.
-     * Sets up the TableView columns and initializes classifier.
+     * Sets up the {@link TableView} columns and initializes the classifier
+     * reference on a background thread.
      *
      * @param url not used
      * @param rb  not used
@@ -143,8 +176,7 @@ public class BatchController implements Initializable {
             @Override
             protected Void call() throws Exception {
                 int attempts = 0;
-                while (MainApp.getSharedClassifier() == null
-                        && attempts < 30) {
+                while (MainApp.getSharedClassifier() == null && attempts < 30) {
                     Thread.sleep(500);
                     attempts++;
                 }
@@ -159,8 +191,7 @@ public class BatchController implements Initializable {
         initTask.setOnSucceeded(e -> {
             Platform.runLater(() -> {
                 selectFolderButton.setDisable(false);
-                System.out.println("BatchController: " +
-                        "shared classifier connected.");
+                System.out.println("BatchController: shared classifier connected.");
             });
         });
 
@@ -177,35 +208,38 @@ public class BatchController implements Initializable {
         initThread.start();
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Event Handlers
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
      * Handles the Browse Folder button click.
-     * Opens a directory chooser and stores the selected path.
+     * Opens a {@link DirectoryChooser} and stores the selected path.
      */
     @FXML
     private void handleSelectFolder() {
         DirectoryChooser chooser = new DirectoryChooser();
         chooser.setTitle("Select Image Folder");
 
-        File folder = chooser.showDialog(
-                selectFolderButton.getScene().getWindow());
+        File folder = chooser.showDialog(selectFolderButton.getScene().getWindow());
 
         if (folder != null) {
             selectedFolder = folder;
             folderPathField.setText(folder.getAbsolutePath());
             runBatchButton.setDisable(false);
 
-            // Count images in folder
             File[] images = getImageFiles(folder);
-            progressLabel.setText(
-                    images.length + " images found in folder.");
+            progressLabel.setText(images.length + " images found in folder.");
             progressBox.setVisible(true);
         }
     }
 
     /**
      * Handles the Run Analysis button click.
-     * Runs inference on all images in the selected folder
-     * on a background thread with live progress updates.
+     *
+     * <p>Runs inference on all images in the selected folder on a background
+     * thread with live progress updates. Results are appended to the table
+     * as each image completes.</p>
      */
     @FXML
     private void handleRunBatch() {
@@ -213,26 +247,22 @@ public class BatchController implements Initializable {
 
         File[] imageFiles = getImageFiles(selectedFolder);
         if (imageFiles.length == 0) {
-            progressLabel.setText(
-                    "No JPG or PNG images found in folder.");
+            progressLabel.setText("No JPG or PNG images found in folder.");
             return;
         }
 
-        // Clear previous results
         batchResults.clear();
         resultsTable.getItems().clear();
         summaryBox.setVisible(false);
         exportCsvButton.setDisable(true);
         runBatchButton.setDisable(true);
 
-        // Show progress
         progressBox.setVisible(true);
         batchProgressBar.setProgress(0);
         progressCountLabel.setText("0 / " + imageFiles.length);
 
         long startTime = System.currentTimeMillis();
 
-        // Run batch inference on background thread
         Task<Void> batchTask = new Task<>() {
             @Override
             protected Void call() throws Exception {
@@ -243,41 +273,35 @@ public class BatchController implements Initializable {
                     Path imagePath = imageFile.toPath();
 
                     try {
-                        // Run inference on this image
                         SkinClassifier.PredictionResult result =
                                 classifier.predict(imagePath);
 
-                        // Build table row
+                        // Use centralized class names from SkinClassifier
                         String fullName =
-                                CLASS_FULL_NAMES[result.classIndex];
+                                SkinClassifier.CLASS_FULL_NAMES[result.classIndex];
+
+                        // Pass raw confidence (0–100) to BatchResult constructor
                         BatchResult row = new BatchResult(
                                 imageFile.getName(),
                                 fullName,
-                                String.format("%.2f%%",
-                                        result.confidence),
+                                result.confidence,  // raw double, not formatted string
                                 result.inferenceTimeMs + " ms"
                         );
 
                         batchResults.add(row);
 
-                        // Update UI on JavaFX thread
                         final int current = i + 1;
                         final BatchResult finalRow = row;
                         Platform.runLater(() -> {
                             resultsTable.getItems().add(finalRow);
-                            batchProgressBar.setProgress(
-                                    (double) current / total);
-                            progressCountLabel.setText(
-                                    current + " / " + total);
-                            progressLabel.setText(
-                                    "Processing: " +
-                                            imageFile.getName());
+                            batchProgressBar.setProgress((double) current / total);
+                            progressCountLabel.setText(current + " / " + total);
+                            progressLabel.setText("Processing: " + imageFile.getName());
                         });
 
                     } catch (Exception e) {
-                        System.err.println("Error on " +
-                                imageFile.getName() + ": " +
-                                e.getMessage());
+                        System.err.println("Error on " + imageFile.getName()
+                                + ": " + e.getMessage());
                     }
                 }
                 return null;
@@ -286,15 +310,13 @@ public class BatchController implements Initializable {
 
         batchTask.setOnSucceeded(e -> {
             Platform.runLater(() -> {
-                long elapsed =
-                        System.currentTimeMillis() - startTime;
+                long elapsed = System.currentTimeMillis() - startTime;
                 showSummary(imageFiles.length, elapsed);
                 runBatchButton.setDisable(false);
                 exportCsvButton.setDisable(false);
                 progressLabel.setText("Analysis complete.");
-                System.out.println("BatchController: " +
-                        "processed " + imageFiles.length +
-                        " images in " + elapsed + "ms");
+                System.out.println("BatchController: processed "
+                        + imageFiles.length + " images in " + elapsed + "ms");
             });
         });
 
@@ -302,8 +324,8 @@ public class BatchController implements Initializable {
             Platform.runLater(() -> {
                 progressLabel.setText("Batch analysis failed.");
                 runBatchButton.setDisable(false);
-                System.err.println("Batch error: " +
-                        batchTask.getException().getMessage());
+                System.err.println("Batch error: "
+                        + batchTask.getException().getMessage());
             });
         });
 
@@ -314,31 +336,27 @@ public class BatchController implements Initializable {
 
     /**
      * Handles the Export CSV button click.
-     * Saves all batch results to a CSV file chosen by the user.
+     *
+     * <p>Saves all batch results to a CSV file chosen by the user via a
+     * {@link javafx.stage.FileChooser} dialog. Displays a success or error
+     * toast notification on completion.</p>
      */
     @FXML
     private void handleExportCsv() {
-        javafx.stage.FileChooser fileChooser =
-                new javafx.stage.FileChooser();
+        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
         fileChooser.setTitle("Save Results as CSV");
         fileChooser.setInitialFileName("visolearn_batch_results.csv");
         fileChooser.getExtensionFilters().add(
-                new javafx.stage.FileChooser.ExtensionFilter(
-                        "CSV Files", "*.csv")
+                new javafx.stage.FileChooser.ExtensionFilter("CSV Files", "*.csv")
         );
 
         File csvFile = fileChooser.showSaveDialog(
                 exportCsvButton.getScene().getWindow());
 
         if (csvFile != null) {
-            try (PrintWriter writer =
-                         new PrintWriter(new FileWriter(csvFile))) {
-                // Write header
-                writer.println(
-                        "File Name,Predicted Class," +
-                                "Confidence,Inference Time (ms)");
+            try (PrintWriter writer = new PrintWriter(new FileWriter(csvFile))) {
+                writer.println("File Name,Predicted Class,Confidence,Inference Time (ms)");
 
-                // Write each result row
                 for (BatchResult r : batchResults) {
                     writer.printf("%s,%s,%s,%s%n",
                             r.getFileName(),
@@ -349,49 +367,52 @@ public class BatchController implements Initializable {
                 }
 
                 progressLabel.setText("CSV saved: " + csvFile.getName());
-                System.out.println("BatchController: CSV exported to " + csvFile.getAbsolutePath());
+                System.out.println("BatchController: CSV exported to "
+                        + csvFile.getAbsolutePath());
 
-                // ---> Trigger the Success Toast
                 StackPane root = (StackPane) exportCsvButton.getScene().getRoot();
-                com.visolearn.utils.ToastUtil.showToast(root, "CSV Exported Successfully!", com.visolearn.utils.ToastUtil.ToastType.SUCCESS);
+                ToastUtil.showToast(root, "CSV Exported Successfully!",
+                        ToastUtil.ToastType.SUCCESS);
 
             } catch (Exception e) {
                 progressLabel.setText("CSV export failed.");
                 System.err.println("CSV error: " + e.getMessage());
 
-                // ---> Trigger the Error Toast
                 StackPane root = (StackPane) exportCsvButton.getScene().getRoot();
-                com.visolearn.utils.ToastUtil.showToast(root, "Failed to export CSV.", com.visolearn.utils.ToastUtil.ToastType.ERROR);
+                ToastUtil.showToast(root, "Failed to export CSV.",
+                        ToastUtil.ToastType.ERROR);
             }
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Summary & Helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
      * Displays summary statistics after batch analysis completes.
      *
-     * @param totalImages  total number of images processed
-     * @param elapsedMs    total processing time in milliseconds
+     * <p><b>Fixed:</b> Now aggregates confidence values using
+     * {@link BatchResult#getRawConfidence()} instead of parsing the
+     * formatted display string, which could fail in non-US locales
+     * where {@link String#format} produces {@code "97,34%"} instead
+     * of {@code "97.34%"}.</p>
+     *
+     * @param totalImages Total number of images processed.
+     * @param elapsedMs   Total processing time in milliseconds.
      */
     private void showSummary(int totalImages, long elapsedMs) {
         summaryBox.setVisible(true);
         totalImagesLabel.setText(String.valueOf(totalImages));
 
-        // Count predictions per class
         Map<String, Integer> classCounts = new HashMap<>();
         double totalConfidence = 0;
 
         for (BatchResult r : batchResults) {
-            classCounts.merge(r.getPredictedClass(), 1,
-                    Integer::sum);
-            // Parse confidence value
-            try {
-                String pctStr = r.getConfidence()
-                        .replace("%", "").trim();
-                totalConfidence += Double.parseDouble(pctStr);
-            } catch (NumberFormatException ignored) {}
+            classCounts.merge(r.getPredictedClass(), 1, Integer::sum);
+            totalConfidence += r.getRawConfidence();
         }
 
-        // Find most common predicted class
         String topClass = classCounts.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
                 .map(Map.Entry::getKey)
@@ -399,13 +420,10 @@ public class BatchController implements Initializable {
 
         topClassLabel.setText(topClass);
 
-        // Average confidence
         double avgConf = batchResults.isEmpty() ? 0 :
                 totalConfidence / batchResults.size();
-        avgConfidenceLabel.setText(
-                String.format("%.1f%%", avgConf));
+        avgConfidenceLabel.setText(String.format("%.1f%%", avgConf));
 
-        // Total processing time
         if (elapsedMs < 1000) {
             processingTimeLabel.setText(elapsedMs + " ms");
         } else {
@@ -418,13 +436,13 @@ public class BatchController implements Initializable {
      * Returns all JPG and PNG image files in a given folder.
      * Filters out non-image files and subdirectories.
      *
-     * @param folder the directory to scan
-     * @return array of image files found
+     * @param folder The directory to scan.
+     * @return Array of image files found, or an empty array if none exist.
      */
     private File[] getImageFiles(File folder) {
         File[] files = folder.listFiles(f ->
                 f.isFile() && (
-                        f.getName().toLowerCase().endsWith(".jpg") ||
+                        f.getName().toLowerCase().endsWith(".jpg")  ||
                                 f.getName().toLowerCase().endsWith(".jpeg") ||
                                 f.getName().toLowerCase().endsWith(".png")
                 )

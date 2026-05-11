@@ -34,7 +34,7 @@ import java.util.List;
  * extracted — regardless of whether the block exits normally or via exception.</p>
  *
  * @author Rao Hamza Bilal
- * @version 2.2 (Memory Leak Fix — NDList try-with-resources)
+ * @version 2.3 (Centralized Class Name Constants)
  */
 public class SkinClassifier implements AutoCloseable {
 
@@ -46,6 +46,32 @@ public class SkinClassifier implements AutoCloseable {
     private static final String DENSENET_RESOURCE = "/densenet169_v2.onnx";
     private static final String LABELS_RESOURCE   = "/labels.txt";
     private static final int    NUM_CLASSES       = 7;
+
+    /**
+     * Canonical full-text names for all 7 skin condition classes, indexed to
+     * match model output logits and the {@code labels.txt} resource file.
+     *
+     * <p>This centralized constant prevents duplication across UI controllers,
+     * report generators, and batch analysis modules. Any component displaying
+     * or exporting class names should reference this array rather than hardcoding
+     * strings inline.</p>
+     *
+     * <table border="1">
+     *   <caption>Class index mapping</caption>
+     *   <tr><th>Index</th><th>Full Name</th></tr>
+     *   <tr><td>0</td><td>Actinic Keratosis</td></tr>
+     *   <tr><td>1</td><td>Basal Cell Carcinoma</td></tr>
+     *   <tr><td>2</td><td>Benign Keratosis</td></tr>
+     *   <tr><td>3</td><td>Dermatofibroma</td></tr>
+     *   <tr><td>4</td><td>Melanoma</td></tr>
+     *   <tr><td>5</td><td>Melanocytic Nevus</td></tr>
+     *   <tr><td>6</td><td>Vascular Lesion</td></tr>
+     * </table>
+     */
+    public static final String[] CLASS_FULL_NAMES = {
+            "Actinic Keratosis", "Basal Cell Carcinoma", "Benign Keratosis",
+            "Dermatofibroma", "Melanoma", "Melanocytic Nevus", "Vascular Lesion"
+    };
 
     // ─────────────────────────────────────────────────────────────────────────
     // Model & Predictor Fields

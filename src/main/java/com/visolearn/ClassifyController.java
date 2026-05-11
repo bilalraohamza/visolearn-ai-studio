@@ -33,17 +33,24 @@ import java.util.ResourceBundle;
  * Handles image upload, inference, confidence bar updates,
  * and Grad-CAM heatmap overlay toggle.
  *
- * Threading model:
- * All DJL inference runs on a background Task thread.
- * All UI updates run on the JavaFX Application Thread
- * via Platform.runLater() to prevent freezing.
+ * <p><b>Threading model:</b> All DJL inference runs on a background
+ * {@link Task} thread. All UI updates run on the JavaFX Application Thread
+ * via {@link Platform#runLater(Runnable)} to prevent freezing.</p>
+ *
+ * <h3>Quality Improvements (v1.1):</h3>
+ * <ul>
+ *   <li><b>Removed duplicated {@code CLASS_FULL_NAMES} array</b> — now uses
+ *       the centralized {@link SkinClassifier#CLASS_FULL_NAMES} constant.</li>
+ * </ul>
  *
  * @author Rao Hamza Bilal
- * @version 1.0
+ * @version 1.1 (Centralized Class Names)
  */
 public class ClassifyController implements Initializable {
 
-    // ===== FXML UI Elements =====
+    // ─────────────────────────────────────────────────────────────────────────
+    // FXML UI Elements
+    // ─────────────────────────────────────────────────────────────────────────
 
     @FXML private StackPane imageContainer;
     @FXML private VBox      placeholderBox;
@@ -56,24 +63,20 @@ public class ClassifyController implements Initializable {
     @FXML private HBox      loadingBox;
     @FXML private Label     loadingLabel;
 
-    // Prediction result labels
     @FXML private Label predictionLabel;
     @FXML private Label confidenceLabel;
     @FXML private Label confidenceStatLabel;
     @FXML private Label inferenceTimeLabel;
     @FXML private Label descriptionLabel;
 
-    // Confidence bars for all 7 classes
-    @FXML private ProgressBar bar0, bar1, bar2, bar3,
-            bar4, bar5, bar6;
+    @FXML private ProgressBar bar0, bar1, bar2, bar3, bar4, bar5, bar6;
+    @FXML private Label       pct0, pct1, pct2, pct3, pct4, pct5, pct6;
 
-    // Confidence percentage labels
-    @FXML private Label pct0, pct1, pct2, pct3,
-            pct4, pct5, pct6;
+    // ─────────────────────────────────────────────────────────────────────────
+    // Backend Components
+    // ─────────────────────────────────────────────────────────────────────────
 
-    // ===== Backend components =====
-
-    /** Skin lesion classifier using EfficientNet-B4 ONNX model. */
+    /** Skin lesion classifier using ensemble EfficientNet-B4 + DenseNet-169 ONNX models. */
     private SkinClassifier classifier;
 
     /** Grad-CAM heatmap renderer. */
@@ -88,23 +91,14 @@ public class ClassifyController implements Initializable {
     /** Whether the Grad-CAM heatmap is currently visible. */
     private boolean heatmapVisible = false;
 
-    /**
-     * Full names for display in the UI.
-     * Index matches class label order in labels.txt.
-     */
-    private static final String[] CLASS_FULL_NAMES = {
-            "Actinic Keratosis",
-            "Basal Cell Carcinoma",
-            "Benign Keratosis",
-            "Dermatofibroma",
-            "Melanoma",
-            "Melanocytic Nevus",
-            "Vascular Lesion"
-    };
+    // ─────────────────────────────────────────────────────────────────────────
+    // Class Descriptions
+    // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Short descriptions for each skin lesion class.
+     * Short clinical descriptions for each skin lesion class.
      * Shown in the description box after classification.
+     * Index matches {@link SkinClassifier#CLASS_FULL_NAMES}.
      */
     private static final String[] CLASS_DESCRIPTIONS = {
             "Actinic Keratosis (AKIEC): A rough, scaly patch caused by " +
@@ -123,26 +117,26 @@ public class ClassifyController implements Initializable {
                     "Usually benign, including angiomas and pyogenic granulomas."
     };
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Initialization
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
      * Called automatically by JavaFX after FXML is loaded.
-     * Initializes the classifier and drag-and-drop support.
+     * Initializes the classifier reference (shared from {@link MainApp})
+     * and sets up drag-and-drop support.
      *
-     * @param url      not used
-     * @param rb       not used
+     * @param url not used
+     * @param rb  not used
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // GradCamRenderer constructed after classifier is ready (see initTask.setOnSucceeded)
 
-        // Use shared classifier from MainApp
-        // Avoids loading ONNX model twice
         Task<Void> initTask = new Task<>() {
             @Override
             protected Void call() throws Exception {
-                // Wait until shared classifier is ready
                 int attempts = 0;
-                while (MainApp.getSharedClassifier() == null
-                        && attempts < 30) {
+                while (MainApp.getSharedClassifier() == null && attempts < 30) {
                     Thread.sleep(500);
                     attempts++;
                 }
@@ -158,7 +152,6 @@ public class ClassifyController implements Initializable {
             Platform.runLater(() -> {
                 gradCamRenderer = new GradCamRenderer(classifier);
                 uploadButton.setDisable(false);
-                // Use a shorter string to avoid truncation
                 predictionLabel.setText("Awaiting Image...");
                 predictionLabel.setOpacity(1.0);
             });
@@ -184,9 +177,13 @@ public class ClassifyController implements Initializable {
         setupAnimations();
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Event Handlers
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
      * Handles the Upload Image button click.
-     * Opens a file chooser and runs inference on the selected image.
+     * Opens a {@link FileChooser} and runs inference on the selected image.
      */
     @FXML
     private void handleUpload() {
@@ -218,17 +215,14 @@ public class ClassifyController implements Initializable {
         heatmapImageView.setVisible(false);
         placeholderBox.setVisible(true);
 
-        // 1. Consistency Fix: Match the font size of the result state
         predictionLabel.setText("Awaiting Image...");
         predictionLabel.setOpacity(1.0);
-        // We use 18px to match the 'updateUIWithResult' size exactly
-        predictionLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF;");
+        predictionLabel.setStyle(
+                "-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF;");
 
-        // 2. Clear result labels
         confidenceLabel.setText("");
         inferenceTimeLabel.setText("");
 
-        // 3. Reset description with consistent opacity
         descriptionLabel.setText("Upload a dermoscopy image to see results.");
         descriptionLabel.setOpacity(1.0);
         descriptionLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #D1D5DB;");
@@ -241,25 +235,25 @@ public class ClassifyController implements Initializable {
         gradCamToggle.setSelected(false);
         if (exportReportButton != null) exportReportButton.setDisable(true);
 
-        // Hide only the specific result metrics
         confidenceLabel.setOpacity(0);
         confidenceStatLabel.setOpacity(0);
         inferenceTimeLabel.setOpacity(0);
     }
+
     /**
      * Handles the Export Report button click.
-     * Generates a high-resolution PNG clinical report using ReportExportUtil.
+     * Generates a high-resolution PNG clinical report using {@link ReportExportUtil}.
      */
     @FXML
     private void handleExportReport() {
         if (lastResult == null || currentImagePath == null) return;
 
         Image original = inputImageView.getImage();
-        Image heatmap = heatmapImageView.getImage();
+        Image heatmap  = heatmapImageView.getImage();
 
-        String topClass = CLASS_FULL_NAMES[lastResult.classIndex];
-        double confidence = lastResult.confidence;
-        String inferenceMs = lastResult.inferenceTimeMs + " ms";
+        String topClass     = SkinClassifier.CLASS_FULL_NAMES[lastResult.classIndex];
+        double confidence   = lastResult.confidence;
+        String inferenceMs  = lastResult.inferenceTimeMs + " ms";
 
         ReportExportUtil.saveReportAsImage(
                 exportReportButton.getScene().getWindow(),
@@ -278,30 +272,33 @@ public class ClassifyController implements Initializable {
     @FXML
     private void handleGradCamToggle() {
         if (gradCamToggle.isSelected() && lastResult != null) {
-            // Generate and show heatmap
             generateAndShowHeatmap();
         } else {
-            // Hide heatmap
             heatmapImageView.setVisible(false);
             heatmapVisible = false;
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Inference Pipeline
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * Loads an image from the given path, displays it in the
-     * image view, and runs inference on a background thread.
+     * Loads an image from the given path, displays it in the image view,
+     * and runs inference on a background thread.
      *
-     * @param imagePath path to the image file
+     * @param imagePath Path to the image file.
      */
     private void loadAndClassify(Path imagePath) {
         currentImagePath = imagePath;
 
-        // Display the original image immediately
         try {
             Image fxImage = new Image(imagePath.toUri().toString());
             inputImageView.setImage(fxImage);
             inputImageView.setVisible(true);
-            if (AnimationUtil.animationsEnabled()) AnimationUtil.fadeIn(inputImageView, 500);
+            if (AnimationUtil.animationsEnabled()) {
+                AnimationUtil.fadeIn(inputImageView, 500);
+            }
             placeholderBox.setVisible(false);
             heatmapImageView.setVisible(false);
             gradCamToggle.setSelected(false);
@@ -311,22 +308,18 @@ public class ClassifyController implements Initializable {
             return;
         }
 
-        // Show loading indicator
         loadingBox.setVisible(true);
         AnimationUtil.fadeIn(loadingBox, 300);
         loadingLabel.setText("Running inference...");
         uploadButton.setDisable(true);
 
-        // Run inference on background thread
         Task<SkinClassifier.PredictionResult> inferTask = new Task<>() {
             @Override
-            protected SkinClassifier.PredictionResult call()
-                    throws Exception {
+            protected SkinClassifier.PredictionResult call() throws Exception {
                 return classifier.predict(imagePath);
             }
         };
 
-        // Update UI when inference completes
         inferTask.setOnSucceeded(e -> {
             Platform.runLater(() -> {
                 lastResult = inferTask.getValue();
@@ -345,8 +338,8 @@ public class ClassifyController implements Initializable {
                 predictionLabel.setText("Inference failed.");
                 loadingBox.setVisible(false);
                 uploadButton.setDisable(false);
-                System.err.println("Inference error: " +
-                        inferTask.getException().getMessage());
+                System.err.println("Inference error: "
+                        + inferTask.getException().getMessage());
             });
         });
 
@@ -359,13 +352,11 @@ public class ClassifyController implements Initializable {
      * Updates all UI elements with the prediction result.
      * Always called on the JavaFX Application Thread.
      *
-     * @param result the prediction result from SkinClassifier
+     * @param result The prediction result from {@link SkinClassifier}.
      */
-    private void updateUIWithResult(
-            SkinClassifier.PredictionResult result) {
+    private void updateUIWithResult(SkinClassifier.PredictionResult result) {
 
-        // Update top prediction display
-        String fullName = CLASS_FULL_NAMES[result.classIndex];
+        String fullName = SkinClassifier.CLASS_FULL_NAMES[result.classIndex];
         predictionLabel.setText(fullName);
         AnimationUtil.slideUp(predictionLabel, 500);
         predictionLabel.setStyle(
@@ -377,38 +368,34 @@ public class ClassifyController implements Initializable {
         confidenceStatLabel.setText(
                 String.format("%.1f%%", result.confidence));
         inferenceTimeLabel.setText(
-                String.format("Inference time: %d ms",
-                        result.inferenceTimeMs));
+                String.format("Inference time: %d ms", result.inferenceTimeMs));
 
-        // Update class description
-        descriptionLabel.setText(
-                CLASS_DESCRIPTIONS[result.classIndex]);
+        descriptionLabel.setText(CLASS_DESCRIPTIONS[result.classIndex]);
 
         AnimationUtil.fadeIn(confidenceLabel, 700);
         AnimationUtil.fadeIn(confidenceStatLabel, 800);
         AnimationUtil.fadeIn(inferenceTimeLabel, 900);
         AnimationUtil.fadeIn(descriptionLabel, 1000);
 
-        // Update all 7 confidence bars
-        ProgressBar[] bars = {bar0,bar1,bar2,bar3,bar4,bar5,bar6};
-        Label[]       pcts = {pct0,pct1,pct2,pct3,pct4,pct5,pct6};
+        ProgressBar[] bars = {bar0, bar1, bar2, bar3, bar4, bar5, bar6};
+        Label[]       pcts = {pct0, pct1, pct2, pct3, pct4, pct5, pct6};
 
         for (int i = 0; i < 7; i++) {
             float prob = result.allProbabilities[i];
-            AnimationUtil.animateProgressBar(
-                    bars[i],
-                    prob,
-                    900
-            );
+            AnimationUtil.animateProgressBar(bars[i], prob, 900);
             pcts[i].setText(String.format("%.1f%%", prob * 100));
         }
 
         if (exportReportButton != null) exportReportButton.setDisable(false);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Grad-CAM Heatmap Generation
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * Generates the Grad-CAM heatmap on a background thread
-     * and overlays it on the input image when ready.
+     * Generates the Grad-CAM heatmap on a background thread and overlays it
+     * on the input image when ready.
      */
     private void generateAndShowHeatmap() {
         if (currentImagePath == null || lastResult == null) return;
@@ -425,8 +412,7 @@ public class ClassifyController implements Initializable {
                         lastResult,
                         (completed, total) -> Platform.runLater(() ->
                                 loadingLabel.setText(String.format(
-                                        "Saliency map... (%d / %d)",
-                                        completed, total))
+                                        "Saliency map... (%d / %d)", completed, total))
                         )
                 );
             }
@@ -435,8 +421,7 @@ public class ClassifyController implements Initializable {
         heatmapTask.setOnSucceeded(e -> {
             Platform.runLater(() -> {
                 BufferedImage heatmapImg = heatmapTask.getValue();
-                Image fxHeatmap = SwingFXUtils.toFXImage(
-                        heatmapImg, null);
+                Image fxHeatmap = SwingFXUtils.toFXImage(heatmapImg, null);
                 heatmapImageView.setImage(fxHeatmap);
                 heatmapImageView.setVisible(true);
                 AnimationUtil.fadeIn(heatmapImageView, 600);
@@ -448,8 +433,8 @@ public class ClassifyController implements Initializable {
         heatmapTask.setOnFailed(e -> {
             Platform.runLater(() -> {
                 loadingBox.setVisible(false);
-                System.err.println("Grad-CAM error: " +
-                        heatmapTask.getException().getMessage());
+                System.err.println("Grad-CAM error: "
+                        + heatmapTask.getException().getMessage());
             });
         });
 
@@ -458,8 +443,12 @@ public class ClassifyController implements Initializable {
         heatmapThread.start();
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Setup Helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * Sets up drag and drop support on the image container.
+     * Sets up drag-and-drop support on the image container.
      * Users can drag image files directly onto the image panel.
      */
     private void setupDragAndDrop() {
@@ -476,7 +465,7 @@ public class ClassifyController implements Initializable {
             if (!files.isEmpty()) {
                 File dropped = files.get(0);
                 String name  = dropped.getName().toLowerCase();
-                if (name.endsWith(".jpg") ||
+                if (name.endsWith(".jpg")  ||
                         name.endsWith(".jpeg") ||
                         name.endsWith(".png")) {
                     loadAndClassify(dropped.toPath());
@@ -486,11 +475,16 @@ public class ClassifyController implements Initializable {
         });
     }
 
+    /**
+     * Applies entrance animations and hover effects to interactive elements.
+     */
     private void setupAnimations() {
         AnimationUtil.fadeIn(imageContainer, 700);
         AnimationUtil.applyButtonHover(uploadButton);
         AnimationUtil.applyButtonHover(clearButton);
-        if (exportReportButton != null) AnimationUtil.applyButtonHover(exportReportButton);
+        if (exportReportButton != null) {
+            AnimationUtil.applyButtonHover(exportReportButton);
+        }
         AnimationUtil.fadeIn(predictionLabel, 800);
     }
 
@@ -499,8 +493,8 @@ public class ClassifyController implements Initializable {
      * Called when clearing the current image.
      */
     private void resetBars() {
-        ProgressBar[] bars = {bar0,bar1,bar2,bar3,bar4,bar5,bar6};
-        Label[]       pcts = {pct0,pct1,pct2,pct3,pct4,pct5,pct6};
+        ProgressBar[] bars = {bar0, bar1, bar2, bar3, bar4, bar5, bar6};
+        Label[]       pcts = {pct0, pct1, pct2, pct3, pct4, pct5, pct6};
         for (int i = 0; i < 7; i++) {
             bars[i].setProgress(0);
             pcts[i].setText("0%");

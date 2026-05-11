@@ -119,6 +119,9 @@ public class TrainingLogLoader {
      * @return The {@link EpochData} entry with the maximum {@code valAcc}.
      */
     public EpochData getBestEpoch(List<EpochData> epochs) {
+        if (epochs == null || epochs.isEmpty()) {
+            throw new IllegalArgumentException("Epoch list is empty — check the JSON log file.");
+        }
         EpochData best = epochs.get(0);
         for (EpochData e : epochs) {
             if (e.valAcc > best.valAcc) {

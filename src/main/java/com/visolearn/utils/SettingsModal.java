@@ -1,11 +1,11 @@
 package com.visolearn.utils;
 
+import com.visolearn.MainController;
 import javafx.animation.*;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.effect.DropShadow;
-import javafx.scene.effect.GaussianBlur;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -13,6 +13,7 @@ import javafx.scene.shape.SVGPath;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.util.Duration;
+
 import java.util.prefs.Preferences;
 
 /**
@@ -22,6 +23,12 @@ import java.util.prefs.Preferences;
  * glass-card modal with animated entrance and exit transitions. The modal
  * is appended to—and removed from—the supplied root {@link StackPane}
  * without affecting any existing scene structure.</p>
+ *
+ * <p>When the user clicks "Save Changes", all preferences are persisted
+ * via {@link java.util.prefs.Preferences}, and the selected color theme
+ * is applied immediately to the current scene via
+ * {@link com.visolearn.MainController#applyTheme(javafx.scene.Scene, String)}
+ * without requiring an application restart.</p>
  *
  * <h3>Usage:</h3>
  * <pre>{@code
@@ -37,37 +44,37 @@ public final class SettingsModal {
     // ─────────────────────────────────────────────────────────────────────────
 
     private static final String COLOR_OVERLAY_BG        = "rgba(0,0,0,0.60)";
-    private static final String COLOR_MODAL_BG           = "#252533";
-    private static final String COLOR_MODAL_BORDER       = "rgba(255,255,255,0.10)";
-    private static final String COLOR_ACCENT_EMERALD     = "#10B981";
-    private static final String COLOR_ACCENT_HOVER       = "#059669";
-    private static final String COLOR_TEXT_PRIMARY       = "#F8F9FA";
-    private static final String COLOR_TEXT_SECONDARY     = "#9CA3AF";
-    private static final String COLOR_TEXT_MUTED         = "#6B7280";
-    private static final String COLOR_DIVIDER            = "rgba(255,255,255,0.08)";
-    private static final String COLOR_CONTROL_BG         = "#1E1E2A";
-    private static final String COLOR_CONTROL_BORDER     = "rgba(255,255,255,0.12)";
-    private static final String COLOR_SLIDER_TRACK       = "#374151";
-    private static final String COLOR_CLOSE_BTN_HOVER    = "rgba(255,255,255,0.10)";
+    private static final String COLOR_MODAL_BG          = "#252533";
+    private static final String COLOR_MODAL_BORDER      = "rgba(255,255,255,0.10)";
+    private static final String COLOR_ACCENT_EMERALD    = "#10B981";
+    private static final String COLOR_ACCENT_HOVER      = "#059669";
+    private static final String COLOR_TEXT_PRIMARY      = "#F8F9FA";
+    private static final String COLOR_TEXT_SECONDARY    = "#9CA3AF";
+    private static final String COLOR_TEXT_MUTED        = "#6B7280";
+    private static final String COLOR_DIVIDER           = "rgba(255,255,255,0.08)";
+    private static final String COLOR_CONTROL_BG        = "#1E1E2A";
+    private static final String COLOR_CONTROL_BORDER    = "rgba(255,255,255,0.12)";
+    private static final String COLOR_SLIDER_TRACK      = "#374151";
+    private static final String COLOR_CLOSE_BTN_HOVER   = "rgba(255,255,255,0.10)";
 
     // Animation
-    private static final double ANIM_FADE_IN_MS          = 220;
-    private static final double ANIM_SLIDE_IN_MS         = 280;
-    private static final double ANIM_FADE_OUT_MS         = 180;
-    private static final double MODAL_SLIDE_OFFSET_PX    = -24;
+    private static final double ANIM_FADE_IN_MS         = 220;
+    private static final double ANIM_SLIDE_IN_MS        = 280;
+    private static final double ANIM_FADE_OUT_MS        = 180;
+    private static final double MODAL_SLIDE_OFFSET_PX   = -24;
 
     // Layout
-    private static final double MODAL_MAX_WIDTH          = 450;
-    private static final double MODAL_MAX_HEIGHT         = 580;
+    private static final double MODAL_MAX_WIDTH         = 450;
+    private static final double MODAL_MAX_HEIGHT        = 580;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Control References — set by builder methods, read by saveBtn handler
     // ─────────────────────────────────────────────────────────────────────────
 
-    private static Slider            opacitySlider;
-    private static CheckBox          animCheckBox;
-    private static ComboBox<String>  resolutionCombo;
-    private static ComboBox<String>  themeCombo;
+    private static Slider           opacitySlider;
+    private static CheckBox         animCheckBox;
+    private static ComboBox<String> resolutionCombo;
+    private static ComboBox<String> themeCombo;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Private Constructor
@@ -117,13 +124,8 @@ public final class SettingsModal {
      */
     private static StackPane buildOverlay() {
         StackPane overlay = new StackPane();
-
-        // Bind to parent dimensions so it always fills the root pane
         overlay.setStyle("-fx-background-color: rgba(0,0,0,0.60);");
-
-        // Ensure overlay captures all mouse events (blocks interaction below)
         overlay.setPickOnBounds(true);
-
         return overlay;
     }
 
@@ -143,14 +145,13 @@ public final class SettingsModal {
         card.setAlignment(Pos.TOP_CENTER);
 
         card.setStyle(
-                "-fx-background-color: " + COLOR_MODAL_BG + ";"   +
+                "-fx-background-color: " + COLOR_MODAL_BG + ";"    +
                         "-fx-background-radius: 14px;"                      +
                         "-fx-border-radius: 14px;"                          +
                         "-fx-border-color: " + COLOR_MODAL_BORDER + ";"    +
                         "-fx-border-width: 1px;"
         );
 
-        // Drop shadow for depth / elevation
         DropShadow shadow = new DropShadow();
         shadow.setColor(Color.rgb(0, 0, 0, 0.65));
         shadow.setRadius(40);
@@ -159,24 +160,20 @@ public final class SettingsModal {
         shadow.setSpread(0.02);
         card.setEffect(shadow);
 
-        // Prevent clicks on the card from bubbling to the overlay light-dismiss
         card.setOnMouseClicked(e -> e.consume());
 
-        // ── Shared close action (used by both X button and Save button) ───────
         Runnable closeAction = () -> playExitAnimation(rootPane, overlay);
 
-        // ── Build sections ────────────────────────────────────────────────────
-        VBox header   = buildHeader(closeAction);
+        VBox   header = buildHeader(closeAction);
         Region div1   = buildDivider();
-        VBox body     = buildBody();
+        VBox   body   = buildBody();
         Region div2   = buildDivider();
-        HBox footer   = buildFooter(closeAction);
+        HBox   footer = buildFooter(closeAction, rootPane);
 
         VBox.setVgrow(body, Priority.ALWAYS);
 
         card.getChildren().addAll(header, div1, body, div2, footer);
 
-        // Initial state for entrance animation
         card.setOpacity(0);
         card.setTranslateY(MODAL_SLIDE_OFFSET_PX);
 
@@ -196,7 +193,6 @@ public final class SettingsModal {
         row.setPadding(new Insets(20, 20, 20, 24));
         row.setSpacing(12);
 
-        // Settings gear icon (SVG path)
         SVGPath gearIcon = new SVGPath();
         gearIcon.setContent(
                 "M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 " +
@@ -215,7 +211,6 @@ public final class SettingsModal {
         gearIcon.setScaleX(0.9);
         gearIcon.setScaleY(0.9);
 
-        // Title text block
         VBox titleBlock = new VBox(2);
         HBox.setHgrow(titleBlock, Priority.ALWAYS);
 
@@ -229,7 +224,6 @@ public final class SettingsModal {
 
         titleBlock.getChildren().addAll(title, subtitle);
 
-        // Close (X) button
         Button closeBtn = buildCloseButton(closeAction);
 
         row.getChildren().addAll(gearIcon, titleBlock, closeBtn);
@@ -251,10 +245,10 @@ public final class SettingsModal {
         btn.setMaxSize(32, 32);
 
         String baseStyle =
-                "-fx-background-color: transparent;"     +
-                        "-fx-background-radius: 50%;"            +
-                        "-fx-text-fill: " + COLOR_TEXT_SECONDARY + ";" +
-                        "-fx-border-color: transparent;"         +
+                "-fx-background-color: transparent;"                +
+                        "-fx-background-radius: 50%;"                       +
+                        "-fx-text-fill: " + COLOR_TEXT_SECONDARY + ";"     +
+                        "-fx-border-color: transparent;"                    +
                         "-fx-cursor: hand;";
 
         String hoverStyle =
@@ -284,29 +278,24 @@ public final class SettingsModal {
         body.setPadding(new Insets(20, 24, 20, 24));
         body.setSpacing(6);
 
-        // ── Row 1: Grad-CAM Opacity ───────────────────────────────────────────
         VBox opacityRow = buildSliderSetting(
                 "Grad-CAM Overlay Opacity",
                 "Controls the intensity of the saliency heatmap overlay",
                 0.0, 1.0, 0.6
         );
 
-        // ── Spacer ─────────────────────────────────────────────────────────────
         Region spacer1 = new Region();
         spacer1.setPrefHeight(8);
 
-        // ── Row 2: UI Animations ──────────────────────────────────────────────
         HBox animRow = buildCheckBoxSetting(
                 "Enable Fluid UI Animations",
                 "Smooth transitions, toasts, and motion effects throughout the app",
                 true
         );
 
-        // ── Spacer ─────────────────────────────────────────────────────────────
         Region spacer2 = new Region();
         spacer2.setPrefHeight(8);
 
-        // ── Row 3: Report Resolution ──────────────────────────────────────────
         HBox resolutionRow = buildComboBoxSetting(
                 "Report Export Resolution",
                 "Sets the pixel density of exported clinical report images",
@@ -314,11 +303,9 @@ public final class SettingsModal {
                 "High / Retina (2×)"
         );
 
-        // ── Spacer ─────────────────────────────────────────────────────────────
         Region spacer3 = new Region();
         spacer3.setPrefHeight(8);
 
-        // ── Row 4: Theme Mode (bonus setting to fill the card nicely) ─────────
         HBox themeRow = buildComboBoxSetting(
                 "Color Theme",
                 "Visual theme applied across the entire application",
@@ -342,12 +329,6 @@ public final class SettingsModal {
 
     /**
      * Builds a labeled Slider setting row inside a styled card panel.
-     *
-     * @param title       Setting display name.
-     * @param description Short descriptive hint shown in muted text.
-     * @param min         Slider minimum value.
-     * @param max         Slider maximum value.
-     * @param defaultVal  Initial slider thumb position.
      */
     private static VBox buildSliderSetting(
             String title, String description,
@@ -355,7 +336,6 @@ public final class SettingsModal {
 
         VBox panel = buildSettingPanel();
 
-        // Labels
         HBox labelRow = new HBox();
         labelRow.setAlignment(Pos.CENTER_LEFT);
 
@@ -366,13 +346,12 @@ public final class SettingsModal {
         Label descLabel = buildSettingDescLabel(description);
         textBlock.getChildren().addAll(nameLabel, descLabel);
 
-        // Live value readout
         Label valueReadout = new Label(String.format("%.0f%%", defaultVal * 100));
         valueReadout.setFont(Font.font("System", FontWeight.BOLD, 12));
         valueReadout.setStyle(
-                "-fx-text-fill: " + COLOR_ACCENT_EMERALD + ";"  +
-                        "-fx-background-color: rgba(16,185,129,0.12);"  +
-                        "-fx-background-radius: 5px;"                    +
+                "-fx-text-fill: " + COLOR_ACCENT_EMERALD + ";"   +
+                        "-fx-background-color: rgba(16,185,129,0.12);"   +
+                        "-fx-background-radius: 5px;"                     +
                         "-fx-padding: 2 7 2 7;"
         );
         valueReadout.setMinWidth(46);
@@ -380,7 +359,6 @@ public final class SettingsModal {
 
         labelRow.getChildren().addAll(textBlock, valueReadout);
 
-        // Slider
         Slider slider = new Slider(min, max, defaultVal);
         opacitySlider = slider;
         slider.setShowTickMarks(false);
@@ -394,7 +372,6 @@ public final class SettingsModal {
                         "-fx-accent: " + COLOR_ACCENT_EMERALD + ";"
         );
 
-        // Update readout label live
         slider.valueProperty().addListener((obs, oldVal, newVal) ->
                 valueReadout.setText(String.format("%.0f%%", newVal.doubleValue() * 100))
         );
@@ -419,17 +396,15 @@ public final class SettingsModal {
         Label descLabel = buildSettingDescLabel(description);
         textBlock.getChildren().addAll(nameLabel, descLabel);
 
-        // Custom-styled toggle using CheckBox
         CheckBox checkBox = new CheckBox();
         animCheckBox = checkBox;
         checkBox.setSelected(defaultSelected);
         checkBox.setStyle(
-                "-fx-mark-color: white;"                                      +
-                        "-fx-focus-color: transparent;"                                +
+                "-fx-mark-color: white;"            +
+                        "-fx-focus-color: transparent;"     +
                         "-fx-faint-focus-color: transparent;"
         );
 
-        // Wrap checkbox in a custom toggle pill
         StackPane togglePill = buildTogglePill(checkBox);
 
         HBox row = new HBox(14);
@@ -459,21 +434,20 @@ public final class SettingsModal {
         combo.getItems().addAll(options);
         combo.setValue(defaultOption);
 
-        // Assign to the correct static reference based on which setting this is
         if (title.equals("Report Export Resolution")) resolutionCombo = combo;
         else if (title.equals("Color Theme"))         themeCombo      = combo;
+
         combo.setMaxWidth(Double.MAX_VALUE);
         combo.setStyle(
-                "-fx-background-color: " + COLOR_CONTROL_BG + ";"   +
-                        "-fx-border-color: " + COLOR_CONTROL_BORDER + ";"   +
-                        "-fx-border-radius: 7px;"                            +
-                        "-fx-background-radius: 7px;"                        +
-                        "-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";"        +
-                        "-fx-prompt-text-fill: " + COLOR_TEXT_MUTED + ";"   +
+                "-fx-background-color: " + COLOR_CONTROL_BG + ";"    +
+                        "-fx-border-color: " + COLOR_CONTROL_BORDER + ";"    +
+                        "-fx-border-radius: 7px;"                             +
+                        "-fx-background-radius: 7px;"                         +
+                        "-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";"         +
+                        "-fx-prompt-text-fill: " + COLOR_TEXT_MUTED + ";"    +
                         "-fx-font-size: 12px;"
         );
 
-        // Style the combo arrow button area via CSS lookup (inline workaround)
         combo.setCellFactory(lv -> new ListCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -483,9 +457,9 @@ public final class SettingsModal {
                 } else {
                     setText(item);
                     setStyle(
-                            "-fx-background-color: " + COLOR_CONTROL_BG + ";" +
-                                    "-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";"      +
-                                    "-fx-font-size: 12px;"                             +
+                            "-fx-background-color: " + COLOR_CONTROL_BG + ";"  +
+                                    "-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";"       +
+                                    "-fx-font-size: 12px;"                              +
                                     "-fx-padding: 8 12 8 12;"
                     );
                 }
@@ -504,10 +478,8 @@ public final class SettingsModal {
 
     /**
      * Wraps a CheckBox in a custom animated on/off toggle pill.
-     * The pill color transitions between muted gray (off) and emerald (on).
      */
     private static StackPane buildTogglePill(CheckBox checkBox) {
-        // Pill track
         Rectangle track = new Rectangle(44, 24);
         track.setArcWidth(24);
         track.setArcHeight(24);
@@ -515,7 +487,6 @@ public final class SettingsModal {
                 ? Color.web(COLOR_ACCENT_EMERALD)
                 : Color.web("#4B5563"));
 
-        // Thumb circle
         Rectangle thumb = new Rectangle(18, 18);
         thumb.setArcWidth(18);
         thumb.setArcHeight(18);
@@ -533,18 +504,15 @@ public final class SettingsModal {
         pill.setMaxSize(44, 24);
         pill.setCursor(javafx.scene.Cursor.HAND);
 
-        // Animate toggle on click
         pill.setOnMouseClicked(e -> {
             checkBox.setSelected(!checkBox.isSelected());
             boolean on = checkBox.isSelected();
 
-            // Thumb slide animation
             TranslateTransition slideThumb = new TranslateTransition(
                     Duration.millis(180), thumb);
             slideThumb.setToX(on ? 10 : -10);
             slideThumb.setInterpolator(Interpolator.SPLINE(0.4, 0.0, 0.2, 1.0));
 
-            // Track color transition (manual key-frame approach)
             Color fromColor = on ? Color.web("#4B5563") : Color.web(COLOR_ACCENT_EMERALD);
             Color toColor   = on ? Color.web(COLOR_ACCENT_EMERALD) : Color.web("#4B5563");
 
@@ -559,7 +527,6 @@ public final class SettingsModal {
             new ParallelTransition(slideThumb, colorAnim).play();
         });
 
-        // Hide the actual CheckBox (it is managed programmatically)
         checkBox.setVisible(false);
         checkBox.setManaged(false);
 
@@ -572,14 +539,14 @@ public final class SettingsModal {
 
     /**
      * Builds the modal footer with a "Cancel" ghost button and a styled
-     * "Save Changes" primary button.
+     * "Save Changes" primary button that persists all preferences and applies
+     * the selected theme dynamically via {@link MainController#applyTheme}.
      */
-    private static HBox buildFooter(Runnable closeAction) {
+    private static HBox buildFooter(Runnable closeAction, StackPane rootPane) {
         HBox footer = new HBox(12);
         footer.setPadding(new Insets(16, 24, 20, 24));
         footer.setAlignment(Pos.CENTER_RIGHT);
 
-        // Cancel / secondary button
         Button cancelBtn = new Button("Cancel");
         cancelBtn.setFont(Font.font("System", FontWeight.NORMAL, 13));
         cancelBtn.setPrefHeight(38);
@@ -587,20 +554,20 @@ public final class SettingsModal {
         cancelBtn.setCursor(javafx.scene.Cursor.HAND);
 
         String cancelBase =
-                "-fx-background-color: transparent;"                      +
-                        "-fx-border-color: " + COLOR_CONTROL_BORDER + ";"        +
+                "-fx-background-color: transparent;"                       +
+                        "-fx-border-color: " + COLOR_CONTROL_BORDER + ";"         +
                         "-fx-border-radius: 8px;"                                  +
                         "-fx-background-radius: 8px;"                              +
-                        "-fx-text-fill: " + COLOR_TEXT_SECONDARY + ";"           +
+                        "-fx-text-fill: " + COLOR_TEXT_SECONDARY + ";"            +
                         "-fx-font-size: 13px;"                                     +
                         "-fx-cursor: hand;";
 
         String cancelHover =
-                "-fx-background-color: rgba(255,255,255,0.06);"           +
-                        "-fx-border-color: " + COLOR_CONTROL_BORDER + ";"        +
+                "-fx-background-color: rgba(255,255,255,0.06);"            +
+                        "-fx-border-color: " + COLOR_CONTROL_BORDER + ";"         +
                         "-fx-border-radius: 8px;"                                  +
                         "-fx-background-radius: 8px;"                              +
-                        "-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";"             +
+                        "-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";"              +
                         "-fx-font-size: 13px;"                                     +
                         "-fx-cursor: hand;";
 
@@ -609,7 +576,6 @@ public final class SettingsModal {
         cancelBtn.setOnMouseExited(e -> cancelBtn.setStyle(cancelBase));
         cancelBtn.setOnAction(e -> closeAction.run());
 
-        // Save / primary button
         Button saveBtn = new Button("Save Changes");
         saveBtn.setFont(Font.font("System", FontWeight.BOLD, 13));
         saveBtn.setPrefHeight(38);
@@ -617,7 +583,7 @@ public final class SettingsModal {
         saveBtn.setCursor(javafx.scene.Cursor.HAND);
 
         String saveBase =
-                "-fx-background-color: " + COLOR_ACCENT_EMERALD + ";"    +
+                "-fx-background-color: " + COLOR_ACCENT_EMERALD + ";"     +
                         "-fx-background-radius: 8px;"                              +
                         "-fx-border-color: transparent;"                           +
                         "-fx-border-radius: 8px;"                                  +
@@ -627,7 +593,7 @@ public final class SettingsModal {
                         "-fx-cursor: hand;";
 
         String saveHover =
-                "-fx-background-color: " + COLOR_ACCENT_HOVER + ";"      +
+                "-fx-background-color: " + COLOR_ACCENT_HOVER + ";"       +
                         "-fx-background-radius: 8px;"                              +
                         "-fx-border-color: transparent;"                           +
                         "-fx-border-radius: 8px;"                                  +
@@ -651,13 +617,27 @@ public final class SettingsModal {
         saveBtn.setOnMouseExited(e -> saveBtn.setStyle(saveBase));
         saveBtn.setOnMousePressed(e -> saveBtn.setStyle(savePressed));
         saveBtn.setOnMouseReleased(e -> saveBtn.setStyle(saveHover));
+
         saveBtn.setOnAction(e -> {
+            // ── Step 1: Persist all preferences ──────────────────────────────
             Preferences prefs = Preferences.userNodeForPackage(SettingsModal.class);
-            if (opacitySlider  != null) prefs.putDouble("gradcam_opacity",       opacitySlider.getValue());
-            if (animCheckBox   != null) prefs.putBoolean("animations_enabled",   animCheckBox.isSelected());
-            if (resolutionCombo != null) prefs.put("export_resolution",          resolutionCombo.getValue());
-            if (themeCombo     != null) prefs.put("theme",                       themeCombo.getValue());
+
+            if (opacitySlider   != null) prefs.putDouble("gradcam_opacity",     opacitySlider.getValue());
+            if (animCheckBox    != null) prefs.putBoolean("animations_enabled", animCheckBox.isSelected());
+            if (resolutionCombo != null) prefs.put("export_resolution",         resolutionCombo.getValue());
+            if (themeCombo      != null) prefs.put("color_theme",               themeCombo.getValue());
+
             System.out.println("[SettingsModal] Settings saved to Preferences.");
+
+            // ── Step 2: Apply theme immediately without restarting ───────────
+            String theme = prefs.get("color_theme", "Deep Slate (Dark)");
+            javafx.scene.Scene scene = rootPane.getScene();
+
+            if (scene != null) {
+                MainController.applyTheme(scene, theme);
+            }
+
+            // ── Step 3: Close the modal ──────────────────────────────────────
             closeAction.run();
         });
 
@@ -669,25 +649,20 @@ public final class SettingsModal {
     // Shared Layout Helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Returns a styled container panel used as the background for each
-     * individual setting row. Provides a subtle inset card appearance.
-     */
     private static VBox buildSettingPanel() {
         VBox panel = new VBox(8);
         panel.setPadding(new Insets(14, 16, 14, 16));
         panel.setMaxWidth(Double.MAX_VALUE);
         panel.setStyle(
-                "-fx-background-color: rgba(255,255,255,0.03);"  +
-                        "-fx-background-radius: 9px;"                     +
-                        "-fx-border-color: " + COLOR_DIVIDER + ";"       +
-                        "-fx-border-radius: 9px;"                         +
+                "-fx-background-color: rgba(255,255,255,0.03);" +
+                        "-fx-background-radius: 9px;"                    +
+                        "-fx-border-color: " + COLOR_DIVIDER + ";"      +
+                        "-fx-border-radius: 9px;"                        +
                         "-fx-border-width: 1px;"
         );
         return panel;
     }
 
-    /** Returns a styled setting name label. */
     private static Label buildSettingNameLabel(String text) {
         Label l = new Label(text);
         l.setFont(Font.font("System", FontWeight.SEMI_BOLD, 13));
@@ -695,7 +670,6 @@ public final class SettingsModal {
         return l;
     }
 
-    /** Returns a styled setting description label. */
     private static Label buildSettingDescLabel(String text) {
         Label l = new Label(text);
         l.setFont(Font.font("System", FontWeight.NORMAL, 11));
@@ -704,9 +678,6 @@ public final class SettingsModal {
         return l;
     }
 
-    /**
-     * Returns a 1px-tall horizontal divider region spanning the full width.
-     */
     private static Region buildDivider() {
         Region divider = new Region();
         divider.setPrefHeight(1);
@@ -720,30 +691,20 @@ public final class SettingsModal {
     // Animations
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Plays the modal entrance animation:
-     * <ul>
-     *   <li>Overlay: fade in from 0 → 1.</li>
-     *   <li>Card: slide down from Y=−24 → 0 + fade in from 0 → 1.</li>
-     * </ul>
-     */
     private static void playEntranceAnimation(StackPane overlay, VBox card) {
 
-        // Overlay fade in
         FadeTransition overlayFade = new FadeTransition(
                 Duration.millis(ANIM_FADE_IN_MS), overlay);
         overlayFade.setFromValue(0);
         overlayFade.setToValue(1);
         overlayFade.setInterpolator(Interpolator.EASE_OUT);
 
-        // Card slide down (from offset to 0)
         TranslateTransition cardSlide = new TranslateTransition(
                 Duration.millis(ANIM_SLIDE_IN_MS), card);
         cardSlide.setFromY(MODAL_SLIDE_OFFSET_PX);
         cardSlide.setToY(0);
         cardSlide.setInterpolator(Interpolator.SPLINE(0.2, 0.8, 0.2, 1.0));
 
-        // Card fade in
         FadeTransition cardFade = new FadeTransition(
                 Duration.millis(ANIM_SLIDE_IN_MS), card);
         cardFade.setFromValue(0);
@@ -751,28 +712,15 @@ public final class SettingsModal {
         cardFade.setInterpolator(Interpolator.EASE_OUT);
 
         ParallelTransition cardEntrance = new ParallelTransition(cardSlide, cardFade);
-
-        // Play together (overlay slightly leads the card)
         new ParallelTransition(overlayFade, cardEntrance).play();
     }
 
-    /**
-     * Plays the modal exit animation, then removes the overlay from the root.
-     *
-     * <ul>
-     *   <li>Card: fade out + slight slide up.</li>
-     *   <li>Overlay: fade out.</li>
-     *   <li>On finish: overlay node is removed from rootPane.</li>
-     * </ul>
-     */
     private static void playExitAnimation(StackPane rootPane, StackPane overlay) {
 
-        // Card reference (first child of overlay)
         javafx.scene.Node card = overlay.getChildren().isEmpty()
                 ? overlay
                 : overlay.getChildren().get(0);
 
-        // Card slide up + fade out
         TranslateTransition cardSlide = new TranslateTransition(
                 Duration.millis(ANIM_FADE_OUT_MS), card);
         cardSlide.setToY(MODAL_SLIDE_OFFSET_PX / 1.5);
@@ -783,7 +731,6 @@ public final class SettingsModal {
         cardFade.setToValue(0);
         cardFade.setInterpolator(Interpolator.EASE_IN);
 
-        // Overlay fade out
         FadeTransition overlayFade = new FadeTransition(
                 Duration.millis(ANIM_FADE_OUT_MS), overlay);
         overlayFade.setToValue(0);
@@ -792,7 +739,6 @@ public final class SettingsModal {
         ParallelTransition exit = new ParallelTransition(
                 cardSlide, cardFade, overlayFade);
 
-        // Clean up: remove overlay from the scene graph after animation completes
         exit.setOnFinished(e -> rootPane.getChildren().remove(overlay));
         exit.play();
     }

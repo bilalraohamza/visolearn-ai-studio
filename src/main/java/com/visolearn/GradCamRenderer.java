@@ -17,14 +17,14 @@ import java.nio.file.Path;
  * 1. Record the model's baseline confidence for the predicted class.
  * 2. Divide the 380x380 image into a 7x7 grid of patches (~54x54 px).
  * 3. For each patch, replace it with the ImageNet mean color (neutral
- *    gray) and run a fresh inference pass.
+ * gray) and run a fresh inference pass.
  * 4. Compute the confidence drop: baseline - occluded_confidence.
- *    Large drop = this region was important to the prediction.
- *    No drop (or gain) = the model did not rely on this region.
+ * Large drop = this region was important to the prediction.
+ * No drop (or gain) = the model did not rely on this region.
  * 5. Apply ReLU to keep only regions that positively supported
- *    the prediction.
+ * the prediction.
  * 6. Normalize to [0, 1], apply Gaussian smoothing, then colorize
- *    with a jet colormap (blue -> cyan -> yellow -> red).
+ * with a jet colormap (blue -> cyan -> yellow -> red).
  * 7. Blend the colorized saliency map over the original image.
  *
  * <h2>Why this is better than the previous version</h2>
@@ -115,9 +115,12 @@ public class GradCamRenderer {
             Path originalImagePath,
             SkinClassifier.PredictionResult result,
             ProgressCallback callback) throws Exception {
+
+        // Read saved opacity, fall back to 0.55 if never set
         HEATMAP_OPACITY = (float) java.util.prefs.Preferences
                 .userNodeForPackage(com.visolearn.utils.SettingsModal.class)
                 .getDouble("gradcam_opacity", 0.55);
+
         // Load and resize original image to 380x380
         BufferedImage original = ImageIO.read(originalImagePath.toFile());
         if (original == null) {

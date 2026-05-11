@@ -23,13 +23,18 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.prefs.Preferences;
 
 /**
  * VisoLearn AI Studio — Clinical Report Export Utility
  *
  * <p>Generates a high-resolution PNG clinical report by constructing an
- * off-screen JavaFX layout, snapshotting it at 2× scale, and persisting
- * it to a user-selected file via {@link javax.imageio.ImageIO}.</p>
+ * off-screen JavaFX layout, snapshotting it at a user-configured scale,
+ * and persisting it to a user-selected file via {@link javax.imageio.ImageIO}.</p>
+ *
+ * <p>The snapshot scale is read dynamically from {@link java.util.prefs.Preferences}
+ * as set by the user in {@link SettingsModal}, supporting Standard (1×),
+ * High / Retina (2×), and Ultra (3×) export resolutions.</p>
  *
  * <p><b>No external libraries required.</b> Uses only standard JavaFX
  * and {@code javax.imageio} APIs.</p>
@@ -53,43 +58,40 @@ public final class ReportExportUtil {
     // ─────────────────────────────────────────────────────────────────────────
 
     /** Overall report background — pure clinical white. */
-    private static final String COLOR_BACKGROUND      = "#FFFFFF";
+    private static final String COLOR_BACKGROUND    = "#FFFFFF";
 
     /** Primary text color — near-black for maximum contrast. */
-    private static final String COLOR_TEXT_PRIMARY     = "#111827";
+    private static final String COLOR_TEXT_PRIMARY  = "#111827";
 
     /** Secondary text — muted gray for labels and meta information. */
-    private static final String COLOR_TEXT_SECONDARY   = "#6B7280";
+    private static final String COLOR_TEXT_SECONDARY = "#6B7280";
 
     /** Brand accent — VisoLearn emerald. */
-    private static final String COLOR_ACCENT           = "#10B981";
+    private static final String COLOR_ACCENT        = "#10B981";
 
-    /** Danger/alert accent used for confidence indicator bar fill. */
-    private static final String COLOR_ACCENT_DARK      = "#059669";
+    /** Darker emerald used for confidence indicator bar fill. */
+    private static final String COLOR_ACCENT_DARK   = "#059669";
 
     /** Subtle divider and card border color. */
-    private static final String COLOR_BORDER           = "#E5E7EB";
+    private static final String COLOR_BORDER        = "#E5E7EB";
 
     /** Light surface for data cards (stats section). */
-    private static final String COLOR_CARD_BG          = "#F9FAFB";
+    private static final String COLOR_CARD_BG       = "#F9FAFB";
 
     /** Header gradient start. */
-    private static final String COLOR_HEADER_START     = "#064E3B";
+    private static final String COLOR_HEADER_START  = "#064E3B";
 
     /** Header gradient end. */
-    private static final String COLOR_HEADER_END       = "#065F46";
+    private static final String COLOR_HEADER_END    = "#065F46";
 
-    /** Width of the entire report canvas in logical pixels (scaled ×2 on export). */
-    private static final double REPORT_WIDTH           = 860;
-
-    /** Snapshot scale factor — produces a 1720px-wide PNG for crisp printing. */
-    private static final double SNAPSHOT_SCALE         = 2.0;
+    /** Width of the entire report canvas in logical pixels. */
+    private static final double REPORT_WIDTH        = 860;
 
     /** Each medical image display width inside the report. */
-    private static final double IMAGE_FIT_WIDTH        = 300;
+    private static final double IMAGE_FIT_WIDTH     = 300;
 
     /** Each medical image display height inside the report. */
-    private static final double IMAGE_FIT_HEIGHT       = 260;
+    private static final double IMAGE_FIT_HEIGHT    = 260;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Private Constructor — static utility class
@@ -97,8 +99,7 @@ public final class ReportExportUtil {
 
     private ReportExportUtil() {
         throw new UnsupportedOperationException(
-                "ReportExportUtil is a static utility class and cannot be instantiated."
-        );
+                "ReportExportUtil is a static utility class and cannot be instantiated.");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -106,13 +107,14 @@ public final class ReportExportUtil {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Builds an off-screen clinical report layout, snapshots it at high
-     * resolution, and writes it to a PNG file chosen by the user.
+     * Builds an off-screen clinical report layout, snapshots it at the
+     * user-configured resolution scale, and writes it to a PNG file chosen
+     * by the user via a {@link FileChooser} dialog.
      *
      * @param owner         The owning {@link Window} for the {@link FileChooser} dialog.
      * @param original      The raw input scan {@link Image}.
      * @param heatmap       The Grad-CAM saliency map {@link Image}.
-     * @param topClass      The predicted diagnostic class label (e.g., "Diabetic Retinopathy").
+     * @param topClass      The predicted diagnostic class label (e.g., {@code "Diabetic Retinopathy"}).
      * @param confidence    Prediction confidence as a fraction, 0.0–1.0 (e.g., {@code 0.9734}).
      * @param inferenceTime Human-readable inference duration string (e.g., {@code "142 ms"}).
      */
@@ -127,15 +129,15 @@ public final class ReportExportUtil {
         // ── Step 1: Let the user choose the output file ──────────────────────
         File outputFile = promptSaveLocation(owner);
         if (outputFile == null) {
-            return; // User cancelled the dialog — do nothing.
+            return;
         }
 
         // ── Step 2: Build the off-screen report VBox ─────────────────────────
-        VBox reportLayout = buildReportLayout(original, heatmap, topClass, confidence, inferenceTime);
+        VBox reportLayout = buildReportLayout(
+                original, heatmap, topClass, confidence, inferenceTime);
         new javafx.scene.Scene(reportLayout);
 
         // ── Step 3: Force layout pass so all node sizes are computed ─────────
-        //    Without this, snapshot dimensions may be zero or incorrect.
         reportLayout.applyCss();
         reportLayout.layout();
 
@@ -144,13 +146,14 @@ public final class ReportExportUtil {
         params.setFill(Color.WHITE);
 
         /*
-         * Scale transform: rendering at 2× produces a @2x / Retina-quality PNG.
-         * The output image will be (REPORT_WIDTH * 2) pixels wide, ensuring
-         * sharpness when printed or viewed at 100% zoom.
+         * Read the export scale dynamically from Preferences rather than using
+         * a hardcoded constant. This reflects the user's choice from SettingsModal:
+         *   Standard (1×)      → 1.0  — fast export, screen-resolution PNG
+         *   High / Retina (2×) → 2.0  — default, crisp for most displays/print
+         *   Ultra (3×)         → 3.0  — maximum fidelity for large-format printing
          */
-        javafx.scene.transform.Scale scale =
-                new javafx.scene.transform.Scale(SNAPSHOT_SCALE, SNAPSHOT_SCALE);
-        params.setTransform(scale);
+        double scale = getSnapshotScale();
+        params.setTransform(new javafx.scene.transform.Scale(scale, scale));
 
         // ── Step 5: Snapshot the node into a WritableImage ───────────────────
         WritableImage fxImage = reportLayout.snapshot(params, null);
@@ -159,7 +162,6 @@ public final class ReportExportUtil {
         BufferedImage bufferedImage = SwingFXUtils.fromFXImage(fxImage, null);
 
         try {
-            // Ensure the file name ends with .png
             String path = outputFile.getAbsolutePath();
             if (!path.toLowerCase().endsWith(".png")) {
                 outputFile = new File(path + ".png");
@@ -168,7 +170,8 @@ public final class ReportExportUtil {
             boolean written = ImageIO.write(bufferedImage, "PNG", outputFile);
 
             if (written) {
-                System.out.println("[ReportExportUtil] Report saved: " + outputFile.getAbsolutePath());
+                System.out.println("[ReportExportUtil] Report saved ("
+                        + scale + "×): " + outputFile.getAbsolutePath());
                 ToastUtil.showToast(
                         findRootStackPane(owner),
                         "Report saved successfully!",
@@ -182,6 +185,35 @@ public final class ReportExportUtil {
             System.err.println("[ReportExportUtil] Failed to write report: " + ex.getMessage());
             ex.printStackTrace();
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Dynamic Snapshot Scale
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Reads the user's preferred report export resolution from
+     * {@link java.util.prefs.Preferences} as persisted by {@link SettingsModal},
+     * and maps it to a numeric scale factor for {@link SnapshotParameters}.
+     *
+     * <table border="1">
+     *   <caption>Resolution preference mapping</caption>
+     *   <tr><th>Preference value (prefix)</th><th>Scale factor</th><th>Output width (px)</th></tr>
+     *   <tr><td>{@code "Standard"}</td><td>1.0</td><td>860</td></tr>
+     *   <tr><td>{@code "High / Retina (2×)"} (default)</td><td>2.0</td><td>1720</td></tr>
+     *   <tr><td>{@code "Ultra"}</td><td>3.0</td><td>2580</td></tr>
+     * </table>
+     *
+     * @return The scale factor to apply to {@link SnapshotParameters#setTransform}.
+     */
+    private static double getSnapshotScale() {
+        String saved = Preferences
+                .userNodeForPackage(SettingsModal.class)
+                .get("export_resolution", "High / Retina (2×)");
+
+        if (saved.startsWith("Standard")) return 1.0;
+        if (saved.startsWith("Ultra"))    return 3.0;
+        return 2.0; // default: High / Retina (2×)
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -199,7 +231,6 @@ public final class ReportExportUtil {
             double confidence,
             String inferenceTime) {
 
-        // ── Root container ───────────────────────────────────────────────────
         VBox root = new VBox();
         root.setPrefWidth(REPORT_WIDTH);
         root.setMinWidth(REPORT_WIDTH);
@@ -207,7 +238,6 @@ public final class ReportExportUtil {
         root.setStyle("-fx-background-color: " + COLOR_BACKGROUND + ";");
         root.setSpacing(0);
 
-        // ── Sections (top to bottom) ─────────────────────────────────────────
         root.getChildren().addAll(
                 buildHeader(),
                 buildMetaInfoBar(),
@@ -247,16 +277,13 @@ public final class ReportExportUtil {
                         + COLOR_HEADER_START + ", " + COLOR_HEADER_END + ");"
         );
 
-        // Left side: branding + title
         VBox titleBlock = new VBox(4);
         titleBlock.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(titleBlock, Priority.ALWAYS);
 
-        // Brand name row
         HBox brandRow = new HBox(10);
         brandRow.setAlignment(Pos.CENTER_LEFT);
 
-        // Emerald accent square mimicking a logo mark
         Rectangle logoMark = new Rectangle(28, 28);
         logoMark.setFill(Color.web(COLOR_ACCENT));
         logoMark.setArcWidth(6);
@@ -268,14 +295,12 @@ public final class ReportExportUtil {
 
         brandRow.getChildren().addAll(logoMark, brandLabel);
 
-        // Report title
         Label reportTitle = new Label("Clinical AI Analysis Report");
         reportTitle.setFont(Font.font("System", FontWeight.NORMAL, 13));
-        reportTitle.setStyle("-fx-text-fill: #A7F3D0;"); // light emerald tint
+        reportTitle.setStyle("-fx-text-fill: #A7F3D0;");
 
         titleBlock.getChildren().addAll(brandRow, reportTitle);
 
-        // Right side: Report ID badge
         VBox idBlock = new VBox(4);
         idBlock.setAlignment(Pos.CENTER_RIGHT);
 
@@ -291,13 +316,12 @@ public final class ReportExportUtil {
         idValue.setStyle("-fx-text-fill: #FFFFFF;");
 
         idBlock.getChildren().addAll(idLabel, idValue);
-
         header.getChildren().addAll(titleBlock, idBlock);
         return header;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Section: Meta Info Bar (timestamp, version)
+    // Section: Meta Info Bar
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
@@ -311,20 +335,19 @@ public final class ReportExportUtil {
         bar.setAlignment(Pos.CENTER_LEFT);
         bar.setSpacing(24);
         bar.setStyle(
-                "-fx-background-color: #F0FDF4;" +   // very light mint tint
-                        "-fx-border-color: " + COLOR_BORDER + ";" +
+                "-fx-background-color: #F0FDF4;"                +
+                        "-fx-border-color: " + COLOR_BORDER + ";"       +
                         "-fx-border-width: 0 0 1 0;"
         );
 
         String timestamp = LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("MMMM dd, yyyy  |  HH:mm:ss 'UTC'"));
 
-        Label tsIcon  = makeMetaChip("🕐", "Generated On:", timestamp);
-        Label verIcon = makeMetaChip("⚙", "Engine:", "VisoLearn Inference Engine v2.1.0");
+        Label tsIcon   = makeMetaChip("🕐", "Generated On:", timestamp);
+        Label verIcon  = makeMetaChip("⚙",  "Engine:", "VisoLearn Inference Engine v2.1.0");
         Label modeIcon = makeMetaChip("🔬", "Mode:", "Diagnostic — Research Use Only");
 
         HBox.setHgrow(tsIcon, Priority.ALWAYS);
-
         bar.getChildren().addAll(tsIcon, verIcon, modeIcon);
         return bar;
     }
@@ -338,12 +361,12 @@ public final class ReportExportUtil {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Section: Diagnosis Summary (stat cards)
+    // Section: Diagnosis Summary
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Builds the three-column stat card row showing:
-     * AI Diagnosis | Confidence Score + bar | Inference Time
+     * Builds the three-column stat card row:
+     * AI Diagnosis | Confidence Score + bar | Inference Time.
      */
     private static HBox buildDiagnosisSummarySection(
             String topClass, double confidence, String inferenceTime) {
@@ -352,26 +375,15 @@ public final class ReportExportUtil {
         row.setPadding(new Insets(0, 36, 0, 36));
         row.setAlignment(Pos.CENTER);
 
-        // Card 1 — AI Diagnosis
         VBox diagCard = buildStatCard(
-                "AI DIAGNOSIS",
-                topClass,
-                "Primary classification result",
-                COLOR_ACCENT
-        );
+                "AI DIAGNOSIS", topClass, "Primary classification result", COLOR_ACCENT);
         HBox.setHgrow(diagCard, Priority.ALWAYS);
 
-        // Card 2 — Confidence Score (with visual bar)
         VBox confCard = buildConfidenceCard(confidence);
         HBox.setHgrow(confCard, Priority.ALWAYS);
 
-        // Card 3 — Inference Time
         VBox timeCard = buildStatCard(
-                "INFERENCE TIME",
-                inferenceTime,
-                "Model forward-pass latency",
-                "#6366F1"     // indigo accent for timing
-        );
+                "INFERENCE TIME", inferenceTime, "Model forward-pass latency", "#6366F1");
         HBox.setHgrow(timeCard, Priority.ALWAYS);
 
         row.getChildren().addAll(diagCard, confCard, timeCard);
@@ -388,14 +400,13 @@ public final class ReportExportUtil {
         card.setAlignment(Pos.CENTER_LEFT);
         card.setPadding(new Insets(18, 20, 18, 20));
         card.setStyle(
-                "-fx-background-color: " + COLOR_CARD_BG + ";"         +
-                        "-fx-background-radius: 10px;"                          +
-                        "-fx-border-color: " + COLOR_BORDER + ";"              +
-                        "-fx-border-radius: 10px;"                              +
+                "-fx-background-color: " + COLOR_CARD_BG + ";"  +
+                        "-fx-background-radius: 10px;"                   +
+                        "-fx-border-color: " + COLOR_BORDER + ";"        +
+                        "-fx-border-radius: 10px;"                       +
                         "-fx-border-width: 1px;"
         );
 
-        // Colored top accent stripe (replaces left-border for card style)
         Rectangle topStripe = new Rectangle(36, 4);
         topStripe.setFill(Color.web(accentColor));
         topStripe.setArcWidth(4);
@@ -429,10 +440,10 @@ public final class ReportExportUtil {
         card.setAlignment(Pos.CENTER_LEFT);
         card.setPadding(new Insets(18, 20, 18, 20));
         card.setStyle(
-                "-fx-background-color: " + COLOR_CARD_BG + ";" +
-                        "-fx-background-radius: 10px;"                  +
-                        "-fx-border-color: " + COLOR_BORDER + ";"      +
-                        "-fx-border-radius: 10px;"                      +
+                "-fx-background-color: " + COLOR_CARD_BG + ";"  +
+                        "-fx-background-radius: 10px;"                   +
+                        "-fx-border-color: " + COLOR_BORDER + ";"        +
+                        "-fx-border-radius: 10px;"                       +
                         "-fx-border-width: 1px;"
         );
 
@@ -453,7 +464,6 @@ public final class ReportExportUtil {
         valueLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
         valueLabel.setStyle("-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";");
 
-        // Progress bar track
         StackPane barTrack = new StackPane();
         barTrack.setPrefHeight(8);
         barTrack.setMaxWidth(Double.MAX_VALUE);
@@ -462,16 +472,14 @@ public final class ReportExportUtil {
                         "-fx-background-radius: 4px;"
         );
 
-        // Progress bar fill — dynamically sized by confidence fraction
         double fillWidthPct = Math.min(confidence, 1.0);
         HBox barFill = new HBox();
         barFill.setPrefHeight(8);
-        // We bind the width proportionally after layout; use percentage via Region
         barFill.setStyle(
                 "-fx-background-color: " + COLOR_ACCENT_DARK + ";" +
                         "-fx-background-radius: 4px;"
         );
-        barFill.setPrefWidth(fillWidthPct); // will be relative to card width after layout
+        barFill.setPrefWidth(fillWidthPct);
         StackPane.setAlignment(barFill, Pos.CENTER_LEFT);
         barTrack.getChildren().add(barFill);
 
@@ -495,23 +503,19 @@ public final class ReportExportUtil {
         VBox section = new VBox(16);
         section.setPadding(new Insets(0, 36, 0, 36));
 
-        // Section title
-        HBox sectionTitle = buildSectionTitle("Medical Image Analysis");
-
-        // Image pair row
         HBox imageRow = new HBox(24);
         imageRow.setAlignment(Pos.CENTER);
 
-        VBox originalCard = buildImageCard(original,  "Input Scan",
+        VBox originalCard = buildImageCard(original, "Input Scan",
                 "Raw diagnostic input image");
-        VBox heatmapCard  = buildImageCard(heatmap,   "Grad-CAM Saliency Map",
+        VBox heatmapCard  = buildImageCard(heatmap, "Grad-CAM Saliency Map",
                 "Highlighted regions of diagnostic interest");
 
         HBox.setHgrow(originalCard, Priority.ALWAYS);
         HBox.setHgrow(heatmapCard,  Priority.ALWAYS);
 
         imageRow.getChildren().addAll(originalCard, heatmapCard);
-        section.getChildren().addAll(sectionTitle, imageRow);
+        section.getChildren().addAll(buildSectionTitle("Medical Image Analysis"), imageRow);
         return section;
     }
 
@@ -523,21 +527,19 @@ public final class ReportExportUtil {
         card.setAlignment(Pos.CENTER);
         card.setPadding(new Insets(16));
         card.setStyle(
-                "-fx-background-color: " + COLOR_CARD_BG + ";" +
-                        "-fx-background-radius: 10px;"                  +
-                        "-fx-border-color: " + COLOR_BORDER + ";"      +
-                        "-fx-border-radius: 10px;"                      +
+                "-fx-background-color: " + COLOR_CARD_BG + ";"  +
+                        "-fx-background-radius: 10px;"                   +
+                        "-fx-border-color: " + COLOR_BORDER + ";"        +
+                        "-fx-border-radius: 10px;"                       +
                         "-fx-border-width: 1px;"
         );
 
-        // Image view
         ImageView view = new ImageView(image);
         view.setFitWidth(IMAGE_FIT_WIDTH);
         view.setFitHeight(IMAGE_FIT_HEIGHT);
         view.setPreserveRatio(true);
         view.setSmooth(true);
 
-        // Image border frame
         StackPane imageFrame = new StackPane(view);
         imageFrame.setStyle(
                 "-fx-background-color: #E5E7EB;" +
@@ -563,24 +565,21 @@ public final class ReportExportUtil {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Builds a clinical interpretation block providing standardised
-     * disclaimer text and a reading guide for the saliency map.
+     * Builds a clinical interpretation block providing standardised disclaimer
+     * text and a reading guide for the saliency map.
      */
     private static VBox buildInterpretationSection(String topClass, double confidence) {
         VBox section = new VBox(14);
         section.setPadding(new Insets(0, 36, 0, 36));
 
-        HBox sectionTitle = buildSectionTitle("Clinical Interpretation Notes");
-
-        // Highlighted disclaimer panel
         VBox disclaimerPanel = new VBox(8);
         disclaimerPanel.setPadding(new Insets(16, 18, 16, 18));
         disclaimerPanel.setStyle(
-                "-fx-background-color: #FFFBEB;"          +   // warm amber tint
-                        "-fx-background-radius: 8px;"              +
-                        "-fx-border-color: #FCD34D;"               +   // amber border
-                        "-fx-border-radius: 8px;"                  +
-                        "-fx-border-width: 0 0 0 4;"               // left accent only
+                "-fx-background-color: #FFFBEB;"   +
+                        "-fx-background-radius: 8px;"       +
+                        "-fx-border-color: #FCD34D;"        +
+                        "-fx-border-radius: 8px;"           +
+                        "-fx-border-width: 0 0 0 4;"
         );
 
         Label disclaimerTitle = new Label("⚠  Important Clinical Notice");
@@ -600,7 +599,6 @@ public final class ReportExportUtil {
 
         disclaimerPanel.getChildren().addAll(disclaimerTitle, disclaimerBody);
 
-        // Findings summary text
         String confidenceGrade = confidence >= 0.90 ? "High" :
                 confidence >= 0.70 ? "Moderate" : "Low";
 
@@ -617,7 +615,11 @@ public final class ReportExportUtil {
         findingsLabel.setWrapText(true);
         findingsLabel.setLineSpacing(3);
 
-        section.getChildren().addAll(sectionTitle, findingsLabel, disclaimerPanel);
+        section.getChildren().addAll(
+                buildSectionTitle("Clinical Interpretation Notes"),
+                findingsLabel,
+                disclaimerPanel
+        );
         return section;
     }
 
@@ -635,8 +637,8 @@ public final class ReportExportUtil {
         footer.setPadding(new Insets(20, 36, 24, 36));
         footer.setAlignment(Pos.CENTER);
         footer.setStyle(
-                "-fx-background-color: " + COLOR_CARD_BG + ";" +
-                        "-fx-border-color: " + COLOR_BORDER + ";"      +
+                "-fx-background-color: " + COLOR_CARD_BG + ";"  +
+                        "-fx-border-color: " + COLOR_BORDER + ";"        +
                         "-fx-border-width: 1 0 0 0;"
         );
 
@@ -654,7 +656,8 @@ public final class ReportExportUtil {
 
         Label copyrightLabel = new Label(
                 "© " + LocalDateTime.now().getYear() +
-                        " VisoLearn AI Studio  |  Powered by Deep Learning Inference Engine v2.1.0  |  Page 1 of 1"
+                        " VisoLearn AI Studio  |  Powered by Deep Learning Inference Engine v2.1.0" +
+                        "  |  Page 1 of 1"
         );
         copyrightLabel.setFont(Font.font("System", FontWeight.NORMAL, 9));
         copyrightLabel.setStyle("-fx-text-fill: #9CA3AF;");
@@ -692,10 +695,9 @@ public final class ReportExportUtil {
      * Returns a thin horizontal divider line spanning the full report width.
      */
     private static Line buildDivider() {
-        Line divider = new Line(0, 0, REPORT_WIDTH - 72, 0); // account for margins
+        Line divider = new Line(0, 0, REPORT_WIDTH - 72, 0);
         divider.setStroke(Color.web(COLOR_BORDER));
         divider.setStrokeWidth(1);
-        VBox wrapper = null; // Line is returned directly and managed by VBox spacing
         return divider;
     }
 
@@ -746,7 +748,6 @@ public final class ReportExportUtil {
                 && owner.getScene().getRoot() instanceof StackPane sp) {
             return sp;
         }
-        // If root is not a StackPane, create a transient overlay — handled by ToastUtil
         return new StackPane();
     }
 }

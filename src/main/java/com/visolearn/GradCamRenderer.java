@@ -73,7 +73,7 @@ public class GradCamRenderer {
     private static final int TOTAL_PATCHES = GRID_SIZE * GRID_SIZE;
 
     /** Opacity of saliency overlay blended onto the original image. */
-    private static final float HEATMAP_OPACITY = 0.55f;
+    private static float HEATMAP_OPACITY = 0.55f;
 
     /**
      * ImageNet mean color in integer pixel space, used as the
@@ -115,7 +115,9 @@ public class GradCamRenderer {
             Path originalImagePath,
             SkinClassifier.PredictionResult result,
             ProgressCallback callback) throws Exception {
-
+        HEATMAP_OPACITY = (float) java.util.prefs.Preferences
+                .userNodeForPackage(com.visolearn.utils.SettingsModal.class)
+                .getDouble("gradcam_opacity", 0.55);
         // Load and resize original image to 380x380
         BufferedImage original = ImageIO.read(originalImagePath.toFile());
         if (original == null) {

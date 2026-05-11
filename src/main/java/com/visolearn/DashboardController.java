@@ -171,6 +171,14 @@ public class DashboardController implements Initializable {
 
         Thread loadThread = new Thread(loadTask);
         loadThread.setDaemon(true);
+
+        loadTask.setOnFailed(e -> Platform.runLater(() -> {
+            Throwable ex = loadTask.getException();
+            System.err.println("Dashboard load failed: " + ex.getMessage());
+            bestAccLabel.setText("Load error");
+            bestEpochLabel.setText(ex.getMessage());
+        }));
+
         loadThread.start();
     }
 

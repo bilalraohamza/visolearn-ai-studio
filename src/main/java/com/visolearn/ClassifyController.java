@@ -212,7 +212,11 @@ public class ClassifyController implements Initializable {
      */
     @FXML
     private void handleClear() {
-        // ... (rest of your reset code for ImageViews and placeholderBox) ...
+        inputImageView.setImage(null);
+        inputImageView.setVisible(false);
+        heatmapImageView.setImage(null);
+        heatmapImageView.setVisible(false);
+        placeholderBox.setVisible(true);
 
         // 1. Consistency Fix: Match the font size of the result state
         predictionLabel.setText("Awaiting Image...");
@@ -297,7 +301,7 @@ public class ClassifyController implements Initializable {
             Image fxImage = new Image(imagePath.toUri().toString());
             inputImageView.setImage(fxImage);
             inputImageView.setVisible(true);
-            AnimationUtil.fadeIn(inputImageView, 500);
+            if (AnimationUtil.animationsEnabled()) AnimationUtil.fadeIn(inputImageView, 500);
             placeholderBox.setVisible(false);
             heatmapImageView.setVisible(false);
             gradCamToggle.setSelected(false);

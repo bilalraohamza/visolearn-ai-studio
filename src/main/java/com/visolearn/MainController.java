@@ -15,3 +15,4 @@ public class MainController {
         SettingsModal.show(root);
     }
 }
+

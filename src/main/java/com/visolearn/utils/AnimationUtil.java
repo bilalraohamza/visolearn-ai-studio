@@ -144,4 +144,9 @@ public class AnimationUtil {
 
         timeline.play();
     }
+    public static boolean animationsEnabled() {
+        return java.util.prefs.Preferences
+                .userNodeForPackage(com.visolearn.utils.SettingsModal.class)
+                .getBoolean("animations_enabled", true);
+    }
 }

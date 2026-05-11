@@ -13,6 +13,7 @@ import javafx.scene.shape.SVGPath;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.util.Duration;
+import java.util.prefs.Preferences;
 
 /**
  * VisoLearn AI Studio — Application Settings Modal
@@ -58,6 +59,15 @@ public final class SettingsModal {
     // Layout
     private static final double MODAL_MAX_WIDTH          = 450;
     private static final double MODAL_MAX_HEIGHT         = 580;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Control References — set by builder methods, read by saveBtn handler
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static Slider            opacitySlider;
+    private static CheckBox          animCheckBox;
+    private static ComboBox<String>  resolutionCombo;
+    private static ComboBox<String>  themeCombo;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Private Constructor
@@ -372,6 +382,7 @@ public final class SettingsModal {
 
         // Slider
         Slider slider = new Slider(min, max, defaultVal);
+        opacitySlider = slider;
         slider.setShowTickMarks(false);
         slider.setShowTickLabels(false);
         slider.setMajorTickUnit(0.25);
@@ -410,6 +421,7 @@ public final class SettingsModal {
 
         // Custom-styled toggle using CheckBox
         CheckBox checkBox = new CheckBox();
+        animCheckBox = checkBox;
         checkBox.setSelected(defaultSelected);
         checkBox.setStyle(
                 "-fx-mark-color: white;"                                      +
@@ -446,6 +458,10 @@ public final class SettingsModal {
         ComboBox<String> combo = new ComboBox<>();
         combo.getItems().addAll(options);
         combo.setValue(defaultOption);
+
+        // Assign to the correct static reference based on which setting this is
+        if (title.equals("Report Export Resolution")) resolutionCombo = combo;
+        else if (title.equals("Color Theme"))         themeCombo      = combo;
         combo.setMaxWidth(Double.MAX_VALUE);
         combo.setStyle(
                 "-fx-background-color: " + COLOR_CONTROL_BG + ";"   +
@@ -636,8 +652,12 @@ public final class SettingsModal {
         saveBtn.setOnMousePressed(e -> saveBtn.setStyle(savePressed));
         saveBtn.setOnMouseReleased(e -> saveBtn.setStyle(saveHover));
         saveBtn.setOnAction(e -> {
-            // TODO: Persist settings to a preferences store here.
-            System.out.println("[SettingsModal] Settings saved.");
+            Preferences prefs = Preferences.userNodeForPackage(SettingsModal.class);
+            if (opacitySlider  != null) prefs.putDouble("gradcam_opacity",       opacitySlider.getValue());
+            if (animCheckBox   != null) prefs.putBoolean("animations_enabled",   animCheckBox.isSelected());
+            if (resolutionCombo != null) prefs.put("export_resolution",          resolutionCombo.getValue());
+            if (themeCombo     != null) prefs.put("theme",                       themeCombo.getValue());
+            System.out.println("[SettingsModal] Settings saved to Preferences.");
             closeAction.run();
         });
 

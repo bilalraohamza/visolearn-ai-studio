@@ -1,0 +1,135 @@
+/* ===== Midnight Blue Theme — VisoLearn AI Studio ===== */
+/* Deep navy blue variant of the default Deep Slate theme  */
+
+/* ===== Global App Background & Font ===== */
+.root {
+    -fx-background-color: #0A1628;
+    -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ===== Modern Card Panels ===== */
+.glass-card {
+    -fx-background-color: #0F2040;
+    -fx-background-radius: 12px;
+    -fx-border-color: rgba(100,160,255,0.08);
+    -fx-border-radius: 12px;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 15, 0, 0, 5);
+}
+
+.stat-box {
+    -fx-background-color: #0D1B35;
+    -fx-background-radius: 8px;
+    -fx-border-color: rgba(100,160,255,0.05);
+    -fx-border-radius: 8px;
+}
+
+/* ===== Modern Buttons ===== */
+.primary-btn {
+    -fx-background-color: #10B981;
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8px;
+    -fx-cursor: hand;
+}
+.primary-btn:hover  { -fx-background-color: #059669; }
+.primary-btn:pressed { -fx-background-color: #047857; -fx-opacity: 1.0; }
+
+.secondary-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #9CA3AF;
+    -fx-font-size: 13px;
+    -fx-background-radius: 8px;
+    -fx-border-color: rgba(100,160,255,0.18);
+    -fx-border-radius: 8px;
+    -fx-border-width: 1px;
+    -fx-cursor: hand;
+}
+.secondary-btn:hover {
+    -fx-background-color: rgba(100,160,255,0.07);
+    -fx-text-fill: #F8F9FA;
+}
+
+/* ===== Tab Pane ===== */
+.tab-pane .tab-header-area        { -fx-background-color: #0A1628; }
+.tab-pane .tab-header-background  {
+    -fx-background-color: #0A1628;
+    -fx-border-color: rgba(100,160,255,0.08);
+    -fx-border-width: 0 0 1 0;
+}
+.tab-pane .tab {
+    -fx-background-color: transparent;
+    -fx-padding: 12 24 12 24;
+}
+.tab-pane .tab .tab-label {
+    -fx-text-fill: #9CA3AF;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+.tab-pane .tab:selected {
+    -fx-border-color: transparent transparent #3B82F6 transparent;
+    -fx-border-width: 0 0 3 0;
+}
+.tab-pane .tab:selected .tab-label { -fx-text-fill: #F8F9FA; }
+.tab-pane .tab-header-area .headers-region .tab .focus-indicator { -fx-border-color: transparent; }
+
+/* ===== ProgressBar ===== */
+.progress-bar { -fx-background-color: transparent; }
+.progress-bar .track {
+    -fx-background-color: #0D1B35;
+    -fx-background-radius: 8px;
+    -fx-border-color: transparent;
+}
+.progress-bar .bar {
+    -fx-background-radius: 8px;
+    -fx-padding: 4px;
+}
+
+/* ===== CheckBox ===== */
+.check-box .box {
+    -fx-background-color: #0D1B35;
+    -fx-border-color: #3B4A6B;
+    -fx-border-radius: 4;
+}
+.check-box:selected .box {
+    -fx-background-color: #3B82F6;
+    -fx-border-color: #3B82F6;
+}
+
+/* ===== TableView ===== */
+.table-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-table-cell-border-color: rgba(100,160,255,0.04);
+}
+.table-view .column-header-background {
+    -fx-background-color: #0D1B35;
+    -fx-border-color: rgba(100,160,255,0.07);
+    -fx-border-width: 0 0 1 0;
+}
+.table-view .column-header,
+.table-view .filler,
+.table-view .corner {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-size: 40px;
+}
+.table-view .column-header .label { -fx-text-fill: #9CA3AF; -fx-font-weight: bold; }
+.table-cell       { -fx-text-fill: #D1D5DB; }
+.table-row-cell   { -fx-background-color: transparent; }
+.table-row-cell:hover    { -fx-background-color: rgba(100,160,255,0.05); }
+.table-row-cell:selected { -fx-background-color: rgba(59,130,246,0.15); }
+
+/* ===== Chart Styling ===== */
+.default-color0.chart-series-line  { -fx-stroke: #00B4D8; -fx-stroke-width: 2.5; }
+.default-color1.chart-series-line  { -fx-stroke: #F43F5E; -fx-stroke-width: 2.5; }
+.default-color0.chart-line-symbol  { -fx-background-color: #00B4D8, white; }
+.default-color1.chart-line-symbol  { -fx-background-color: #F43F5E, white; }
+.chart-legend                      { -fx-background-color: transparent; }
+.chart-legend-item                 { -fx-text-fill: #9CA3AF; }
+
+/* ===== ScrollPane ===== */
+.scroll-pane               { -fx-background-color: transparent; -fx-background: #0A1628; }
+.scroll-pane > .viewport   { -fx-background-color: transparent; }
+.scroll-pane               { -fx-background-insets: 0; -fx-padding: 0; }

@@ -154,6 +154,7 @@ public class ClassifyController implements Initializable {
                 uploadButton.setDisable(false);
                 predictionLabel.setText("Awaiting Image...");
                 predictionLabel.setOpacity(1.0);
+                descriptionLabel.setOpacity(1.0);
             });
         });
 
@@ -218,12 +219,12 @@ public class ClassifyController implements Initializable {
         predictionLabel.setText("Awaiting Image...");
         predictionLabel.setOpacity(1.0);
         predictionLabel.setStyle(
-                "-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF;");
+                "-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;");
 
         confidenceLabel.setText("");
         inferenceTimeLabel.setText("");
 
-        descriptionLabel.setText("Upload a dermoscopy image to see results.");
+        descriptionLabel.setText("Upload a dermoscopy image to see classification results and Grad-CAM explanation.");
         descriptionLabel.setOpacity(1.0);
         descriptionLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #D1D5DB;");
 

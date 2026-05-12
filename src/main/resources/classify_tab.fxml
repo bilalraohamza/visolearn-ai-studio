@@ -127,7 +127,7 @@
 
         <VBox styleClass="glass-card" style="-fx-padding: 20; -fx-background-color: #1E1E2A;" VBox.vgrow="ALWAYS">
             <Label text="CLINICAL NOTES" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #00B4D8; -fx-letter-spacing: 1.5px; -fx-padding: 0 0 8 0;"/>
-            <Label fx:id="descriptionLabel" opacity="0" text="Upload a dermoscopy image to see classification results and Grad-CAM explanation." wrapText="true" style="-fx-font-size: 13px; -fx-text-fill: #D1D5DB; -fx-line-spacing: 4;"/>
+            <Label fx:id="descriptionLabel" opacity="1" text="Upload a dermoscopy image to see classification results and Grad-CAM explanation." wrapText="true" style="-fx-font-size: 13px; -fx-text-fill: #D1D5DB; -fx-line-spacing: 4;"/>
         </VBox>
 
     </VBox>

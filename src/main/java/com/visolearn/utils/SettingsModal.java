@@ -309,7 +309,7 @@ public final class SettingsModal {
         HBox themeRow = buildComboBoxSetting(
                 "Color Theme",
                 "Visual theme applied across the entire application",
-                new String[]{"Deep Slate (Dark)", "Midnight Blue (Dark)", "Clinical (Light)"},
+                new String[]{"Deep Slate (Dark)", "Midnight Blue (Dark)"},
                 "Deep Slate (Dark)"
         );
 
@@ -334,6 +334,11 @@ public final class SettingsModal {
             String title, String description,
             double min, double max, double defaultVal) {
 
+        // Read saved value so the slider restores its state when modal reopens
+        double savedVal = Preferences
+                .userNodeForPackage(SettingsModal.class)
+                .getDouble("gradcam_opacity", defaultVal);
+
         VBox panel = buildSettingPanel();
 
         HBox labelRow = new HBox();
@@ -346,7 +351,7 @@ public final class SettingsModal {
         Label descLabel = buildSettingDescLabel(description);
         textBlock.getChildren().addAll(nameLabel, descLabel);
 
-        Label valueReadout = new Label(String.format("%.0f%%", defaultVal * 100));
+        Label valueReadout = new Label(String.format("%.0f%%", savedVal * 100));
         valueReadout.setFont(Font.font("System", FontWeight.BOLD, 12));
         valueReadout.setStyle(
                 "-fx-text-fill: " + COLOR_ACCENT_EMERALD + ";"   +
@@ -359,7 +364,7 @@ public final class SettingsModal {
 
         labelRow.getChildren().addAll(textBlock, valueReadout);
 
-        Slider slider = new Slider(min, max, defaultVal);
+        Slider slider = new Slider(min, max, savedVal);
         opacitySlider = slider;
         slider.setShowTickMarks(false);
         slider.setShowTickLabels(false);
@@ -398,7 +403,11 @@ public final class SettingsModal {
 
         CheckBox checkBox = new CheckBox();
         animCheckBox = checkBox;
-        checkBox.setSelected(defaultSelected);
+        // Read saved value so toggle restores its state when modal reopens
+        boolean savedSelected = Preferences
+                .userNodeForPackage(SettingsModal.class)
+                .getBoolean("animations_enabled", defaultSelected);
+        checkBox.setSelected(savedSelected);
         checkBox.setStyle(
                 "-fx-mark-color: white;"            +
                         "-fx-focus-color: transparent;"     +
@@ -432,10 +441,21 @@ public final class SettingsModal {
 
         ComboBox<String> combo = new ComboBox<>();
         combo.getItems().addAll(options);
-        combo.setValue(defaultOption);
 
-        if (title.equals("Report Export Resolution")) resolutionCombo = combo;
-        else if (title.equals("Color Theme"))         themeCombo      = combo;
+        // Resolve which Preferences key this combo maps to, then restore saved value
+        if (title.equals("Report Export Resolution")) {
+            resolutionCombo = combo;
+            String saved = Preferences.userNodeForPackage(SettingsModal.class)
+                    .get("export_resolution", defaultOption);
+            combo.setValue(combo.getItems().contains(saved) ? saved : defaultOption);
+        } else if (title.equals("Color Theme")) {
+            themeCombo = combo;
+            String saved = Preferences.userNodeForPackage(SettingsModal.class)
+                    .get("color_theme", defaultOption);
+            combo.setValue(combo.getItems().contains(saved) ? saved : defaultOption);
+        } else {
+            combo.setValue(defaultOption);
+        }
 
         combo.setMaxWidth(Double.MAX_VALUE);
         combo.setStyle(

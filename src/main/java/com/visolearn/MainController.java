@@ -45,14 +45,25 @@ public class MainController {
     public static void applyTheme(javafx.scene.Scene scene, String themeName) {
         if (scene == null || themeName == null) return;
 
-        scene.getStylesheets().clear();
-        String css = themeName.contains("Light") ? "/styles-light.css" : "/styles.css";
+        String css;
+        if (themeName.contains("Midnight Blue")) {
+            css = "/styles-midnight-blue.css";
+        } else if (themeName.contains("Light")) {
+            css = "/styles-light.css";
+        } else {
+            css = "/styles.css"; // Deep Slate (Dark) — default
+        }
 
         java.net.URL cssUrl = MainController.class.getResource(css);
-        if (cssUrl != null) {
-            scene.getStylesheets().add(cssUrl.toExternalForm());
-        } else {
-            System.err.println("Could not find stylesheet: " + css);
+
+        if (cssUrl == null) {
+            // CSS file not found — keep current stylesheet, don't break the UI
+            System.err.println("[Theme] Could not find: " + css + " — keeping current stylesheet.");
+            return;
         }
+
+        // CSS found — safe to swap
+        scene.getStylesheets().clear();
+        scene.getStylesheets().add(cssUrl.toExternalForm());
     }
 }

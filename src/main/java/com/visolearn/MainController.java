@@ -13,17 +13,19 @@ public class MainController {
     private static final String[][] DARK_TO_LIGHT = {
             {"#1A1A24", "#F4F7FB"},
             {"#1E1E2A", "#EEF4F8"},
+            {"#252533", "#FFFFFF"},          // FIX: was missing — history headers, session summary box
             {"#F8F9FA", "#0F172A"},
             {"#f0f0fa", "#0F172A"},
             {"#D1D5DB", "#334155"},
             {"#9CA3AF", "#64748B"},
-            {"#6B7280", "#64748B"},
+            {"#6B7280", "#475569"},
             {"#4B5563", "#94A3B8"},
             {"#374151", "#CBD5E1"},
-            {"white", "#0F172A"},
-            {"rgba(255,255,255,0.05)", "rgba(15,23,42,0.10)"},
-            {"rgba(255,255,255,0.10)", "rgba(15,23,42,0.10)"},
-            {"rgba(255,255,255,0.15)", "rgba(15,23,42,0.16)"}
+            {"white",   "#0F172A"},
+            {"rgba(255,255,255,0.05)",  "rgba(15,23,42,0.08)"},
+            {"rgba(255,255,255,0.10)",  "rgba(15,23,42,0.10)"},
+            {"rgba(255,255,255,0.15)",  "rgba(15,23,42,0.16)"},
+            {"rgba(255,255,255,0.03)",  "rgba(15,23,42,0.04)"},
     };
 
     private static final String[][] LIGHT_TO_DARK = reverse(DARK_TO_LIGHT);
@@ -63,6 +65,18 @@ public class MainController {
             String themed = replaceTokens(style, darkMode ? LIGHT_TO_DARK : DARK_TO_LIGHT);
             if (!style.equals(themed)) {
                 node.setStyle(themed);
+            }
+        }
+
+        // FIX: TabPane.getChildrenUnmodifiable() only returns header/skin nodes —
+        // NOT the content inside each tab. Without this, every inline style in
+        // classify_tab, history_tab, batch_tab is never visited and stays stuck
+        // on its original color regardless of theme switches.
+        if (node instanceof javafx.scene.control.TabPane tabPane) {
+            for (javafx.scene.control.Tab tab : tabPane.getTabs()) {
+                if (tab.getContent() != null) {
+                    applyInlineTheme(tab.getContent(), darkMode);
+                }
             }
         }
 

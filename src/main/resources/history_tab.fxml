@@ -9,7 +9,6 @@
 
 <SplitPane fx:id="historyRoot"
            dividerPositions="0.3"
-           stylesheets="@visolearn_theme.css"
            xmlns="http://javafx.com/javafx"
            xmlns:fx="http://javafx.com/fxml"
            fx:controller="com.visolearn.HistoryController"

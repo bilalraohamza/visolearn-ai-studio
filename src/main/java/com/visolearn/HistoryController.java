@@ -89,7 +89,7 @@ public class HistoryController implements Initializable {
                     topRow.getChildren().addAll(icon, nameLabel);
 
                     Label dobLabel = new Label("DOB: " + (patient.dob != null ? patient.dob : "N/A"));
-                    dobLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #6B7280;");
+                    dobLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #94A3B8;");
                     VBox.setMargin(dobLabel, new Insets(0, 0, 0, 22));
 
                     rootBox.getChildren().addAll(topRow, dobLabel);
@@ -121,7 +121,9 @@ public class HistoryController implements Initializable {
                     setStyle(null);
                 } else {
                     setText(className);
-                    setStyle("-fx-text-fill: #F8F9FA; -fx-font-size: 14px; -fx-font-weight: bold;");
+                    // No explicit text-fill — let .table-cell CSS rule control color
+                    // so it renders correctly in both dark (#D1D5DB) and light (#1E293B) themes
+                    setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
                 }
             }
         });
@@ -151,7 +153,8 @@ public class HistoryController implements Initializable {
                     setText(null);
                 } else {
                     setText(ts.length() >= 10 ? ts.substring(0, 10) : ts);
-                    setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 13px;");
+                    // No explicit text-fill — CSS handles per-theme coloring
+                    setStyle("-fx-font-size: 13px;");
                 }
             }
         });

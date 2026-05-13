@@ -9,6 +9,7 @@ import javafx.animation.Timeline;
 import javafx.animation.TranslateTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import com.visolearn.MainController;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -69,6 +70,10 @@ public final class SettingsModal {
         Runnable saveAction = () -> {
             SettingsManager.persist();
             System.out.println("[SettingsModal] Settings saved to Preferences.");
+            // Apply theme immediately so the user sees the change without restart
+            if (rootPane.getScene() != null) {
+                MainController.applyTheme(rootPane.getScene(), SettingsManager.isDarkMode());
+            }
             playExitAnimation(rootPane, overlay);
         };
 
@@ -385,29 +390,29 @@ public final class SettingsModal {
 
         String base = primary
                 ? "-fx-background-color: " + COLOR_ACCENT + ";" +
-                "-fx-background-radius: 8px;" +
-                "-fx-text-fill: #FFFFFF;" +
-                "-fx-font-size: 13px;" +
-                "-fx-font-weight: bold;"
+                  "-fx-background-radius: 8px;" +
+                  "-fx-text-fill: #FFFFFF;" +
+                  "-fx-font-size: 13px;" +
+                  "-fx-font-weight: bold;"
                 : "-fx-background-color: transparent;" +
-                "-fx-border-color: " + COLOR_CONTROL_BORDER + ";" +
-                "-fx-border-radius: 8px;" +
-                "-fx-background-radius: 8px;" +
-                "-fx-text-fill: " + COLOR_TEXT_SECONDARY + ";" +
-                "-fx-font-size: 13px;";
+                  "-fx-border-color: " + COLOR_CONTROL_BORDER + ";" +
+                  "-fx-border-radius: 8px;" +
+                  "-fx-background-radius: 8px;" +
+                  "-fx-text-fill: " + COLOR_TEXT_SECONDARY + ";" +
+                  "-fx-font-size: 13px;";
 
         String hover = primary
                 ? "-fx-background-color: " + COLOR_ACCENT_HOVER + ";" +
-                "-fx-background-radius: 8px;" +
-                "-fx-text-fill: #FFFFFF;" +
-                "-fx-font-size: 13px;" +
-                "-fx-font-weight: bold;"
+                  "-fx-background-radius: 8px;" +
+                  "-fx-text-fill: #FFFFFF;" +
+                  "-fx-font-size: 13px;" +
+                  "-fx-font-weight: bold;"
                 : "-fx-background-color: rgba(255,255,255,0.06);" +
-                "-fx-border-color: " + COLOR_CONTROL_BORDER + ";" +
-                "-fx-border-radius: 8px;" +
-                "-fx-background-radius: 8px;" +
-                "-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";" +
-                "-fx-font-size: 13px;";
+                  "-fx-border-color: " + COLOR_CONTROL_BORDER + ";" +
+                  "-fx-border-radius: 8px;" +
+                  "-fx-background-radius: 8px;" +
+                  "-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";" +
+                  "-fx-font-size: 13px;";
 
         button.setStyle(base);
         button.setOnMouseEntered(e -> button.setStyle(hover));

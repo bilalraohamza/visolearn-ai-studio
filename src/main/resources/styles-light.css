@@ -138,3 +138,148 @@
     -fx-padding: 0;
 }
 .scroll-pane > .viewport { -fx-background-color: transparent; }
+
+/* ===== ComboBox — Dropdown Popup (Light) ===== */
+.combo-box {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #CBD5E1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+}
+.combo-box .list-cell {
+    -fx-text-fill: #1E293B;
+    -fx-background-color: transparent;
+    -fx-padding: 6 10 6 10;
+}
+.combo-box .arrow-button { -fx-background-color: transparent; }
+.combo-box .arrow { -fx-background-color: #64748B; }
+
+.combo-box-popup .list-view {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: rgba(15,23,42,0.12);
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(15,23,42,0.18), 14, 0, 0, 5);
+}
+.combo-box-popup .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #1E293B;
+    -fx-font-size: 13px;
+    -fx-padding: 9 14 9 14;
+}
+.combo-box-popup .list-cell:filled:hover {
+    -fx-background-color: #EEF4F8;
+    -fx-cursor: hand;
+}
+.combo-box-popup .list-cell:filled:selected,
+.combo-box-popup .list-cell:filled:selected:hover {
+    -fx-background-color: rgba(15,159,117,0.15);
+    -fx-text-fill: #0F9F75;
+}
+
+/* ===== TextField (Light) ===== */
+.text-field {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #1E293B;
+    -fx-prompt-text-fill: #94A3B8;
+    -fx-border-color: #CBD5E1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-font-size: 13px;
+    -fx-padding: 8 12 8 12;
+}
+.text-field:focused {
+    -fx-border-color: #0F9F75;
+    -fx-background-color: #FFFFFF;
+}
+
+/* ===== Dialog (Light) ===== */
+.dialog-pane {
+    -fx-background-color: #FFFFFF;
+}
+.dialog-pane .header-panel {
+    -fx-background-color: #F4F7FB;
+}
+.dialog-pane .header-panel .label {
+    -fx-text-fill: #0F172A;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+.dialog-pane .button-bar .button {
+    -fx-background-color: #E2E8F0;
+    -fx-text-fill: #1E293B;
+    -fx-background-radius: 6;
+}
+.dialog-pane .button-bar .button:hover {
+    -fx-background-color: #CBD5E1;
+}
+.dialog-pane .button-bar .button:default {
+    -fx-background-color: #0F9F75;
+    -fx-text-fill: white;
+}
+.dialog-pane .button-bar .button:default:hover {
+    -fx-background-color: #0B7F62;
+}
+.dialog-pane .label {
+    -fx-text-fill: #334155;
+}
+.dialog-pane .grid-pane .label {
+    -fx-text-fill: #475569;
+}
+.dialog-pane .text-field {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #1E293B;
+    -fx-border-color: #CBD5E1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+/* ===== SplitPane Divider (Light) ===== */
+.split-pane > .split-pane-divider {
+    -fx-background-color: #EEF4F8;
+    -fx-border-color: #E2E8F0;
+    -fx-border-width: 0 1 0 0;
+}
+
+/* ===== History Tab — Patient List (Light) ===== */
+.list-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+.list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #1E293B;
+    -fx-padding: 10 14 10 14;
+    -fx-border-color: rgba(15,23,42,0.06);
+    -fx-border-width: 0 0 1 0;
+    -fx-font-size: 13px;
+}
+.list-cell:hover {
+    -fx-background-color: #EEF4F8;
+    -fx-cursor: hand;
+}
+.list-cell:selected,
+.list-cell:filled:selected {
+    -fx-background-color: rgba(15,159,117,0.12);
+    -fx-border-color: #0F9F75;
+    -fx-border-width: 0 0 0 3;
+    -fx-text-fill: #0F172A;
+}
+
+/* ===== PieChart (Light) ===== */
+.chart-pie-label {
+    -fx-fill: #334155;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+.chart-pie-label-line { -fx-stroke: #94A3B8; }
+
+/* ===== ScrollBar (Light) ===== */
+.scroll-bar { -fx-background-color: transparent; }
+.scroll-bar .track { -fx-background-color: #E2E8F0; -fx-background-radius: 4; }
+.scroll-bar .thumb { -fx-background-color: #CBD5E1; -fx-background-radius: 4; }
+.scroll-bar .thumb:hover { -fx-background-color: #94A3B8; }
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button { -fx-background-color: transparent; -fx-padding: 2; }
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow { -fx-background-color: #64748B; }

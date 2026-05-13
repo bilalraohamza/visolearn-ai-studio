@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.prefs.Preferences;
 
 /**
  * VisoLearn AI Studio — Clinical Report Export Utility
@@ -207,9 +206,7 @@ public final class ReportExportUtil {
      * @return The scale factor to apply to {@link SnapshotParameters#setTransform}.
      */
     private static double getSnapshotScale() {
-        String saved = Preferences
-                .userNodeForPackage(SettingsModal.class)
-                .get("export_resolution", "High / Retina (2×)");
+        String saved = SettingsManager.getExportResolution();
 
         if (saved.startsWith("Standard")) return 1.0;
         if (saved.startsWith("Ultra"))    return 3.0;

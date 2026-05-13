@@ -6,6 +6,7 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import com.visolearn.utils.SettingsManager;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -72,11 +73,9 @@ public class MainApp extends Application {
 
         // Create the scene with the loaded layout
         Scene scene = new Scene(loader.load(), MIN_WIDTH, MIN_HEIGHT);
-        scene.getStylesheets().add(
-                Objects.requireNonNull(
-                        getClass().getResource("/styles.css")
-                ).toExternalForm()
-        );
+        MainController.applyTheme(scene, SettingsManager.isDarkMode());
+        SettingsManager.darkModeProperty().addListener((obs, oldValue, isDark) ->
+                MainController.applyTheme(scene, isDark));
 
         // Configure the primary stage (main window)
         primaryStage.setTitle(APP_TITLE);

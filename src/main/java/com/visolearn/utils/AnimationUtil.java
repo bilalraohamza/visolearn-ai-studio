@@ -6,15 +6,12 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.util.Duration;
 
-import java.util.prefs.Preferences;
-
 /**
  * Centralized animation utility for VisoLearn AI Studio.
  *
- * <p>All public methods are guard-gated by {@link #animationsEnabled()}, which
- * reads the user's preference from {@link java.util.prefs.Preferences}. When
- * animations are disabled (e.g., for accessibility or performance), each method
- * applies its final visual state immediately with no transition.</p>
+ * <p>All public methods are guard-gated by {@link #animationsEnabled()}. When
+ * animations are disabled, each method applies its final visual state
+ * immediately with no transition.</p>
  *
  * <p>All methods are safe to call on the JavaFX Application Thread only.</p>
  */
@@ -120,10 +117,6 @@ public final class AnimationUtil {
      * @param node The target {@link Node} (typically a {@code Button} or {@code HBox}).
      */
     public static void applyButtonHover(Node node) {
-        if (!animationsEnabled()) {
-            return;
-        }
-
         ScaleTransition scaleIn = new ScaleTransition(Duration.millis(150), node);
         scaleIn.setToX(HOVER_SCALE);
         scaleIn.setToY(HOVER_SCALE);
@@ -135,11 +128,21 @@ public final class AnimationUtil {
         scaleOut.setInterpolator(Interpolator.EASE_OUT);
 
         node.setOnMouseEntered(e -> {
+            if (!animationsEnabled()) {
+                node.setScaleX(1.0);
+                node.setScaleY(1.0);
+                return;
+            }
             scaleOut.stop();
             scaleIn.play();
         });
 
         node.setOnMouseExited(e -> {
+            if (!animationsEnabled()) {
+                node.setScaleX(1.0);
+                node.setScaleY(1.0);
+                return;
+            }
             scaleIn.stop();
             scaleOut.play();
         });
@@ -257,8 +260,6 @@ public final class AnimationUtil {
      * @return {@code true} if animations should run; {@code false} to skip them.
      */
     public static boolean animationsEnabled() {
-        return Preferences
-                .userNodeForPackage(SettingsModal.class)
-                .getBoolean("animations_enabled", true);
+        return SettingsManager.isAnimationsEnabled();
     }
 }

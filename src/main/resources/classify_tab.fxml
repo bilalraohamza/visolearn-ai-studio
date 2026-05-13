@@ -11,9 +11,7 @@
       spacing="20">
 
     <VBox spacing="16" prefWidth="390">
-
         <VBox styleClass="glass-card" style="-fx-padding: 20;">
-
             <Label text="INPUT IMAGE"
                    style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.5px; -fx-padding: 0 0 12 0;"/>
 
@@ -32,7 +30,6 @@
                 </VBox>
 
                 <ImageView fx:id="inputImageView" opacity="0" fitWidth="346" fitHeight="346" preserveRatio="false" visible="false"/>
-
                 <ImageView fx:id="heatmapImageView" opacity="0" fitWidth="346" fitHeight="346" preserveRatio="false" visible="false"/>
             </StackPane>
 
@@ -50,20 +47,17 @@
                     <Label fx:id="loadingLabel" text="Analyzing..." style="-fx-font-size: 12px; -fx-text-fill: #10B981; -fx-font-weight: bold;"/>
                 </HBox>
             </HBox>
-
         </VBox>
     </VBox>
 
     <VBox spacing="16" HBox.hgrow="ALWAYS">
-
         <VBox fx:id="predictionBox" styleClass="glass-card" style="-fx-padding: 24;">
             <HBox alignment="CENTER_LEFT" spacing="20">
                 <VBox spacing="4" HBox.hgrow="ALWAYS">
                     <Label text="AI DIAGNOSIS" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.5px;"/>
                     <Label fx:id="predictionLabel" opacity="0" text="Awaiting Image..." style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
-                    <Label fx:id="confidenceLabel" opacity="0" text="Please upload a dermoscopy scan to begin." style="-fx-font-size: 14px; -fx-text-fill: #10B981;"/>
+                    <Label fx:id="confidenceLabel" opacity="0" text="Please upload a scan to begin." style="-fx-font-size: 14px; -fx-text-fill: #10B981;"/>
                 </VBox>
-
                 <VBox alignment="CENTER" styleClass="stat-box" style="-fx-padding: 12 20 12 20; -fx-min-width: 100;">
                     <Label text="CONFIDENCE" style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.2px;"/>
                     <Label fx:id="confidenceStatLabel" opacity="0" text="-" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #10B981;"/>
@@ -81,43 +75,36 @@
                 <Region HBox.hgrow="ALWAYS"/>
                 <Label text="Softmax Output" style="-fx-font-size: 11px; -fx-text-fill: #6B7280;"/>
             </HBox>
-
             <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 0 0 12 0;">
                 <Label text="Actinic Keratosis (AK)" prefWidth="180" style="-fx-font-size: 13px; -fx-text-fill: #D1D5DB;"/>
                 <ProgressBar fx:id="bar0" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" prefHeight="10" style="-fx-accent: #38BDF8;"/>
                 <Label fx:id="pct0" text="0%" prefWidth="45" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-alignment: center-right; -fx-font-weight: bold;"/>
             </HBox>
-
             <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 0 0 12 0;">
                 <Label text="Basal Cell Carcinoma (BCC)" prefWidth="180" style="-fx-font-size: 13px; -fx-text-fill: #D1D5DB;"/>
                 <ProgressBar fx:id="bar1" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" prefHeight="10" style="-fx-accent: #F472B6;"/>
                 <Label fx:id="pct1" text="0%" prefWidth="45" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-alignment: center-right; -fx-font-weight: bold;"/>
             </HBox>
-
             <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 0 0 12 0;">
                 <Label text="Benign Keratosis (BKL)" prefWidth="180" style="-fx-font-size: 13px; -fx-text-fill: #D1D5DB;"/>
                 <ProgressBar fx:id="bar2" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" prefHeight="10" style="-fx-accent: #A78BFA;"/>
                 <Label fx:id="pct2" text="0%" prefWidth="45" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-alignment: center-right; -fx-font-weight: bold;"/>
             </HBox>
-
             <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 0 0 12 0;">
                 <Label text="Dermatofibroma (DF)" prefWidth="180" style="-fx-font-size: 13px; -fx-text-fill: #D1D5DB;"/>
                 <ProgressBar fx:id="bar3" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" prefHeight="10" style="-fx-accent: #FB923C;"/>
                 <Label fx:id="pct3" text="0%" prefWidth="45" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-alignment: center-right; -fx-font-weight: bold;"/>
             </HBox>
-
             <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 0 0 12 0;">
                 <Label text="Melanoma (MEL)" prefWidth="180" style="-fx-font-size: 13px; -fx-text-fill: #F87171; -fx-font-weight: bold;"/>
                 <ProgressBar fx:id="bar4" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" prefHeight="10" style="-fx-accent: #EF4444;"/>
                 <Label fx:id="pct4" text="0%" prefWidth="45" style="-fx-font-size: 12px; -fx-text-fill: #EF4444; -fx-alignment: center-right; -fx-font-weight: bold;"/>
             </HBox>
-
             <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 0 0 12 0;">
                 <Label text="Melanocytic Nevus (NV)" prefWidth="180" style="-fx-font-size: 13px; -fx-text-fill: #10B981; -fx-font-weight: bold;"/>
                 <ProgressBar fx:id="bar5" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" prefHeight="10" style="-fx-accent: #10B981;"/>
                 <Label fx:id="pct5" text="0%" prefWidth="45" style="-fx-font-size: 12px; -fx-text-fill: #10B981; -fx-alignment: center-right; -fx-font-weight: bold;"/>
             </HBox>
-
             <HBox alignment="CENTER_LEFT" spacing="12">
                 <Label text="Vascular Lesion (VASC)" prefWidth="180" style="-fx-font-size: 13px; -fx-text-fill: #D1D5DB;"/>
                 <ProgressBar fx:id="bar6" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" prefHeight="10" style="-fx-accent: #FBBF24;"/>
@@ -125,10 +112,23 @@
             </HBox>
         </VBox>
 
-        <VBox styleClass="glass-card" style="-fx-padding: 20; -fx-background-color: #1E1E2A;" VBox.vgrow="ALWAYS">
-            <Label text="CLINICAL NOTES" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #00B4D8; -fx-letter-spacing: 1.5px; -fx-padding: 0 0 8 0;"/>
-            <Label fx:id="descriptionLabel" opacity="1" text="Upload a dermoscopy image to see classification results and Grad-CAM explanation." wrapText="true" style="-fx-font-size: 13px; -fx-text-fill: #D1D5DB; -fx-line-spacing: 4;"/>
-        </VBox>
+        <HBox spacing="16">
+            <VBox styleClass="glass-card" style="-fx-padding: 20; -fx-background-color: #1E1E2A;" HBox.hgrow="ALWAYS">
+                <Label text="CLINICAL NOTES" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #00B4D8; -fx-letter-spacing: 1.5px; -fx-padding: 0 0 8 0;"/>
+                <Label fx:id="descriptionLabel" opacity="1" text="Upload an image to see results." wrapText="true" style="-fx-font-size: 13px; -fx-text-fill: #D1D5DB; -fx-line-spacing: 4;"/>
+            </VBox>
 
+            <VBox spacing="10" styleClass="glass-card" style="-fx-padding: 20; -fx-min-width: 300;">
+                <Label text="SESSION ASSIGNMENT" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #00B4D8; -fx-letter-spacing: 1.5px;"/>
+
+                <ComboBox fx:id="patientComboBox" promptText="Select Patient..." maxWidth="Infinity"
+                          style="-fx-background-color: #1E1E2A; -fx-control-inner-background: #1E1E2A; -fx-text-fill: white; -fx-border-color: #374151; -fx-border-radius: 4;"/>
+
+                <Button fx:id="saveToHistoryButton" text="Save to Patient History" disable="true" onAction="#handleSaveToHistory"
+                        maxWidth="Infinity" styleClass="primary-btn" style="-fx-padding: 10;"/>
+
+                <Label fx:id="saveStatusLabel" text="" style="-fx-font-size: 11px; -fx-text-fill: #10B981;"/>
+            </VBox>
+        </HBox>
     </VBox>
 </HBox>

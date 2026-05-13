@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.control.cell.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.chart.PieChart?>
+
+<SplitPane fx:id="historyRoot"
+           dividerPositions="0.3"
+           stylesheets="@visolearn_theme.css"
+           xmlns="http://javafx.com/javafx"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="com.visolearn.HistoryController"
+           style="-fx-background-color: #1A1A24;">
+
+    <VBox spacing="0" style="-fx-background-color: #1E1E2A;">
+
+        <HBox alignment="CENTER_LEFT" spacing="10"
+              style="-fx-background-color: #252533; -fx-padding: 14 16 14 16;">
+            <Text text="🔍" fill="#00B4D8" style="-fx-font-family: 'System'; -fx-font-size: 15px;"/>
+            <Text text="Patient History" fill="#F8F9FA" style="-fx-font-family: 'System'; -fx-font-size: 15px; -fx-font-weight: bold;"/>
+        </HBox>
+
+        <TextField fx:id="searchField"
+                   promptText="Search patients by name..."
+                   style="-fx-background-color: #1A1A24; -fx-text-fill: #F8F9FA; -fx-prompt-text-fill: #6B7280; -fx-border-color: #374151; -fx-border-radius: 8; -fx-background-radius: 8; -fx-font-size: 13px; -fx-padding: 10 12 10 12;">
+            <VBox.margin>
+                <Insets top="12" left="12" right="12" bottom="8"/>
+            </VBox.margin>
+        </TextField>
+
+        <ListView fx:id="patientListView"
+                  style="-fx-background-color: transparent; -fx-control-inner-background: #1E1E2A; -fx-border-color: transparent; -fx-padding: 0;">
+            <VBox.vgrow>
+                <Priority fx:constant="ALWAYS"/>
+            </VBox.vgrow>
+        </ListView>
+
+        <Label fx:id="noPatientsLabel"
+               text="No patients found."
+               style="-fx-text-fill: #6B7280; -fx-font-size: 13px; -fx-padding: 10 12 10 12;"
+               visible="false">
+            <VBox.margin>
+                <Insets left="12"/>
+            </VBox.margin>
+        </Label>
+
+        <Button fx:id="registerPatientButton"
+                text="+ Register New Patient"
+                style="-fx-background-color: #252533; -fx-text-fill: #10B981; -fx-font-size: 13px; -fx-font-weight: bold; -fx-border-color: #10B981; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10 16 10 16; -fx-cursor: hand;">
+            <VBox.margin>
+                <Insets top="8" left="12" right="12" bottom="12"/>
+            </VBox.margin>
+        </Button>
+    </VBox>
+
+    <VBox spacing="0" style="-fx-background-color: #1A1A24;">
+
+        <HBox alignment="CENTER_LEFT" spacing="10"
+              style="-fx-background-color: #252533; -fx-padding: 14 16 14 16;">
+            <Text text="📋" fill="#F59E0B" style="-fx-font-family: 'System'; -fx-font-size: 15px;"/>
+            <Text text="Session History" fill="#F8F9FA" style="-fx-font-family: 'System'; -fx-font-size: 15px; -fx-font-weight: bold;"/>
+            <Text fx:id="selectedPatientLabel" text="-" fill="#9CA3AF" style="-fx-font-family: 'System'; -fx-font-size: 14px;"/>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <Button fx:id="deletePatientButton" text="🗑 Delete Patient" visible="false"
+                    style="-fx-background-color: transparent; -fx-text-fill: #EF4444; -fx-border-color: #EF4444; -fx-border-radius: 4; -fx-padding: 6 12; -fx-font-size: 12px; -fx-font-weight: bold; -fx-cursor: hand;"/>
+        </HBox>
+
+        <TableView fx:id="predictionsTable"
+                   style="-fx-background-color: transparent; -fx-control-inner-background: #1A1A24; -fx-border-color: transparent;"
+                   editable="false">
+
+            <columns>
+                <TableColumn fx:id="imageColumn" text="Scan" prefWidth="80" maxWidth="80" resizable="false" style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="predictedClassColumn" text="Predicted Class" prefWidth="250" style="-fx-alignment: CENTER-LEFT;"/>
+                <TableColumn fx:id="confidenceColumn" text="Confidence" prefWidth="130" style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="timestampColumn" text="Date" prefWidth="160" style="-fx-alignment: CENTER;"/>
+            </columns>
+
+            <VBox.margin>
+                <Insets top="16" left="20" right="20"/>
+            </VBox.margin>
+        </TableView>
+
+        <Region fx:id="tableEmptyState" style="-fx-pref-height: 120;"/>
+
+        <Region style="-fx-pref-height: 1; -fx-background-color: #252533;">
+            <VBox.margin>
+                <Insets top="16" bottom="0"/>
+            </VBox.margin>
+        </Region>
+
+        <HBox spacing="24" alignment="TOP_CENTER" style="-fx-padding: 20 20 20 20;">
+            <VBox spacing="10" alignment="TOP_CENTER">
+                <Text text="Condition Distribution" fill="#F8F9FA" style="-fx-font-family: 'System'; -fx-font-size: 15px; -fx-font-weight: bold;"/>
+                <PieChart fx:id="distributionChart" legendVisible="true"
+                          style="-fx-background-color: transparent;"
+                          minWidth="360" minHeight="260" prefWidth="360" prefHeight="260" maxWidth="360" maxHeight="260"/>
+            </VBox>
+
+            <VBox spacing="12" alignment="TOP_LEFT" style="-fx-background-color: #252533; -fx-padding: 20; -fx-background-radius: 10;">
+                <Text text="Session Summary" fill="#F8F9FA" style="-fx-font-family: 'System'; -fx-font-size: 15px; -fx-font-weight: bold;"/>
+                <HBox spacing="8">
+                    <Text text="Total sessions:" fill="#9CA3AF" style="-fx-font-family: 'System'; -fx-font-size: 13px;"/>
+                    <Label fx:id="totalSessionsLabel" text="0" textFill="#F8F9FA" style="-fx-font-family: 'System'; -fx-font-size: 13px; -fx-font-weight: bold;"/>
+                </HBox>
+                <HBox spacing="8">
+                    <Text text="Avg confidence:" fill="#9CA3AF" style="-fx-font-family: 'System'; -fx-font-size: 13px;"/>
+                    <Label fx:id="avgConfidenceLabel" text="0%" textFill="#F8F9FA" style="-fx-font-family: 'System'; -fx-font-size: 13px; -fx-font-weight: bold;"/>
+                </HBox>
+                <HBox spacing="8">
+                    <Text text="Total inference time:" fill="#9CA3AF" style="-fx-font-family: 'System'; -fx-font-size: 13px;"/>
+                    <Label fx:id="totalInferenceLabel" text="0 ms" textFill="#F8F9FA" style="-fx-font-family: 'System'; -fx-font-size: 13px; -fx-font-weight: bold;"/>
+                </HBox>
+            </VBox>
+        </HBox>
+
+    </VBox>
+
+</SplitPane>

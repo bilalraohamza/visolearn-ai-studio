@@ -19,7 +19,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- DJL Bill of Materials — manages all DJL versions automatically -->
             <dependency>
                 <groupId>ai.djl</groupId>
                 <artifactId>bom</artifactId>
@@ -32,25 +31,21 @@
 
     <dependencies>
 
-        <!-- ===== DJL Core ===== -->
         <dependency>
             <groupId>ai.djl</groupId>
             <artifactId>api</artifactId>
         </dependency>
 
-        <!-- DJL ONNX Runtime engine — loads skin_model.onnx -->
         <dependency>
             <groupId>ai.djl.onnxruntime</groupId>
             <artifactId>onnxruntime-engine</artifactId>
         </dependency>
 
-        <!-- DJL image processing utilities -->
         <dependency>
             <groupId>ai.djl</groupId>
             <artifactId>basicdataset</artifactId>
         </dependency>
 
-        <!-- ===== JavaFX ===== -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
@@ -69,14 +64,18 @@
             <version>${javafx.version}</version>
         </dependency>
 
-        <!-- ===== Jackson — reads training_log.json ===== -->
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.45.1.0</version>
+        </dependency>
+
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>2.17.0</version>
         </dependency>
 
-        <!-- ===== Logging ===== -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
@@ -88,7 +87,6 @@
     <build>
         <plugins>
 
-            <!-- Maven compiler plugin — enforces Java 17 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -99,7 +97,6 @@
                 </configuration>
             </plugin>
 
-            <!-- JavaFX Maven plugin — needed to run JavaFX apps -->
             <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
@@ -109,7 +106,6 @@
                 </configuration>
             </plugin>
 
-            <!-- Maven shade plugin — packages everything into one runnable JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -122,8 +118,7 @@
                         </goals>
                         <configuration>
                             <transformers>
-                                <transformer implementation=
-                                                     "org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>com.visolearn.MainApp</mainClass>
                                 </transformer>
                             </transformers>

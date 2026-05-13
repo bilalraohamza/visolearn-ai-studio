@@ -99,7 +99,27 @@ public class MainController {
         applyTheme(scene, !themeName.contains("Light"));
     }
 
-    private static void applyInlineTheme(Node node, boolean darkMode) {
+    public static void applyThemeToDialog(javafx.scene.control.Dialog<?> dialog, boolean darkMode) {
+        if (dialog == null) return;
+        javafx.scene.control.DialogPane pane = dialog.getDialogPane();
+        String css = darkMode ? "/styles.css" : "/styles-light.css";
+        java.net.URL cssUrl = MainController.class.getResource(css);
+        if (cssUrl != null) {
+            pane.getStylesheets().clear();
+            pane.getStylesheets().add(cssUrl.toExternalForm());
+            // Also apply the theme specific CSS if any
+            java.net.URL themeUrl = MainController.class.getResource("/visolearn_theme.css");
+            if (themeUrl != null) {
+                pane.getStylesheets().add(themeUrl.toExternalForm());
+            }
+        }
+        
+        pane.applyCss();
+        pane.layout();
+        applyInlineTheme(pane, darkMode);
+    }
+
+    public static void applyInlineTheme(Node node, boolean darkMode) {
         if (node == null) return;
 
         String style = node.getStyle();

@@ -25,6 +25,7 @@ import com.visolearn.data.PredictionDAO;
 import com.visolearn.data.model.Patient;
 import com.visolearn.data.model.Prediction;
 import com.visolearn.utils.AnimationUtil;
+import com.visolearn.utils.PdfReportExporter;
 import com.visolearn.utils.ReportExportUtil;
 import com.visolearn.utils.RiskAssessor;
 import com.visolearn.utils.RiskLevel;
@@ -417,6 +418,7 @@ public class ClassifyController implements Initializable {
         lastResult           = null;
         heatmapVisible       = false;
         gradCamToggle.setSelected(false);
+        gradCamToggle.setDisable(true);
         if (exportReportButton != null) exportReportButton.setDisable(true);
 
         saveToHistoryButton.setDisable(true);
@@ -432,11 +434,35 @@ public class ClassifyController implements Initializable {
         }
     }
 
-    /** Handles the Export Report button click. */
+    /**
+     * Shows a popup to let the user select between PNG and PDF export.
+     */
     @FXML
     private void handleExportReport() {
-        if (lastResult == null || currentImagePath == null) return;
+        if (lastResult == null || inputImageView.getImage() == null) return;
 
+        java.util.List<String> choices = new java.util.ArrayList<>();
+        choices.add("Export as PDF (Clinical Document)");
+        choices.add("Export as PNG (High Resolution Image)");
+
+        javafx.scene.control.ChoiceDialog<String> dialog = new javafx.scene.control.ChoiceDialog<>(choices.get(0), choices);
+        dialog.setTitle("Export Clinical Report");
+        dialog.setHeaderText("Choose export format");
+        dialog.setContentText("Format:");
+
+        com.visolearn.MainController.applyThemeToDialog(dialog, com.visolearn.utils.SettingsManager.isDarkMode());
+
+        java.util.Optional<String> choice = dialog.showAndWait();
+        if (choice.isPresent()) {
+            if (choice.get().contains("PDF")) {
+                handleExportPdfInternal();
+            } else {
+                handleExportPngInternal();
+            }
+        }
+    }
+
+    private void handleExportPngInternal() {
         Image original = inputImageView.getImage();
         Image heatmap  = heatmapImageView.getImage();
 
@@ -458,6 +484,36 @@ public class ClassifyController implements Initializable {
         } else {
             heatmapImageView.setVisible(false);
             heatmapVisible = false;
+        }
+    }
+
+    private void handleExportPdfInternal() {
+        if (lastResult == null || inputImageView.getImage() == null) return;
+
+        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
+        fileChooser.setTitle("Export Clinical Report PDF");
+        fileChooser.setInitialFileName("visolearn_report.pdf");
+        fileChooser.getExtensionFilters().add(
+                new javafx.stage.FileChooser.ExtensionFilter("PDF Documents", "*.pdf")
+        );
+
+        File file = fileChooser.showSaveDialog(exportReportButton.getScene().getWindow());
+
+        if (file != null) {
+            try {
+                PdfReportExporter.exportClinicalReport(
+                        file, 
+                        lastResult, 
+                        inputImageView.getImage(), 
+                        heatmapImageView.getImage()
+                );
+                StackPane root = (StackPane) exportReportButton.getScene().getRoot();
+                ToastUtil.showToast(root, "PDF Report exported successfully!", ToastUtil.ToastType.SUCCESS);
+            } catch (Exception e) {
+                e.printStackTrace();
+                StackPane root = (StackPane) exportReportButton.getScene().getRoot();
+                ToastUtil.showToast(root, "Failed to export PDF: " + e.getMessage(), ToastUtil.ToastType.ERROR);
+            }
         }
     }
 

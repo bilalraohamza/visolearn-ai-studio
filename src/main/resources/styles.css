@@ -4,6 +4,44 @@
     -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
+/* ===== Dialog Panels ===== */
+.dialog-pane {
+    -fx-background-color: #1A1A24;
+}
+.dialog-pane .header-panel {
+    -fx-background-color: #252533;
+    -fx-border-color: rgba(255,255,255,0.05);
+    -fx-border-width: 0 0 1 0;
+}
+.dialog-pane .label {
+    -fx-text-fill: #E5E7EB;
+}
+.dialog-pane .content {
+    -fx-text-fill: #9CA3AF;
+}
+.dialog-pane .button-bar {
+    -fx-background-color: #1A1A24;
+}
+.dialog-pane .button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #9CA3AF;
+    -fx-border-color: rgba(255,255,255,0.15);
+    -fx-border-radius: 8px;
+    -fx-padding: 6 16 6 16;
+}
+.dialog-pane .button:hover {
+    -fx-background-color: rgba(255,255,255,0.05);
+    -fx-text-fill: #F8F9FA;
+}
+.dialog-pane .button:default {
+    -fx-background-color: #10B981;
+    -fx-text-fill: white;
+    -fx-border-color: transparent;
+}
+.dialog-pane .button:default:hover {
+    -fx-background-color: #059669;
+}
+
 /* ===== Modern Card Panels ===== */
 .glass-card {
     -fx-background-color: #252533;

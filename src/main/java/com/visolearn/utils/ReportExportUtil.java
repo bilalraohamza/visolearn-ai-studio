@@ -131,31 +131,8 @@ public final class ReportExportUtil {
             return;
         }
 
-        // ── Step 2: Build the off-screen report VBox ─────────────────────────
-        VBox reportLayout = buildReportLayout(
-                original, heatmap, topClass, confidence, inferenceTime);
-        new javafx.scene.Scene(reportLayout);
-
-        // ── Step 3: Force layout pass so all node sizes are computed ─────────
-        reportLayout.applyCss();
-        reportLayout.layout();
-
-        // ── Step 4: Configure SnapshotParameters ─────────────────────────────
-        SnapshotParameters params = new SnapshotParameters();
-        params.setFill(Color.WHITE);
-
-        /*
-         * Read the export scale dynamically from Preferences rather than using
-         * a hardcoded constant. This reflects the user's choice from SettingsModal:
-         *   Standard (1×)      → 1.0  — fast export, screen-resolution PNG
-         *   High / Retina (2×) → 2.0  — default, crisp for most displays/print
-         *   Ultra (3×)         → 3.0  — maximum fidelity for large-format printing
-         */
-        double scale = getSnapshotScale();
-        params.setTransform(new javafx.scene.transform.Scale(scale, scale));
-
-        // ── Step 5: Snapshot the node into a WritableImage ───────────────────
-        WritableImage fxImage = reportLayout.snapshot(params, null);
+        // ── Step 2-5: Generate the snapshot ──────────────────────────────────
+        WritableImage fxImage = generateReportSnapshot(original, heatmap, topClass, confidence, inferenceTime);
 
         // ── Step 6: Convert to BufferedImage and write to disk ───────────────
         BufferedImage bufferedImage = SwingFXUtils.fromFXImage(fxImage, null);
@@ -184,6 +161,29 @@ public final class ReportExportUtil {
             System.err.println("[ReportExportUtil] Failed to write report: " + ex.getMessage());
             ex.printStackTrace();
         }
+    }
+
+    /**
+     * Generates a high-resolution WritableImage snapshot of the clinical report layout.
+     */
+    public static WritableImage generateReportSnapshot(
+            Image  original,
+            Image  heatmap,
+            String topClass,
+            double confidence,
+            String inferenceTime) {
+
+        VBox reportLayout = buildReportLayout(original, heatmap, topClass, confidence, inferenceTime);
+        new javafx.scene.Scene(reportLayout);
+        reportLayout.applyCss();
+        reportLayout.layout();
+
+        SnapshotParameters params = new SnapshotParameters();
+        params.setFill(Color.WHITE);
+        double scale = getSnapshotScale();
+        params.setTransform(new javafx.scene.transform.Scale(scale, scale));
+
+        return reportLayout.snapshot(params, null);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

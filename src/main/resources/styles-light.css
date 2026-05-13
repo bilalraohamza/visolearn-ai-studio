@@ -5,6 +5,44 @@
     -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
+/* ===== Dialog Panels (Light) ===== */
+.dialog-pane {
+    -fx-background-color: #F4F7FB;
+}
+.dialog-pane .header-panel {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: rgba(15,23,42,0.08);
+    -fx-border-width: 0 0 1 0;
+}
+.dialog-pane .label {
+    -fx-text-fill: #1E293B;
+}
+.dialog-pane .content {
+    -fx-text-fill: #475569;
+}
+.dialog-pane .button-bar {
+    -fx-background-color: #F4F7FB;
+}
+.dialog-pane .button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #475569;
+    -fx-border-color: rgba(15,23,42,0.15);
+    -fx-border-radius: 8px;
+    -fx-padding: 6 16 6 16;
+}
+.dialog-pane .button:hover {
+    -fx-background-color: rgba(15,23,42,0.05);
+    -fx-text-fill: #1E293B;
+}
+.dialog-pane .button:default {
+    -fx-background-color: #0EA5E9;
+    -fx-text-fill: white;
+    -fx-border-color: transparent;
+}
+.dialog-pane .button:default:hover {
+    -fx-background-color: #0284C7;
+}
+
 .glass-card {
     -fx-background-color: #FFFFFF;
     -fx-background-radius: 12px;

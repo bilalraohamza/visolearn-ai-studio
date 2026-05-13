@@ -232,6 +232,8 @@ public class HistoryController implements Initializable {
         alert.setHeaderText("Delete " + selectedPatient.name + "?");
         alert.setContentText("This will permanently delete the patient and all associated scan history. This action cannot be undone.");
 
+        com.visolearn.MainController.applyThemeToDialog(alert, com.visolearn.utils.SettingsManager.isDarkMode());
+
         alert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
                 Task<Void> deleteTask = new Task<>() {
@@ -334,6 +336,8 @@ public class HistoryController implements Initializable {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Register New Patient");
         dialog.setHeaderText("Enter patient details below.");
+
+        com.visolearn.MainController.applyThemeToDialog(dialog, com.visolearn.utils.SettingsManager.isDarkMode());
 
         DialogPane pane = dialog.getDialogPane();
         pane.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);

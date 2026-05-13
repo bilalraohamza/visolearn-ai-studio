@@ -1,5 +1,6 @@
 package com.visolearn;
 
+import com.visolearn.utils.AnimationUtil;
 import com.visolearn.utils.ToastUtil;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
@@ -206,6 +207,8 @@ public class BatchController implements Initializable {
         Thread initThread = new Thread(initTask);
         initThread.setDaemon(true);
         initThread.start();
+        
+        setupAnimations();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -448,5 +451,11 @@ public class BatchController implements Initializable {
                 )
         );
         return files != null ? files : new File[0];
+    }
+
+    private void setupAnimations() {
+        AnimationUtil.applyButtonHover(selectFolderButton);
+        AnimationUtil.applyButtonHover(runBatchButton);
+        AnimationUtil.applyButtonHover(exportCsvButton);
     }
 }

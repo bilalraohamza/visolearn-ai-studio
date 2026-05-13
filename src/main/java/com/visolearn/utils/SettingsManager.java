@@ -110,7 +110,12 @@ public final class SettingsManager {
         setGradCamOpacity(snapshot.gradCamOpacity());
         setAnimationsEnabled(snapshot.animationsEnabled());
         setExportResolution(snapshot.exportResolution());
-        setDarkMode(snapshot.darkMode());
+        // Only fire the darkMode property listener if the value actually changed.
+        // This prevents a redundant applyTheme call when the user cancels without
+        // changing the theme toggle, which would cause a visible re-render flash.
+        if (snapshot.darkMode() != isDarkMode()) {
+            setDarkMode(snapshot.darkMode());
+        }
     }
 
     public static void persist() {

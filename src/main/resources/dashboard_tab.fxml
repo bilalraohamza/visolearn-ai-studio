@@ -73,7 +73,7 @@
     </HBox>
 
     <HBox spacing="16" VBox.vgrow="ALWAYS">
-        <VBox HBox.hgrow="ALWAYS" styleClass="glass-card" style="-fx-padding: 16;" spacing="8">
+        <VBox HBox.hgrow="ALWAYS" styleClass="glass-card" style="-fx-padding: 16;" spacing="8" alignment="CENTER">
             <Label text="Training &amp; Validation Loss" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
             <LineChart fx:id="lossChart" VBox.vgrow="ALWAYS" animated="false" style="-fx-background-color: transparent; -fx-padding: 0;">
                 <xAxis><NumberAxis label="Epoch" lowerBound="1" upperBound="35" tickUnit="5" autoRanging="false" style="-fx-tick-label-fill: #9CA3AF;"/></xAxis>
@@ -81,7 +81,7 @@
             </LineChart>
         </VBox>
 
-        <VBox HBox.hgrow="ALWAYS" styleClass="glass-card" style="-fx-padding: 16;" spacing="8">
+        <VBox HBox.hgrow="ALWAYS" styleClass="glass-card" style="-fx-padding: 16;" spacing="8" alignment="CENTER">
             <Label text="Training &amp; Validation Accuracy" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
             <LineChart fx:id="accuracyChart" VBox.vgrow="ALWAYS" animated="false" style="-fx-background-color: transparent; -fx-padding: 0;">
                 <xAxis><NumberAxis label="Epoch" lowerBound="1" upperBound="35" tickUnit="5" autoRanging="false" style="-fx-tick-label-fill: #9CA3AF;"/></xAxis>
@@ -90,7 +90,7 @@
         </VBox>
     </HBox>
 
-    <VBox styleClass="glass-card" style="-fx-padding: 20;" spacing="16">
+    <VBox styleClass="glass-card" style="-fx-padding: 20;" spacing="16" VBox.vgrow="ALWAYS" alignment="CENTER_LEFT">
         <VBox spacing="4">
             <Label text="ENSEMBLE PER-CLASS F1 SCORE" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.5px;"/>
             <Label text="Averaged results from ensemble evaluation" style="-fx-font-size: 12px; -fx-text-fill: #6B7280;"/>

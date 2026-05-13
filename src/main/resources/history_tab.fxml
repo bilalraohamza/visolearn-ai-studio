@@ -72,6 +72,9 @@
         <TableView fx:id="predictionsTable"
                    style="-fx-background-color: transparent; -fx-control-inner-background: #1A1A24; -fx-border-color: transparent;"
                    editable="false">
+            <VBox.vgrow>
+                <Priority fx:constant="ALWAYS"/>
+            </VBox.vgrow>
 
             <columns>
                 <TableColumn fx:id="imageColumn" text="Scan" prefWidth="80" maxWidth="80" resizable="false" style="-fx-alignment: CENTER;"/>
@@ -105,15 +108,15 @@
                 <Text text="Session Summary" fill="#F8F9FA" style="-fx-font-family: 'System'; -fx-font-size: 15px; -fx-font-weight: bold;"/>
                 <HBox spacing="8">
                     <Text text="Total sessions:" fill="#9CA3AF" style="-fx-font-family: 'System'; -fx-font-size: 13px;"/>
-                    <Label fx:id="totalSessionsLabel" text="0" textFill="#F8F9FA" style="-fx-font-family: 'System'; -fx-font-size: 13px; -fx-font-weight: bold;"/>
+                    <Label fx:id="totalSessionsLabel" text="0" style="-fx-font-family: 'System'; -fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
                 </HBox>
                 <HBox spacing="8">
                     <Text text="Avg confidence:" fill="#9CA3AF" style="-fx-font-family: 'System'; -fx-font-size: 13px;"/>
-                    <Label fx:id="avgConfidenceLabel" text="0%" textFill="#F8F9FA" style="-fx-font-family: 'System'; -fx-font-size: 13px; -fx-font-weight: bold;"/>
+                    <Label fx:id="avgConfidenceLabel" text="0%" style="-fx-font-family: 'System'; -fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
                 </HBox>
                 <HBox spacing="8">
                     <Text text="Total inference time:" fill="#9CA3AF" style="-fx-font-family: 'System'; -fx-font-size: 13px;"/>
-                    <Label fx:id="totalInferenceLabel" text="0 ms" textFill="#F8F9FA" style="-fx-font-family: 'System'; -fx-font-size: 13px; -fx-font-weight: bold;"/>
+                    <Label fx:id="totalInferenceLabel" text="0 ms" style="-fx-font-family: 'System'; -fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
                 </HBox>
             </VBox>
         </HBox>

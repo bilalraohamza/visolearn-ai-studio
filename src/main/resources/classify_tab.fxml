@@ -10,18 +10,18 @@
       style="-fx-background-color: #1A1A24; -fx-padding: 24;"
       spacing="20">
 
-    <VBox spacing="16" prefWidth="390">
-        <VBox styleClass="glass-card" style="-fx-padding: 20;">
+    <VBox spacing="16" HBox.hgrow="ALWAYS" prefWidth="500">
+        <VBox styleClass="glass-card" style="-fx-padding: 20;" VBox.vgrow="ALWAYS">
             <Label text="INPUT IMAGE"
                    style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.5px; -fx-padding: 0 0 12 0;"/>
 
             <StackPane fx:id="imageContainer"
-                       prefWidth="350" prefHeight="350"
                        minWidth="350" minHeight="350"
+                       VBox.vgrow="ALWAYS"
                        style="-fx-background-color: #1E1E2A; -fx-background-radius: 8; -fx-border-color: #4B5563; -fx-border-width: 2; -fx-border-radius: 8; -fx-border-style: dashed; -fx-cursor: hand;">
 
                 <VBox fx:id="placeholderBox" alignment="CENTER" spacing="12">
-                    <StackPane style="-fx-background-color: rgba(16, 185, 129, 0.1); -fx-background-radius: 50; -fx-min-width: 60; -fx-min-height: 60; -fx-max-width: 60; -fx-max-height: 60;"
+                    <StackPane fx:id="plusIcon" style="-fx-background-color: rgba(16, 185, 129, 0.1); -fx-background-radius: 50; -fx-min-width: 60; -fx-min-height: 60; -fx-max-width: 60; -fx-max-height: 60;"
                                alignment="CENTER">
                         <Label text="+" style="-fx-font-size: 28px; -fx-text-fill: #10B981; -fx-font-weight: bold; -fx-translate-y: -2;"/>
                     </StackPane>
@@ -29,8 +29,8 @@
                     <Label text="or click to browse files" style="-fx-font-size: 12px; -fx-text-fill: #9CA3AF;"/>
                 </VBox>
 
-                <ImageView fx:id="inputImageView" opacity="0" fitWidth="346" fitHeight="346" preserveRatio="false" visible="false"/>
-                <ImageView fx:id="heatmapImageView" opacity="0" fitWidth="346" fitHeight="346" preserveRatio="false" visible="false"/>
+                <ImageView fx:id="inputImageView" opacity="0" preserveRatio="false" visible="false"/>
+                <ImageView fx:id="heatmapImageView" opacity="0" preserveRatio="false" visible="false"/>
             </StackPane>
 
             <HBox spacing="12" style="-fx-padding: 16 0 0 0;">
@@ -50,8 +50,11 @@
         </VBox>
     </VBox>
 
-    <VBox spacing="16" HBox.hgrow="ALWAYS">
-        <VBox fx:id="predictionBox" styleClass="glass-card" style="-fx-padding: 24;">
+    <VBox spacing="16" HBox.hgrow="ALWAYS" prefWidth="500">
+        <VBox fx:id="predictionBox" styleClass="glass-card" style="-fx-padding: 24;" spacing="16" VBox.vgrow="ALWAYS" alignment="CENTER_LEFT">
+            <HBox fx:id="riskBanner" visible="false" managed="false" alignment="CENTER" style="-fx-padding: 8 16; -fx-background-radius: 6;">
+                <Label fx:id="riskLabel" style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: white;"/>
+            </HBox>
             <HBox alignment="CENTER_LEFT" spacing="20">
                 <VBox spacing="4" HBox.hgrow="ALWAYS">
                     <Label text="AI DIAGNOSIS" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.5px;"/>
@@ -69,7 +72,7 @@
             </HBox>
         </VBox>
 
-        <VBox styleClass="glass-card" style="-fx-padding: 20;">
+        <VBox styleClass="glass-card" style="-fx-padding: 20;" VBox.vgrow="ALWAYS" alignment="CENTER">
             <HBox alignment="CENTER_LEFT" style="-fx-padding: 0 0 16 0;">
                 <Label text="CLASS PROBABILITIES" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #9CA3AF; -fx-letter-spacing: 1.5px;"/>
                 <Region HBox.hgrow="ALWAYS"/>
@@ -112,17 +115,17 @@
             </HBox>
         </VBox>
 
-        <HBox spacing="16">
-            <VBox styleClass="glass-card" style="-fx-padding: 20; -fx-background-color: #1E1E2A;" HBox.hgrow="ALWAYS">
+        <HBox spacing="16" VBox.vgrow="ALWAYS">
+            <VBox styleClass="glass-card" style="-fx-padding: 20;" HBox.hgrow="ALWAYS" alignment="CENTER_LEFT">
                 <Label text="CLINICAL NOTES" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #00B4D8; -fx-letter-spacing: 1.5px; -fx-padding: 0 0 8 0;"/>
-                <Label fx:id="descriptionLabel" opacity="1" text="Upload an image to see results." wrapText="true" style="-fx-font-size: 13px; -fx-text-fill: #D1D5DB; -fx-line-spacing: 4;"/>
+                <Label fx:id="descriptionLabel" opacity="1" text="Upload a dermoscopy image to see classification results and Grad-CAM explanation." wrapText="true" style="-fx-font-size: 13px; -fx-text-fill: #D1D5DB; -fx-line-spacing: 4;"/>
             </VBox>
 
-            <VBox spacing="10" styleClass="glass-card" style="-fx-padding: 20; -fx-min-width: 300;">
+            <VBox spacing="10" styleClass="glass-card" style="-fx-padding: 20; -fx-min-width: 300;" alignment="CENTER_LEFT">
                 <Label text="SESSION ASSIGNMENT" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #00B4D8; -fx-letter-spacing: 1.5px;"/>
 
                 <ComboBox fx:id="patientComboBox" promptText="Select Patient..." maxWidth="Infinity"
-                          style="-fx-background-color: #1E1E2A; -fx-control-inner-background: #1E1E2A; -fx-text-fill: white; -fx-border-color: #374151; -fx-border-radius: 4;"/>
+                          style="-fx-background-color: #1E1E2A; -fx-control-inner-background: #1E1E2A; -fx-text-fill: #F8F9FA; -fx-border-color: #374151; -fx-border-radius: 4;"/>
 
                 <Button fx:id="saveToHistoryButton" text="Save to Patient History" disable="true" onAction="#handleSaveToHistory"
                         maxWidth="Infinity" styleClass="primary-btn" style="-fx-padding: 10;"/>

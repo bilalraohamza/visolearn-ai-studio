@@ -37,19 +37,25 @@ import java.util.function.Consumer;
  */
 public final class SettingsModal {
 
-    private static final String COLOR_MODAL_BG = "#252533";
-    private static final String COLOR_MODAL_BORDER = "rgba(255,255,255,0.10)";
     private static final String COLOR_ACCENT = "#10B981";
     private static final String COLOR_ACCENT_HOVER = "#059669";
-    private static final String COLOR_TEXT_PRIMARY = "#F8F9FA";
-    private static final String COLOR_TEXT_SECONDARY = "#9CA3AF";
-    private static final String COLOR_TEXT_MUTED = "#6B7280";
-    private static final String COLOR_DIVIDER = "rgba(255,255,255,0.08)";
-    private static final String COLOR_CONTROL_BG = "#1E1E2A";
-    private static final String COLOR_CONTROL_BORDER = "rgba(255,255,255,0.12)";
 
-    private static final double MODAL_WIDTH = 450;
+    private static final double MODAL_WIDTH = 420;
     private static final double MODAL_SLIDE_OFFSET = -24;
+
+    // Returns colors based on current theme
+    private static String modalBg()           { return SettingsManager.isDarkMode() ? "#252533" : "#FFFFFF"; }
+    private static String modalBorder()       { return SettingsManager.isDarkMode() ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.10)"; }
+    private static String textPrimary()       { return SettingsManager.isDarkMode() ? "#F8F9FA" : "#0F172A"; }
+    private static String textSecondary()     { return SettingsManager.isDarkMode() ? "#9CA3AF" : "#64748B"; }
+    private static String textMuted()         { return SettingsManager.isDarkMode() ? "#6B7280" : "#475569"; }
+    private static String dividerColor()      { return SettingsManager.isDarkMode() ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.08)"; }
+    private static String controlBg()         { return SettingsManager.isDarkMode() ? "#1E1E2A" : "#EEF4F8"; }
+    private static String controlBorder()     { return SettingsManager.isDarkMode() ? "rgba(255,255,255,0.15)" : "rgba(15,23,42,0.16)"; }
+    private static String settingPanelBg()    { return SettingsManager.isDarkMode() ? "rgba(255,255,255,0.03)" : "rgba(15,23,42,0.04)"; }
+    private static String sliderTrackBg()     { return SettingsManager.isDarkMode() ? "#374151" : "#CBD5E1"; }
+    private static String toggleTrackOff()    { return SettingsManager.isDarkMode() ? "#4B5563" : "#94A3B8"; }
+    private static String cancelBtnHoverBg()  { return SettingsManager.isDarkMode() ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.10)"; }
 
     private SettingsModal() {
         throw new UnsupportedOperationException(
@@ -80,24 +86,68 @@ public final class SettingsModal {
         VBox modalCard = buildModalCard(cancelAction, saveAction);
         modalCard.setOnMouseClicked(e -> e.consume());
 
-        overlay.setOnMouseClicked(e -> cancelAction.run());
+        // FIX: JavaFX ComboBox popups render in a separate PopupWindow outside the scene.
+        // When the user clicks a dropdown item the popup closes first, then a synthetic
+        // mouse-released event lands on the overlay — triggering cancelAction by mistake.
+        // We suppress the cancel for 300ms after any popup closes to prevent this.
+        final boolean[] suppressCancel = {false};
+        overlay.setOnMouseClicked(e -> {
+            if (!suppressCancel[0]) {
+                cancelAction.run();
+            }
+        });
+
+        // Wire suppressCancel into all ComboBoxes inside the card
+        modalCard.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                hookComboBoxSuppression(modalCard, suppressCancel);
+            }
+        });
+
         overlay.getChildren().add(modalCard);
         StackPane.setAlignment(modalCard, Pos.CENTER);
         rootPane.getChildren().add(overlay);
 
+        // Hook after the card is added to the scene
+        hookComboBoxSuppression(modalCard, suppressCancel);
+
         playEntranceAnimation(overlay, modalCard);
+    }
+
+    /** Walk all ComboBoxes inside a node tree and add showing/hidden listeners that
+     *  temporarily suppress the overlay cancel click so dropdown selection works. */
+    @SuppressWarnings("unchecked")
+    private static void hookComboBoxSuppression(javafx.scene.Node root, boolean[] suppressCancel) {
+        if (root instanceof ComboBox<?> cb) {
+            cb.showingProperty().addListener((obs, wasShowing, isShowing) -> {
+                if (!isShowing && wasShowing) {
+                    // Popup just closed — suppress the next overlay click for 300ms
+                    suppressCancel[0] = true;
+                    javafx.animation.PauseTransition pt =
+                            new javafx.animation.PauseTransition(javafx.util.Duration.millis(300));
+                    pt.setOnFinished(e -> suppressCancel[0] = false);
+                    pt.play();
+                }
+            });
+        }
+        if (root instanceof javafx.scene.Parent parent) {
+            for (javafx.scene.Node child : parent.getChildrenUnmodifiable()) {
+                hookComboBoxSuppression(child, suppressCancel);
+            }
+        }
     }
 
     private static VBox buildModalCard(Runnable cancelAction, Runnable saveAction) {
         VBox card = new VBox(0);
         card.setMaxWidth(MODAL_WIDTH);
         card.setMinWidth(MODAL_WIDTH);
+        card.setMaxHeight(Region.USE_PREF_SIZE);
         card.setAlignment(Pos.TOP_CENTER);
         card.setStyle(
-                "-fx-background-color: " + COLOR_MODAL_BG + ";" +
+                "-fx-background-color: " + modalBg() + ";" +
                         "-fx-background-radius: 14px;" +
                         "-fx-border-radius: 14px;" +
-                        "-fx-border-color: " + COLOR_MODAL_BORDER + ";" +
+                        "-fx-border-color: " + modalBorder() + ";" +
                         "-fx-border-width: 1px;"
         );
 
@@ -149,11 +199,11 @@ public final class SettingsModal {
 
         Label title = new Label("Application Settings");
         title.setFont(Font.font("System", FontWeight.BOLD, 16));
-        title.setStyle("-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";");
+        title.setStyle("-fx-text-fill: " + textPrimary() + ";");
 
         Label subtitle = new Label("Changes preview immediately");
         subtitle.setFont(Font.font("System", FontWeight.NORMAL, 11));
-        subtitle.setStyle("-fx-text-fill: " + COLOR_TEXT_MUTED + ";");
+        subtitle.setStyle("-fx-text-fill: " + textMuted() + ";");
 
         titleBlock.getChildren().addAll(title, subtitle);
         row.getChildren().addAll(gearIcon, titleBlock, buildCloseButton(closeAction));
@@ -215,7 +265,7 @@ public final class SettingsModal {
         slider.setBlockIncrement(0.05);
         slider.setMaxWidth(Double.MAX_VALUE);
         slider.setStyle(
-                "-fx-control-inner-background: #374151;" +
+                "-fx-control-inner-background: " + sliderTrackBg() + ";" +
                         "-fx-accent: " + COLOR_ACCENT + ";"
         );
         slider.valueProperty().addListener((obs, oldValue, value) -> {
@@ -264,14 +314,8 @@ public final class SettingsModal {
         String saved = SettingsManager.getExportResolution();
         combo.setValue(combo.getItems().contains(saved) ? saved : "High / Retina (2x)");
         combo.setMaxWidth(Double.MAX_VALUE);
-        combo.setStyle(
-                "-fx-background-color: " + COLOR_CONTROL_BG + ";" +
-                        "-fx-border-color: " + COLOR_CONTROL_BORDER + ";" +
-                        "-fx-border-radius: 7px;" +
-                        "-fx-background-radius: 7px;" +
-                        "-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";" +
-                        "-fx-font-size: 12px;"
-        );
+        // Removed inline setStyle so ComboBox correctly relies on styles.css / styles-light.css
+        // which avoids conflicts when swapping themes.
         combo.valueProperty().addListener((obs, oldValue, value) ->
                 SettingsManager.setExportResolution(value));
 
@@ -285,7 +329,7 @@ public final class SettingsModal {
         track.setArcHeight(24);
         track.setFill(checkBox.isSelected()
                 ? Color.web(COLOR_ACCENT)
-                : Color.web("#4B5563"));
+                : Color.web(toggleTrackOff()));
 
         Rectangle thumb = new Rectangle(18, 18);
         thumb.setArcWidth(18);
@@ -315,7 +359,7 @@ public final class SettingsModal {
     }
 
     private static void updateTogglePill(Rectangle track, Rectangle thumb, boolean selected) {
-        Color toColor = selected ? Color.web(COLOR_ACCENT) : Color.web("#4B5563");
+        Color toColor = selected ? Color.web(COLOR_ACCENT) : Color.web(toggleTrackOff());
         double toX = selected ? 10 : -10;
 
         if (!SettingsManager.isAnimationsEnabled()) {
@@ -362,20 +406,20 @@ public final class SettingsModal {
         button.setStyle(
                 "-fx-background-color: transparent;" +
                         "-fx-background-radius: 50%;" +
-                        "-fx-text-fill: " + COLOR_TEXT_SECONDARY + ";" +
+                        "-fx-text-fill: " + textSecondary() + ";" +
                         "-fx-border-color: transparent;"
         );
         button.setOnAction(e -> closeAction.run());
         button.setOnMouseEntered(e -> button.setStyle(
-                "-fx-background-color: rgba(255,255,255,0.10);" +
+                "-fx-background-color: " + (SettingsManager.isDarkMode() ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.08)") + ";" +
                         "-fx-background-radius: 50%;" +
-                        "-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";" +
+                        "-fx-text-fill: " + textPrimary() + ";" +
                         "-fx-border-color: transparent;"
         ));
         button.setOnMouseExited(e -> button.setStyle(
                 "-fx-background-color: transparent;" +
                         "-fx-background-radius: 50%;" +
-                        "-fx-text-fill: " + COLOR_TEXT_SECONDARY + ";" +
+                        "-fx-text-fill: " + textSecondary() + ";" +
                         "-fx-border-color: transparent;"
         ));
         return button;
@@ -395,10 +439,10 @@ public final class SettingsModal {
                   "-fx-font-size: 13px;" +
                   "-fx-font-weight: bold;"
                 : "-fx-background-color: transparent;" +
-                  "-fx-border-color: " + COLOR_CONTROL_BORDER + ";" +
+                  "-fx-border-color: " + controlBorder() + ";" +
                   "-fx-border-radius: 8px;" +
                   "-fx-background-radius: 8px;" +
-                  "-fx-text-fill: " + COLOR_TEXT_SECONDARY + ";" +
+                  "-fx-text-fill: " + textSecondary() + ";" +
                   "-fx-font-size: 13px;";
 
         String hover = primary
@@ -407,11 +451,11 @@ public final class SettingsModal {
                   "-fx-text-fill: #FFFFFF;" +
                   "-fx-font-size: 13px;" +
                   "-fx-font-weight: bold;"
-                : "-fx-background-color: rgba(255,255,255,0.06);" +
-                  "-fx-border-color: " + COLOR_CONTROL_BORDER + ";" +
+                : "-fx-background-color: " + cancelBtnHoverBg() + ";" +
+                  "-fx-border-color: " + controlBorder() + ";" +
                   "-fx-border-radius: 8px;" +
                   "-fx-background-radius: 8px;" +
-                  "-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";" +
+                  "-fx-text-fill: " + textPrimary() + ";" +
                   "-fx-font-size: 13px;";
 
         button.setStyle(base);
@@ -425,9 +469,9 @@ public final class SettingsModal {
         panel.setPadding(new Insets(14, 16, 14, 16));
         panel.setMaxWidth(Double.MAX_VALUE);
         panel.setStyle(
-                "-fx-background-color: rgba(255,255,255,0.03);" +
+                "-fx-background-color: " + settingPanelBg() + ";" +
                         "-fx-background-radius: 9px;" +
-                        "-fx-border-color: " + COLOR_DIVIDER + ";" +
+                        "-fx-border-color: " + dividerColor() + ";" +
                         "-fx-border-radius: 9px;" +
                         "-fx-border-width: 1px;"
         );
@@ -441,14 +485,14 @@ public final class SettingsModal {
     private static Label buildSettingNameLabel(String text) {
         Label label = new Label(text);
         label.setFont(Font.font("System", FontWeight.SEMI_BOLD, 13));
-        label.setStyle("-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";");
+        label.setStyle("-fx-text-fill: " + textPrimary() + ";");
         return label;
     }
 
     private static Label buildSettingDescLabel(String text) {
         Label label = new Label(text);
         label.setFont(Font.font("System", FontWeight.NORMAL, 11));
-        label.setStyle("-fx-text-fill: " + COLOR_TEXT_MUTED + ";");
+        label.setStyle("-fx-text-fill: " + textMuted() + ";");
         label.setWrapText(true);
         return label;
     }
@@ -458,7 +502,7 @@ public final class SettingsModal {
         divider.setPrefHeight(1);
         divider.setMaxHeight(1);
         divider.setMaxWidth(Double.MAX_VALUE);
-        divider.setStyle("-fx-background-color: " + COLOR_DIVIDER + ";");
+        divider.setStyle("-fx-background-color: " + dividerColor() + ";");
         return divider;
     }
 

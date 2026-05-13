@@ -75,13 +75,16 @@ public class HistoryController implements Initializable {
                     setGraphic(null);
                     setText(null);
                 } else {
+                    boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
+                    String dobColor = isDark ? "#94A3B8" : "#475569";
+
                     VBox rootBox = new VBox(4);
 
                     HBox topRow = new HBox(8);
                     topRow.setAlignment(Pos.CENTER_LEFT);
 
                     Text icon = new Text("👤");
-                    icon.setStyle("-fx-fill: #9CA3AF; -fx-font-size: 14px;");
+                    icon.setStyle("-fx-fill: " + dobColor + "; -fx-font-size: 14px;");
 
                     Label nameLabel = new Label(patient.name);
                     nameLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #10B981;");
@@ -89,7 +92,7 @@ public class HistoryController implements Initializable {
                     topRow.getChildren().addAll(icon, nameLabel);
 
                     Label dobLabel = new Label("DOB: " + (patient.dob != null ? patient.dob : "N/A"));
-                    dobLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #94A3B8;");
+                    dobLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: " + dobColor + ";");
                     VBox.setMargin(dobLabel, new Insets(0, 0, 0, 22));
 
                     rootBox.getChildren().addAll(topRow, dobLabel);

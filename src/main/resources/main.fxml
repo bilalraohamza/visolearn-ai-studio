@@ -10,8 +10,7 @@
            fx:id="rootPane"
            fx:controller="com.visolearn.MainController">
 
-    <BorderPane minWidth="1050" minHeight="720"
-                style="-fx-background-color: #1A1A24;">
+    <BorderPane style="-fx-background-color: #1A1A24;">
 
         <top>
             <VBox style="-fx-background-color: #1E1E2A;

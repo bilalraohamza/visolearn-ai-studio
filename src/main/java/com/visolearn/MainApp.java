@@ -29,10 +29,10 @@ public class MainApp extends Application {
     private static final String APP_TITLE = "VisoLearn AI Studio";
 
     /** Minimum window width in pixels. */
-    private static final double MIN_WIDTH = 1100;
+    private static final double MIN_WIDTH = 900;
 
     /** Minimum window height in pixels. */
-    private static final double MIN_HEIGHT = 700;
+    private static final double MIN_HEIGHT = 600;
 
     /**
      * Single shared classifier instance used by all controllers.
@@ -74,8 +74,14 @@ public class MainApp extends Application {
         // Create the scene with the loaded layout
         Scene scene = new Scene(loader.load(), MIN_WIDTH, MIN_HEIGHT);
         MainController.applyTheme(scene, SettingsManager.isDarkMode());
-        SettingsManager.darkModeProperty().addListener((obs, oldValue, isDark) ->
-                MainController.applyTheme(scene, isDark));
+        SettingsManager.darkModeProperty().addListener((obs, oldValue, isDark) -> {
+            // Only re-render when the value genuinely changed.
+            // restore() on cancel fires this listener too but with the same value,
+            // so we guard here to prevent a redundant (and jarring) re-render.
+            if (!oldValue.equals(isDark)) {
+                MainController.applyTheme(scene, isDark);
+            }
+        });
 
         // Configure the primary stage (main window)
         primaryStage.setTitle(APP_TITLE);
@@ -93,6 +99,16 @@ public class MainApp extends Application {
         });
 
         primaryStage.show();
+
+        // Re-apply theme after show() because tab content nodes (history_tab, batch_tab, etc.)
+        // may not be fully attached to the scene graph during the first applyTheme call above.
+        // A short delay ensures the skin/layout pass has completed before we walk the tree.
+        if (!SettingsManager.isDarkMode()) {
+            javafx.animation.PauseTransition reapply = new javafx.animation.PauseTransition(
+                    javafx.util.Duration.millis(150));
+            reapply.setOnFinished(e -> MainController.applyTheme(scene, SettingsManager.isDarkMode()));
+            reapply.play();
+        }
 
         // Initialize shared classifier on background thread
         // Both ClassifyController and BatchController will use this

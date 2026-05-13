@@ -26,6 +26,8 @@ import com.visolearn.data.model.Patient;
 import com.visolearn.data.model.Prediction;
 import com.visolearn.utils.AnimationUtil;
 import com.visolearn.utils.ReportExportUtil;
+import com.visolearn.utils.RiskAssessor;
+import com.visolearn.utils.RiskLevel;
 import com.visolearn.utils.SettingsManager;
 import com.visolearn.utils.ToastUtil;
 import javafx.animation.PauseTransition;
@@ -66,6 +68,7 @@ public class ClassifyController implements Initializable {
 
     @FXML private StackPane imageContainer;
     @FXML private VBox      placeholderBox;
+    @FXML private StackPane plusIcon;
     @FXML private ImageView inputImageView;
     @FXML private ImageView heatmapImageView;
     @FXML private Button    uploadButton;
@@ -80,6 +83,8 @@ public class ClassifyController implements Initializable {
     @FXML private Label confidenceStatLabel;
     @FXML private Label inferenceTimeLabel;
     @FXML private Label descriptionLabel;
+    @FXML private HBox  riskBanner;
+    @FXML private Label riskLabel;
 
     @FXML private ProgressBar bar0, bar1, bar2, bar3, bar4, bar5, bar6;
     @FXML private Label       pct0, pct1, pct2, pct3, pct4, pct5, pct6;
@@ -161,18 +166,26 @@ public class ClassifyController implements Initializable {
         heatmapImageView.opacityProperty().bind(
                 SettingsManager.gradCamOpacityProperty());
 
-        // Format the ComboBox dropdown list for Dark Mode
+        // Bind image sizes to container size
+        inputImageView.fitWidthProperty().bind(imageContainer.widthProperty().subtract(4));
+        inputImageView.fitHeightProperty().bind(imageContainer.heightProperty().subtract(4));
+        heatmapImageView.fitWidthProperty().bind(imageContainer.widthProperty().subtract(4));
+        heatmapImageView.fitHeightProperty().bind(imageContainer.heightProperty().subtract(4));
+
+        // Format the ComboBox dropdown list — theme-aware colors
         patientComboBox.setCellFactory(lv -> new ListCell<Patient>() {
             @Override
             protected void updateItem(Patient patient, boolean empty) {
                 super.updateItem(patient, empty);
+                boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
+                String bg = isDark ? "#1E1E2A" : "#FFFFFF";
+                String fg = isDark ? "#F8F9FA" : "#1E293B";
                 if (empty || patient == null) {
                     setText(null);
-                    setStyle("-fx-background-color: #1E1E2A;");
+                    setStyle("-fx-background-color: " + bg + ";");
                 } else {
                     setText(patient.toString());
-                    // Default dark background, white text
-                    setStyle("-fx-text-fill: #F8F9FA; -fx-font-size: 13px; -fx-padding: 8px 12px; -fx-background-color: #1E1E2A;");
+                    setStyle("-fx-text-fill: " + fg + "; -fx-font-size: 13px; -fx-padding: 8px 12px; -fx-background-color: " + bg + ";");
                 }
 
                 // Add Green Hover Effect
@@ -183,7 +196,10 @@ public class ClassifyController implements Initializable {
                 });
                 setOnMouseExited(e -> {
                     if (!empty && patient != null) {
-                        setStyle("-fx-text-fill: #F8F9FA; -fx-font-size: 13px; -fx-padding: 8px 12px; -fx-background-color: #1E1E2A;");
+                        boolean dark = com.visolearn.utils.SettingsManager.isDarkMode();
+                        String exitBg = dark ? "#1E1E2A" : "#FFFFFF";
+                        String exitFg = dark ? "#F8F9FA" : "#1E293B";
+                        setStyle("-fx-text-fill: " + exitFg + "; -fx-font-size: 13px; -fx-padding: 8px 12px; -fx-background-color: " + exitBg + ";");
                     }
                 });
             }
@@ -194,12 +210,14 @@ public class ClassifyController implements Initializable {
             @Override
             protected void updateItem(Patient patient, boolean empty) {
                 super.updateItem(patient, empty);
+                boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
+                String fg = isDark ? "#F8F9FA" : "#1E293B";
                 if (empty || patient == null) {
                     setText(patientComboBox.getPromptText());
-                    setStyle("-fx-text-fill: #9CA3AF; -fx-background-color: transparent; -fx-font-size: 13px;");
+                    setStyle("-fx-text-fill: " + (isDark ? "#9CA3AF" : "#64748B") + "; -fx-background-color: transparent; -fx-font-size: 13px;");
                 } else {
                     setText(patient.toString());
-                    setStyle("-fx-text-fill: #F8F9FA; -fx-background-color: transparent; -fx-font-size: 13px;");
+                    setStyle("-fx-text-fill: " + fg + "; -fx-background-color: transparent; -fx-font-size: 13px;");
                 }
             }
         });
@@ -373,16 +391,21 @@ public class ClassifyController implements Initializable {
         heatmapImageView.setVisible(false);
         placeholderBox.setVisible(true);
 
+        // Use theme-aware colors: check current mode instead of hardcoding dark colors
+        boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
+        String textPrimary = isDark ? "#F8F9FA" : "#0F172A";
+        String textSecondary = isDark ? "#D1D5DB" : "#334155";
+
         predictionLabel.setText("Awaiting Image...");
         predictionLabel.setOpacity(1.0);
-        predictionLabel.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;");
+        predictionLabel.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: " + textPrimary + ";");
 
         confidenceLabel.setText("");
         inferenceTimeLabel.setText("");
 
         descriptionLabel.setText("Upload a dermoscopy image to see classification results and Grad-CAM explanation.");
         descriptionLabel.setOpacity(1.0);
-        descriptionLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #D1D5DB;");
+        descriptionLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: " + textSecondary + "; -fx-line-spacing: 4;");
 
         resetBars();
 
@@ -396,12 +419,17 @@ public class ClassifyController implements Initializable {
         gradCamToggle.setSelected(false);
         if (exportReportButton != null) exportReportButton.setDisable(true);
 
-        saveToHistoryButton.setDisable(false);
+        saveToHistoryButton.setDisable(true);
         saveToHistoryButton.setText("Save to Patient History");
 
         confidenceLabel.setOpacity(0);
         confidenceStatLabel.setOpacity(0);
         inferenceTimeLabel.setOpacity(0);
+        
+        if (riskBanner != null) {
+            riskBanner.setVisible(false);
+            riskBanner.setManaged(false);
+        }
     }
 
     /** Handles the Export Report button click. */
@@ -524,6 +552,27 @@ public class ClassifyController implements Initializable {
             pcts[i].setText(String.format("%.1f%%", prob * 100));
         }
 
+        RiskLevel riskLevel = RiskAssessor.assess(result);
+        if (riskBanner != null && riskLabel != null) {
+            switch (riskLevel) {
+                case URGENT:
+                    riskBanner.setStyle("-fx-background-color: #EF4444; -fx-padding: 8 16; -fx-background-radius: 6;");
+                    riskLabel.setText("URGENT: Consult a dermatologist immediately");
+                    break;
+                case MODERATE:
+                    riskBanner.setStyle("-fx-background-color: #F59E0B; -fx-padding: 8 16; -fx-background-radius: 6;");
+                    riskLabel.setText("MODERATE RISK: Schedule a check-up");
+                    break;
+                case LOW:
+                    riskBanner.setStyle("-fx-background-color: #10B981; -fx-padding: 8 16; -fx-background-radius: 6;");
+                    riskLabel.setText("LOW RISK");
+                    break;
+            }
+            riskBanner.setVisible(true);
+            riskBanner.setManaged(true);
+            AnimationUtil.fadeIn(riskBanner, 600);
+        }
+
         if (exportReportButton != null) exportReportButton.setDisable(false);
         saveToHistoryButton.setDisable(false);
         saveToHistoryButton.setText("Save to Patient History");
@@ -599,6 +648,13 @@ public class ClassifyController implements Initializable {
             }
             event.consume();
         });
+
+        // Add click-to-upload for the entire drop area
+        imageContainer.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 1) {
+                handleUpload();
+            }
+        });
     }
 
     private void setupAnimations() {
@@ -610,6 +666,32 @@ public class ClassifyController implements Initializable {
             AnimationUtil.applyButtonHover(exportReportButton);
         }
         AnimationUtil.fadeIn(predictionLabel, 800);
+
+        // Fluid hover animation for the plus icon
+        if (plusIcon != null) {
+            plusIcon.setOnMouseEntered(e -> {
+                if (SettingsManager.isAnimationsEnabled()) {
+                    javafx.animation.ScaleTransition st = new javafx.animation.ScaleTransition(Duration.millis(150), plusIcon);
+                    st.setToX(1.15);
+                    st.setToY(1.15);
+                    st.play();
+                } else {
+                    plusIcon.setScaleX(1.15);
+                    plusIcon.setScaleY(1.15);
+                }
+            });
+            plusIcon.setOnMouseExited(e -> {
+                if (SettingsManager.isAnimationsEnabled()) {
+                    javafx.animation.ScaleTransition st = new javafx.animation.ScaleTransition(Duration.millis(150), plusIcon);
+                    st.setToX(1.0);
+                    st.setToY(1.0);
+                    st.play();
+                } else {
+                    plusIcon.setScaleX(1.0);
+                    plusIcon.setScaleY(1.0);
+                }
+            });
+        }
     }
 
     private void resetBars() {

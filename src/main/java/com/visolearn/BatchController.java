@@ -3,6 +3,8 @@ package com.visolearn;
 import com.visolearn.utils.AnimationUtil;
 import com.visolearn.utils.ToastUtil;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -19,6 +21,8 @@ import java.io.PrintWriter;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * BatchController controls Tab 3 of VisoLearn AI Studio.
@@ -26,8 +30,25 @@ import java.util.*;
  * on all of them at once, displaying results in a table
  * and providing CSV export functionality.
  *
- * <p>All inference runs on a background thread using {@link Task}
- * to keep the UI responsive during batch processing.</p>
+ * <h3>OOP Feature 2 — Batch Processing with ExecutorService Thread Pool (v2.0):</h3>
+ * <p>Images are now processed in parallel using a
+ * {@link ExecutorService} fixed-thread pool. The thread count is configurable
+ * via a "Threads" {@link Slider} (range 1–4) rendered in the batch tab UI.
+ * Each image is submitted as an independent {@link Callable} returning a
+ * {@link BatchResult}. Futures are collected in a {@link List} and a
+ * {@link CompletableFuture} is used to detect overall completion.</p>
+ *
+ * <h4>Thread-Safety Notes:</h4>
+ * <ul>
+ *   <li>{@link SkinClassifier#predict(Path)} internally uses two shared
+ *       {@link ai.djl.inference.Predictor} instances. To allow concurrent
+ *       calls from the pool threads, invocations are {@code synchronized}
+ *       on the classifier instance, serialising ONNX execution while still
+ *       allowing the pool to manage per-image overhead in parallel.</li>
+ *   <li>{@link BatchResult#statusProperty()} is a {@link StringProperty} that
+ *       is mutated only via {@link Platform#runLater} to keep all JavaFX
+ *       updates on the FX Application Thread.</li>
+ * </ul>
  *
  * <h3>Quality Fixes (v1.1):</h3>
  * <ul>
@@ -40,7 +61,7 @@ import java.util.*;
  * </ul>
  *
  * @author Rao Hamza Bilal
- * @version 1.1 (Quality Improvements)
+ * @version 2.0 (ExecutorService Batch Processing)
  */
 public class BatchController implements Initializable {
 
@@ -62,11 +83,33 @@ public class BatchController implements Initializable {
     @FXML private Label        avgConfidenceLabel;
     @FXML private Label        processingTimeLabel;
 
+    /** Slider controlling the thread pool size (1–4). */
+    @FXML private Slider       threadSlider;
+
+    /** Label that mirrors the current thread slider value (e.g. "2 Threads"). */
+    @FXML private Label        threadCountLabel;
+
     @FXML private TableView<BatchResult>           resultsTable;
     @FXML private TableColumn<BatchResult, String> fileNameColumn;
     @FXML private TableColumn<BatchResult, String> predictedClassColumn;
     @FXML private TableColumn<BatchResult, String> confidenceColumn;
     @FXML private TableColumn<BatchResult, String> inferenceTimeColumn;
+
+    /**
+     * Status column — shows "Processing…" while the worker thread is running,
+     * then updates to "✓ Done" or "✗ Error" via {@link Platform#runLater}.
+     */
+    @FXML private TableColumn<BatchResult, String> statusColumn;
+
+    /**
+     * The four thread-count option tiles (Single / Default / Fast / Max).
+     * Their inline CSS is swapped by {@link #highlightTile(int)} whenever the
+     * slider value changes or a tile is clicked directly.
+     */
+    @FXML private VBox tile1;
+    @FXML private VBox tile2;
+    @FXML private VBox tile3;
+    @FXML private VBox tile4;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Backend Fields
@@ -93,32 +136,66 @@ public class BatchController implements Initializable {
      * {@code rawConfidence} field is stored internally for accurate summary
      * calculations, while the formatted {@code confidence} string is used
      * for table display.</p>
+     *
+     * <p>The {@link #statusProperty()} is a mutable {@link StringProperty}
+     * so that the status column can update live without replacing the row
+     * object in the table's {@link javafx.collections.ObservableList}.</p>
      */
     public static class BatchResult {
 
         private final String fileName;
-        private final String predictedClass;
-        private final String confidence;
-        private final String inferenceTime;
+        private String predictedClass;
+        private String confidence;
+        private String inferenceTime;
 
         /** Raw confidence value (0–100) stored for summary aggregation. */
-        private final double rawConfidence;
+        private double rawConfidence;
 
         /**
-         * Constructs one batch result row.
-         *
-         * @param fileName       Image file name (e.g., {@code "lesion_001.jpg"}).
-         * @param predictedClass Predicted class display name (e.g., {@code "Melanoma"}).
-         * @param rawConfidence  Raw confidence percentage as a {@code double} (0–100).
-         * @param inferenceTime  Inference time in milliseconds as a formatted string.
+         * Observable status string shown in the status column.
+         * Starts as "⏳ Processing…" and is updated on the FX thread once
+         * the worker callable completes.
          */
-        public BatchResult(String fileName, String predictedClass,
-                           double rawConfidence, String inferenceTime) {
-            this.fileName       = fileName;
+        private final StringProperty status = new SimpleStringProperty("⏳ Processing…");
+
+        /**
+         * Constructs a placeholder batch result row used when the image is
+         * first queued. All result fields start as empty/default; they are
+         * filled in by {@link #complete(String, double, String)} or
+         * {@link #fail()} once the worker finishes.
+         *
+         * @param fileName Image file name (e.g., {@code "lesion_001.jpg"}).
+         */
+        public BatchResult(String fileName) {
+            this.fileName        = fileName;
+            this.predictedClass  = "—";
+            this.confidence      = "—";
+            this.inferenceTime   = "—";
+            this.rawConfidence   = 0.0;
+        }
+
+        /**
+         * Fills in the prediction result fields and marks status as done.
+         * Must be called on the FX Application Thread (inside
+         * {@link Platform#runLater}).
+         *
+         * @param predictedClass Predicted class display name.
+         * @param rawConf        Raw confidence percentage (0.0–100.0).
+         * @param infTimeMs      Inference time formatted string (e.g., "142 ms").
+         */
+        public void complete(String predictedClass, double rawConf, String infTimeMs) {
             this.predictedClass = predictedClass;
-            this.rawConfidence  = rawConfidence;
-            this.confidence     = String.format("%.2f%%", rawConfidence);
-            this.inferenceTime  = inferenceTime;
+            this.rawConfidence  = rawConf;
+            this.confidence     = String.format("%.2f%%", rawConf);
+            this.inferenceTime  = infTimeMs;
+            this.status.set("✓ Done");
+        }
+
+        /**
+         * Marks this row as failed. Must be called on the FX Application Thread.
+         */
+        public void fail() {
+            this.status.set("✗ Error");
         }
 
         /** @return Image file name. */
@@ -147,6 +224,17 @@ public class BatchController implements Initializable {
          * @return Raw confidence percentage (0.0–100.0).
          */
         public double getRawConfidence()  { return rawConfidence; }
+
+        /**
+         * Observable property bound to the status {@link TableColumn}.
+         * Enables live cell refresh without removing/re-adding the row.
+         *
+         * @return {@link StringProperty} for the current status text.
+         */
+        public StringProperty statusProperty() { return status; }
+
+        /** @return Current status string (convenience accessor). */
+        public String getStatus()         { return status.get(); }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -155,14 +243,15 @@ public class BatchController implements Initializable {
 
     /**
      * Called automatically by JavaFX after FXML loads.
-     * Sets up the {@link TableView} columns and initializes the classifier
-     * reference on a background thread.
+     * Sets up the {@link TableView} columns, initialises the thread
+     * slider, and waits for the shared classifier on a background thread.
      *
      * @param url not used
      * @param rb  not used
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
+        // ── Table columns ────────────────────────────────────────────────────
         fileNameColumn.setCellValueFactory(
                 new PropertyValueFactory<>("fileName"));
         predictedClassColumn.setCellValueFactory(
@@ -172,7 +261,63 @@ public class BatchController implements Initializable {
         inferenceTimeColumn.setCellValueFactory(
                 new PropertyValueFactory<>("inferenceTime"));
 
-        // Use shared classifier from MainApp
+        // Status column binds to the observable StringProperty for live updates
+        statusColumn.setCellValueFactory(
+                cellData -> cellData.getValue().statusProperty());
+
+        // Apply CSS styling to status cells
+        statusColumn.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    if (item.startsWith("✓")) {
+                        setStyle("-fx-text-fill: #10B981; -fx-font-weight: bold;");
+                    } else if (item.startsWith("✗")) {
+                        setStyle("-fx-text-fill: #EF4444; -fx-font-weight: bold;");
+                    } else {
+                        // "⏳ Processing…"
+                        setStyle("-fx-text-fill: #F59E0B; -fx-font-weight: bold;");
+                    }
+                }
+            }
+        });
+
+        // ── Thread slider ────────────────────────────────────────────────────
+        if (threadSlider != null) {
+            threadSlider.setMin(1);
+            threadSlider.setMax(4);
+            threadSlider.setValue(2);
+            threadSlider.setMajorTickUnit(1);
+            threadSlider.setMinorTickCount(0);
+            threadSlider.setSnapToTicks(true);
+            threadSlider.setShowTickLabels(true);
+            threadSlider.setShowTickMarks(true);
+
+            // Initial state
+            int initial = (int) threadSlider.getValue();
+            updateThreadLabel(initial);
+            highlightTile(initial);
+
+            // Sync tiles whenever the slider moves
+            threadSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+                int v = newVal.intValue();
+                updateThreadLabel(v);
+                highlightTile(v);
+            });
+        }
+
+        // Clicking a tile also moves the slider
+        wireTileClick(tile1, 1);
+        wireTileClick(tile2, 2);
+        wireTileClick(tile3, 3);
+        wireTileClick(tile4, 4);
+
+        // ── Shared classifier ────────────────────────────────────────────────
         Task<Void> initTask = new Task<>() {
             @Override
             protected Void call() throws Exception {
@@ -189,25 +334,20 @@ public class BatchController implements Initializable {
             }
         };
 
-        initTask.setOnSucceeded(e -> {
-            Platform.runLater(() -> {
-                selectFolderButton.setDisable(false);
-                System.out.println("BatchController: shared classifier connected.");
-            });
-        });
+        initTask.setOnSucceeded(e -> Platform.runLater(() -> {
+            selectFolderButton.setDisable(false);
+            System.out.println("BatchController: shared classifier connected.");
+        }));
 
-        initTask.setOnFailed(e -> {
-            Platform.runLater(() -> {
-                progressLabel.setText("Model failed to load.");
-            });
-        });
+        initTask.setOnFailed(e -> Platform.runLater(() ->
+                progressLabel.setText("Model failed to load.")));
 
         selectFolderButton.setDisable(true);
 
         Thread initThread = new Thread(initTask);
         initThread.setDaemon(true);
         initThread.start();
-        
+
         setupAnimations();
     }
 
@@ -240,9 +380,25 @@ public class BatchController implements Initializable {
     /**
      * Handles the Run Analysis button click.
      *
-     * <p>Runs inference on all images in the selected folder on a background
-     * thread with live progress updates. Results are appended to the table
-     * as each image completes.</p>
+     * <p>Replaces the previous single {@link Task} with an
+     * {@link ExecutorService} fixed-thread pool whose size is driven by the
+     * "Threads" slider. Each image file is submitted as a {@link Callable}
+     * that synchronises on the classifier, runs inference, then updates
+     * its placeholder row via {@link Platform#runLater}. A
+     * {@link CompletableFuture} created from all per-image futures is used
+     * to detect overall completion and show the summary.</p>
+     *
+     * <h4>Concurrency Design:</h4>
+     * <pre>{@code
+     * ExecutorService pool = Executors.newFixedThreadPool(threadCount);
+     * List<CompletableFuture<Void>> futures = new ArrayList<>();
+     * for (File f : imageFiles) {
+     *     futures.add(CompletableFuture.runAsync(() -> processImage(f), pool));
+     * }
+     * CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+     *     .whenComplete((v, ex) -> Platform.runLater(() -> onBatchComplete()));
+     * pool.shutdown();
+     * }</pre>
      */
     @FXML
     private void handleRunBatch() {
@@ -254,6 +410,12 @@ public class BatchController implements Initializable {
             return;
         }
 
+        // ── Determine thread count from slider ───────────────────────────────
+        int threadCount = (threadSlider != null)
+                ? Math.max(1, Math.min(4, (int) threadSlider.getValue()))
+                : 2;
+
+        // ── Reset UI state ───────────────────────────────────────────────────
         batchResults.clear();
         resultsTable.getItems().clear();
         summaryBox.setVisible(false);
@@ -262,79 +424,110 @@ public class BatchController implements Initializable {
 
         progressBox.setVisible(true);
         batchProgressBar.setProgress(0);
-        progressCountLabel.setText("0 / " + imageFiles.length);
+        int total = imageFiles.length;
+        progressCountLabel.setText("0 / " + total);
+        progressLabel.setText("Starting " + threadCount + "-thread batch…");
+
+        // ── Pre-populate the table with placeholder rows ─────────────────────
+        // Each row starts with "⏳ Processing…" status so the user immediately
+        // sees all queued images before any results arrive.
+        List<BatchResult> placeholders = new ArrayList<>();
+        for (File f : imageFiles) {
+            BatchResult placeholder = new BatchResult(f.getName());
+            placeholders.add(placeholder);
+            batchResults.add(placeholder);
+        }
+        resultsTable.getItems().addAll(placeholders);
 
         long startTime = System.currentTimeMillis();
 
-        Task<Void> batchTask = new Task<>() {
-            @Override
-            protected Void call() throws Exception {
-                int total = imageFiles.length;
+        // ── Atomic counter for progress bar updates ──────────────────────────
+        AtomicInteger completedCount = new AtomicInteger(0);
 
-                for (int i = 0; i < total; i++) {
-                    File imageFile = imageFiles[i];
-                    Path imagePath = imageFile.toPath();
+        // ── Create fixed-thread pool ─────────────────────────────────────────
+        ExecutorService pool = Executors.newFixedThreadPool(threadCount,
+                r -> {
+                    Thread t = new Thread(r, "batch-worker-" + threadCount);
+                    t.setDaemon(true);
+                    return t;
+                });
 
-                    try {
-                        SkinClassifier.PredictionResult result =
-                                classifier.predict(imagePath);
+        // ── Submit one Callable<Void> per image ──────────────────────────────
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-                        // Use centralized class names from SkinClassifier
-                        String fullName =
-                                SkinClassifier.CLASS_FULL_NAMES[result.classIndex];
+        for (int i = 0; i < imageFiles.length; i++) {
+            final File   imageFile   = imageFiles[i];
+            final Path   imagePath   = imageFile.toPath();
+            final BatchResult row    = placeholders.get(i);
 
-                        // Pass raw confidence (0–100) to BatchResult constructor
-                        BatchResult row = new BatchResult(
-                                imageFile.getName(),
-                                fullName,
-                                result.confidence,  // raw double, not formatted string
-                                result.inferenceTimeMs + " ms"
-                        );
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
 
-                        batchResults.add(row);
-
-                        final int current = i + 1;
-                        final BatchResult finalRow = row;
-                        Platform.runLater(() -> {
-                            resultsTable.getItems().add(finalRow);
-                            batchProgressBar.setProgress((double) current / total);
-                            progressCountLabel.setText(current + " / " + total);
-                            progressLabel.setText("Processing: " + imageFile.getName());
-                        });
-
-                    } catch (Exception e) {
-                        System.err.println("Error on " + imageFile.getName()
-                                + ": " + e.getMessage());
+                try {
+                    // SkinClassifier.predict() uses shared Predictor instances.
+                    // Synchronising on the classifier serialises ONNX calls
+                    // while allowing the pool to handle I/O and preprocessing
+                    // in parallel across threads.
+                    SkinClassifier.PredictionResult result;
+                    synchronized (classifier) {
+                        result = classifier.predict(imagePath);
                     }
+
+                    String fullName =
+                            SkinClassifier.CLASS_FULL_NAMES[result.classIndex];
+                    double rawConf  = result.confidence;   // already 0–100 float
+                    String timeStr  = result.inferenceTimeMs + " ms";
+
+                    // Update this row's observable fields on the FX thread
+                    Platform.runLater(() -> {
+                        row.complete(fullName, rawConf, timeStr);
+                        // Force TableView to refresh the mutated row
+                        resultsTable.refresh();
+
+                        int done  = completedCount.incrementAndGet();
+                        batchProgressBar.setProgress((double) done / total);
+                        progressCountLabel.setText(done + " / " + total);
+                        progressLabel.setText("Processed: " + imageFile.getName());
+                    });
+
+                } catch (Exception ex) {
+                    System.err.println("Batch error on " + imageFile.getName()
+                            + ": " + ex.getMessage());
+                    Platform.runLater(() -> {
+                        row.fail();
+                        resultsTable.refresh();
+                        int done = completedCount.incrementAndGet();
+                        batchProgressBar.setProgress((double) done / total);
+                        progressCountLabel.setText(done + " / " + total);
+                    });
                 }
-                return null;
-            }
-        };
 
-        batchTask.setOnSucceeded(e -> {
-            Platform.runLater(() -> {
-                long elapsed = System.currentTimeMillis() - startTime;
-                showSummary(imageFiles.length, elapsed);
-                runBatchButton.setDisable(false);
-                exportCsvButton.setDisable(false);
-                progressLabel.setText("Analysis complete.");
-                System.out.println("BatchController: processed "
-                        + imageFiles.length + " images in " + elapsed + "ms");
-            });
-        });
+            }, pool);
 
-        batchTask.setOnFailed(e -> {
-            Platform.runLater(() -> {
-                progressLabel.setText("Batch analysis failed.");
-                runBatchButton.setDisable(false);
-                System.err.println("Batch error: "
-                        + batchTask.getException().getMessage());
-            });
-        });
+            futures.add(future);
+        }
 
-        Thread batchThread = new Thread(batchTask);
-        batchThread.setDaemon(true);
-        batchThread.start();
+        // ── Wait for all futures, then show summary ──────────────────────────
+        // CompletableFuture.allOf() returns a new future that completes when
+        // every submitted task is done (success or failure).
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .whenComplete((result, throwable) -> {
+                    // Shutdown the pool — no new tasks will be submitted
+                    pool.shutdown();
+
+                    long elapsed = System.currentTimeMillis() - startTime;
+
+                    Platform.runLater(() -> {
+                        showSummary(imageFiles.length, elapsed);
+                        runBatchButton.setDisable(false);
+                        exportCsvButton.setDisable(false);
+                        progressLabel.setText("Analysis complete. ("
+                                + threadCount + " thread"
+                                + (threadCount > 1 ? "s" : "") + ")");
+                        System.out.printf("BatchController: %d images in %d ms "
+                                + "using %d thread(s)%n",
+                                imageFiles.length, elapsed, threadCount);
+                    });
+                });
     }
 
     /**
@@ -358,14 +551,15 @@ public class BatchController implements Initializable {
 
         if (csvFile != null) {
             try (PrintWriter writer = new PrintWriter(new FileWriter(csvFile))) {
-                writer.println("File Name,Predicted Class,Confidence,Inference Time (ms)");
+                writer.println("File Name,Predicted Class,Confidence,Inference Time (ms),Status");
 
                 for (BatchResult r : batchResults) {
-                    writer.printf("%s,%s,%s,%s%n",
+                    writer.printf("%s,%s,%s,%s,%s%n",
                             r.getFileName(),
                             r.getPredictedClass(),
                             r.getConfidence(),
-                            r.getInferenceTime()
+                            r.getInferenceTime(),
+                            r.getStatus()
                     );
                 }
 
@@ -412,8 +606,11 @@ public class BatchController implements Initializable {
         double totalConfidence = 0;
 
         for (BatchResult r : batchResults) {
-            classCounts.merge(r.getPredictedClass(), 1, Integer::sum);
-            totalConfidence += r.getRawConfidence();
+            // Only count rows that completed successfully (not errors / pending)
+            if (r.getStatus().startsWith("✓")) {
+                classCounts.merge(r.getPredictedClass(), 1, Integer::sum);
+                totalConfidence += r.getRawConfidence();
+            }
         }
 
         String topClass = classCounts.entrySet().stream()
@@ -423,8 +620,11 @@ public class BatchController implements Initializable {
 
         topClassLabel.setText(topClass);
 
-        double avgConf = batchResults.isEmpty() ? 0 :
-                totalConfidence / batchResults.size();
+        long successCount = batchResults.stream()
+                .filter(r -> r.getStatus().startsWith("✓"))
+                .count();
+
+        double avgConf = (successCount == 0) ? 0 : totalConfidence / successCount;
         avgConfidenceLabel.setText(String.format("%.1f%%", avgConf));
 
         if (elapsedMs < 1000) {
@@ -433,6 +633,82 @@ public class BatchController implements Initializable {
             processingTimeLabel.setText(
                     String.format("%.1f s", elapsedMs / 1000.0));
         }
+    }
+
+    /**
+     * Updates the thread count label to reflect the current slider value.
+     *
+     * @param count Current thread count from the slider.
+     */
+    private void updateThreadLabel(int count) {
+        if (threadCountLabel != null) {
+            threadCountLabel.setText(count + " Thread" + (count > 1 ? "s" : ""));
+        }
+    }
+
+    // Inactive tile style — dim background, no purple tint
+    private static final String TILE_INACTIVE =
+            "-fx-background-color: rgba(255,255,255,0.04);" +
+            "-fx-background-radius: 8; -fx-padding: 10 14 10 14;" +
+            "-fx-border-color: rgba(255,255,255,0.07);" +
+            "-fx-border-radius: 8; -fx-border-width: 1;" +
+            "-fx-min-width: 56; -fx-cursor: hand;";
+
+    // Active tile style — purple tint and glow border
+    private static final String TILE_ACTIVE =
+            "-fx-background-color: rgba(167,139,250,0.16);" +
+            "-fx-background-radius: 8; -fx-padding: 10 14 10 14;" +
+            "-fx-border-color: rgba(167,139,250,0.45);" +
+            "-fx-border-radius: 8; -fx-border-width: 1;" +
+            "-fx-min-width: 56; -fx-cursor: hand;" +
+            "-fx-effect: dropshadow(gaussian,rgba(167,139,250,0.25),8,0,0,0);";
+
+    // Label styles matched to active / inactive state
+    private static final String TILE_NUM_INACTIVE =
+            "-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;";
+    private static final String TILE_NUM_ACTIVE =
+            "-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #A78BFA;";
+    private static final String TILE_LBL_INACTIVE =
+            "-fx-font-size: 9px; -fx-text-fill: #6B7280;";
+    private static final String TILE_LBL_ACTIVE =
+            "-fx-font-size: 9px; -fx-text-fill: #A78BFA; -fx-font-weight: bold;";
+
+    /**
+     * Highlights the tile that corresponds to {@code activeThread} and dims
+     * all others. Both the container VBox and its two child Labels (number +
+     * caption) are re-styled so the colour change is immediately visible.
+     *
+     * @param activeThread Thread count whose tile should be highlighted (1–4).
+     */
+    private void highlightTile(int activeThread) {
+        VBox[] tiles = { tile1, tile2, tile3, tile4 };
+        for (int i = 0; i < tiles.length; i++) {
+            if (tiles[i] == null) continue;
+            boolean active = (i + 1) == activeThread;
+            tiles[i].setStyle(active ? TILE_ACTIVE : TILE_INACTIVE);
+            // Child 0 = number label, Child 1 = caption label
+            if (tiles[i].getChildren().size() >= 2) {
+                javafx.scene.control.Label numLbl =
+                        (javafx.scene.control.Label) tiles[i].getChildren().get(0);
+                javafx.scene.control.Label capLbl =
+                        (javafx.scene.control.Label) tiles[i].getChildren().get(1);
+                numLbl.setStyle(active ? TILE_NUM_ACTIVE : TILE_NUM_INACTIVE);
+                capLbl.setStyle(active ? TILE_LBL_ACTIVE : TILE_LBL_INACTIVE);
+            }
+        }
+    }
+
+    /**
+     * Makes a tile VBox clickable: clicking it moves the slider to {@code value},
+     * which triggers the slider listener and calls {@link #highlightTile(int)}
+     * automatically.
+     *
+     * @param tile  The tile VBox to attach the click handler to.
+     * @param value The thread count this tile represents.
+     */
+    private void wireTileClick(VBox tile, int value) {
+        if (tile == null || threadSlider == null) return;
+        tile.setOnMouseClicked(e -> threadSlider.setValue(value));
     }
 
     /**
@@ -446,8 +722,8 @@ public class BatchController implements Initializable {
         File[] files = folder.listFiles(f ->
                 f.isFile() && (
                         f.getName().toLowerCase().endsWith(".jpg")  ||
-                                f.getName().toLowerCase().endsWith(".jpeg") ||
-                                f.getName().toLowerCase().endsWith(".png")
+                        f.getName().toLowerCase().endsWith(".jpeg") ||
+                        f.getName().toLowerCase().endsWith(".png")
                 )
         );
         return files != null ? files : new File[0];

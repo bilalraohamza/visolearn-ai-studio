@@ -1,6 +1,5 @@
 package com.visolearn.data.model;
 
-import java.time.LocalDateTime;
 
 /**
  * Immutable data model representing a single AI inference session for a

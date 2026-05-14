@@ -1,3 +1,4 @@
+/* noinspection CssUnknownProperty,CssInvalidPropertyValue,CssNoGenericFontName,CssInvalidFunction,CssUnresolvedCustomProperty */
 /* ===== Midnight Blue Theme — VisoLearn AI Studio ===== */
 /* Deep navy blue variant of the default Deep Slate theme  */
 
@@ -122,12 +123,40 @@
 .table-row-cell:selected { -fx-background-color: rgba(59,130,246,0.15); }
 
 /* ===== Chart Styling ===== */
-.default-color0.chart-series-line  { -fx-stroke: #00B4D8; -fx-stroke-width: 2.5; }
-.default-color1.chart-series-line  { -fx-stroke: #F43F5E; -fx-stroke-width: 2.5; }
-.default-color0.chart-line-symbol  { -fx-background-color: #00B4D8, white; }
-.default-color1.chart-line-symbol  { -fx-background-color: #F43F5E, white; }
-.chart-legend                      { -fx-background-color: transparent; }
-.chart-legend-item                 { -fx-text-fill: #9CA3AF; }
+.chart {
+    -fx-background-color: transparent;
+    -fx-padding: 8;
+}
+.chart-plot-background {
+    -fx-background-color: rgba(100, 160, 255, 0.02);
+    -fx-background-radius: 6;
+}
+.chart-horizontal-grid-lines {
+    -fx-stroke: rgba(100, 160, 255, 0.07);
+    -fx-stroke-width: 1;
+    -fx-stroke-dash-array: 4 4;
+}
+.chart-vertical-grid-lines {
+    -fx-stroke: rgba(100, 160, 255, 0.03);
+    -fx-stroke-width: 1;
+}
+.chart-horizontal-zero-line,
+.chart-vertical-zero-line { -fx-stroke: rgba(100,160,255,0.12); }
+.axis {
+    -fx-tick-label-fill: #9CA3AF;
+    -fx-minor-tick-visible: false;
+}
+.axis-label {
+    -fx-text-fill: #6B7280;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+.default-color0.chart-series-line  { -fx-stroke: #00C8F0; -fx-stroke-width: 2.5; -fx-effect: dropshadow(gaussian, rgba(0,200,240,0.4), 6, 0, 0, 0); }
+.default-color1.chart-series-line  { -fx-stroke: #FB5E7E; -fx-stroke-width: 2.5; -fx-effect: dropshadow(gaussian, rgba(251,94,126,0.4), 6, 0, 0, 0); }
+.default-color0.chart-line-symbol  { -fx-background-color: #00C8F0, #0A1628; -fx-background-insets: 0, 2; -fx-background-radius: 5; -fx-padding: 5; }
+.default-color1.chart-line-symbol  { -fx-background-color: #FB5E7E, #0A1628; -fx-background-insets: 0, 2; -fx-background-radius: 5; -fx-padding: 5; }
+.chart-legend                      { -fx-background-color: rgba(100,160,255,0.04); -fx-background-radius: 6; -fx-padding: 4 10 4 10; }
+.chart-legend-item                 { -fx-text-fill: #9CA3AF; -fx-font-size: 11px; }
 
 /* ===== ScrollPane ===== */
 .scroll-pane               { -fx-background-color: transparent; -fx-background: #0A1628; }

@@ -17,15 +17,11 @@ import java.io.IOException;
 
 public class PdfReportExporter {
 
-    public static void exportClinicalReport(File file, SkinClassifier.PredictionResult result, Image originalImage, Image heatmapImage) throws IOException {
+    public static void exportClinicalReport(File file, SkinClassifier.PredictionResult result, Image originalImage, Image heatmapImage, String notes) throws IOException {
         
-        String topClass = SkinClassifier.CLASS_FULL_NAMES[result.classIndex];
-        double confidence = result.confidence;
-        String inferenceTime = result.inferenceTimeMs + " ms";
-
         // Generate the exact same beautiful layout as the PNG export!
         WritableImage snapshot = ReportExportUtil.generateReportSnapshot(
-                originalImage, heatmapImage, topClass, confidence, inferenceTime);
+                originalImage, heatmapImage, result, notes);
                 
         BufferedImage awtImage = SwingFXUtils.fromFXImage(snapshot, null);
 
@@ -36,23 +32,26 @@ public class PdfReportExporter {
 
             PDImageXObject pdImage = LosslessFactory.createFromImage(document, awtImage);
 
-            // Scale image to fit A4 width exactly (minus some padding if desired, or full bleed)
-            // A4 width = 595.27563, height = 841.8898
             float pageWidth = page.getMediaBox().getWidth();
             float pageHeight = page.getMediaBox().getHeight();
-            
             float imageWidth = pdImage.getWidth();
             float imageHeight = pdImage.getHeight();
+
+            // Add a small margin (e.g., 20 points)
+            float margin = 20f;
+            float availableWidth = pageWidth - 2 * margin;
+            float availableHeight = pageHeight - 2 * margin;
             
-            // We want it to fit width-wise
-            float scale = pageWidth / imageWidth;
+            // We want it to fit completely on the page (both width-wise and height-wise)
+            float scale = Math.min(availableWidth / imageWidth, availableHeight / imageHeight);
             float scaledWidth = imageWidth * scale;
             float scaledHeight = imageHeight * scale;
 
             try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
-                // Draw from top left
-                float startY = pageHeight - scaledHeight;
-                contentStream.drawImage(pdImage, 0, startY, scaledWidth, scaledHeight);
+                // Center horizontally, align to top margin
+                float startX = margin + (availableWidth - scaledWidth) / 2;
+                float startY = pageHeight - margin - scaledHeight;
+                contentStream.drawImage(pdImage, startX, startY, scaledWidth, scaledHeight);
             }
 
             document.save(file);

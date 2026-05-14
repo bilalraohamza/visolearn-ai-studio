@@ -111,6 +111,7 @@ public class HistoryController implements Initializable {
         AnimationUtil.applyButtonHover(deletePatientButton);
     }
 
+    @SuppressWarnings("deprecation")
     private void setupTableColumns() {
         predictionsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 

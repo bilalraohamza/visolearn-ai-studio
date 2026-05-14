@@ -1,3 +1,4 @@
+/* noinspection CssUnknownProperty,CssInvalidPropertyValue,CssNoGenericFontName,CssInvalidFunction,CssUnresolvedCustomProperty */
 /* ===== Clinical Light Theme - VisoLearn AI Studio ===== */
 
 .root {
@@ -5,43 +6,7 @@
     -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
-/* ===== Dialog Panels (Light) ===== */
-.dialog-pane {
-    -fx-background-color: #F4F7FB;
-}
-.dialog-pane .header-panel {
-    -fx-background-color: #FFFFFF;
-    -fx-border-color: rgba(15,23,42,0.08);
-    -fx-border-width: 0 0 1 0;
-}
-.dialog-pane .label {
-    -fx-text-fill: #1E293B;
-}
-.dialog-pane .content {
-    -fx-text-fill: #475569;
-}
-.dialog-pane .button-bar {
-    -fx-background-color: #F4F7FB;
-}
-.dialog-pane .button {
-    -fx-background-color: transparent;
-    -fx-text-fill: #475569;
-    -fx-border-color: rgba(15,23,42,0.15);
-    -fx-border-radius: 8px;
-    -fx-padding: 6 16 6 16;
-}
-.dialog-pane .button:hover {
-    -fx-background-color: rgba(15,23,42,0.05);
-    -fx-text-fill: #1E293B;
-}
-.dialog-pane .button:default {
-    -fx-background-color: #0EA5E9;
-    -fx-text-fill: white;
-    -fx-border-color: transparent;
-}
-.dialog-pane .button:default:hover {
-    -fx-background-color: #0284C7;
-}
+
 
 .glass-card {
     -fx-background-color: #FFFFFF;
@@ -156,18 +121,74 @@
 .table-row-cell:hover { -fx-background-color: rgba(15,23,42,0.04); }
 .table-row-cell:selected { -fx-background-color: rgba(15,159,117,0.15); }
 
+/* ===== Ensemble Chart Styling (Light) ===== */
+
+.chart {
+    -fx-background-color: transparent;
+    -fx-padding: 8;
+}
+
+.chart-plot-background {
+    -fx-background-color: rgba(15, 23, 42, 0.03);
+    -fx-background-radius: 6;
+}
+
+.chart-horizontal-grid-lines {
+    -fx-stroke: rgba(15, 23, 42, 0.08);
+    -fx-stroke-width: 1;
+    -fx-stroke-dash-array: 4 4;
+}
+
+.chart-vertical-grid-lines {
+    -fx-stroke: rgba(15, 23, 42, 0.04);
+    -fx-stroke-width: 1;
+}
+
+.chart-horizontal-zero-line,
+.chart-vertical-zero-line {
+    -fx-stroke: rgba(15, 23, 42, 0.15);
+}
+
+.axis {
+    -fx-tick-label-fill: #64748B;
+    -fx-tick-mark-fill: #94A3B8;
+    -fx-minor-tick-visible: false;
+}
+
+.axis-label {
+    -fx-text-fill: #64748B;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
 .default-color0.chart-series-line {
     -fx-stroke: #0284C7;
     -fx-stroke-width: 2.5;
+    -fx-effect: dropshadow(gaussian, rgba(2,132,199,0.35), 5, 0, 0, 0);
 }
 .default-color1.chart-series-line {
     -fx-stroke: #E11D48;
     -fx-stroke-width: 2.5;
+    -fx-effect: dropshadow(gaussian, rgba(225,29,72,0.35), 5, 0, 0, 0);
 }
-.default-color0.chart-line-symbol { -fx-background-color: #0284C7, white; }
-.default-color1.chart-line-symbol { -fx-background-color: #E11D48, white; }
-.chart-legend { -fx-background-color: transparent; }
-.chart-legend-item { -fx-text-fill: #475569; }
+.default-color0.chart-line-symbol {
+    -fx-background-color: #0284C7, white;
+    -fx-background-insets: 0, 2;
+    -fx-background-radius: 5;
+    -fx-padding: 5;
+}
+.default-color1.chart-line-symbol {
+    -fx-background-color: #E11D48, white;
+    -fx-background-insets: 0, 2;
+    -fx-background-radius: 5;
+    -fx-padding: 5;
+}
+.chart-legend {
+    -fx-background-color: rgba(15,23,42,0.04);
+    -fx-background-radius: 6;
+    -fx-padding: 4 10 4 10;
+}
+.chart-legend-item { -fx-text-fill: #475569; -fx-font-size: 11px; }
 
 .scroll-pane {
     -fx-background-color: transparent;

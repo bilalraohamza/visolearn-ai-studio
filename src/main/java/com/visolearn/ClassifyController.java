@@ -11,6 +11,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.ListCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -18,8 +19,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
-import javax.imageio.ImageIO;
-import javafx.scene.control.Alert;
 import com.visolearn.data.PatientDAO;
 import com.visolearn.data.PredictionDAO;
 import com.visolearn.data.model.Patient;
@@ -83,7 +82,9 @@ public class ClassifyController implements Initializable {
     @FXML private Label confidenceLabel;
     @FXML private Label confidenceStatLabel;
     @FXML private Label inferenceTimeLabel;
-    @FXML private Label descriptionLabel;
+    @FXML private TextArea notesArea;
+    @FXML private Button saveNotesButton;
+    @FXML private Label notesStatusLabel;
     @FXML private HBox  riskBanner;
     @FXML private Label riskLabel;
 
@@ -109,9 +110,6 @@ public class ClassifyController implements Initializable {
     /** Latest prediction result for Grad-CAM generation. */
     private SkinClassifier.PredictionResult lastResult;
 
-    /** Whether the Grad-CAM heatmap is currently visible. */
-    private boolean heatmapVisible = false;
-
     private final PatientDAO    patientDAO    = new PatientDAO();
     private final PredictionDAO predictionDAO = new PredictionDAO();
 
@@ -122,30 +120,6 @@ public class ClassifyController implements Initializable {
     private static ClassifyController instance;
     public static ClassifyController getInstance() { return instance; }
     // ─────────────────────────────────────────────────────────────────────────
-    // Class Descriptions
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Short clinical descriptions for each skin lesion class.
-     * Shown in the description box after classification.
-     * Index matches {@link SkinClassifier#CLASS_FULL_NAMES}.
-     */
-    private static final String[] CLASS_DESCRIPTIONS = {
-            "Actinic Keratosis (AKIEC): A rough, scaly patch caused by " +
-                    "years of sun exposure. Can develop into skin cancer if untreated.",
-            "Basal Cell Carcinoma (BCC): The most common form of skin cancer. " +
-                    "Rarely spreads but can be locally destructive if ignored.",
-            "Benign Keratosis (BKL): A non-cancerous skin growth. " +
-                    "Includes seborrheic keratoses and similar harmless lesions.",
-            "Dermatofibroma (DF): A common benign skin nodule. " +
-                    "Usually harmless and does not require treatment.",
-            "Melanoma (MEL): The most dangerous form of skin cancer. " +
-                    "Early detection is critical - consult a dermatologist immediately.",
-            "Melanocytic Nevus (NV): A common mole. " +
-                    "Usually benign but monitor for changes in size, shape, or color.",
-            "Vascular Lesion (VASC): Lesions of blood vessels in the skin. " +
-                    "Usually benign, including angiomas and pyogenic granulomas."
-    };
 
     // ─────────────────────────────────────────────────────────────────────────
     // Initialization
@@ -248,7 +222,6 @@ public class ClassifyController implements Initializable {
                 uploadButton.setDisable(false);
                 predictionLabel.setText("Awaiting Image...");
                 predictionLabel.setOpacity(1.0);
-                descriptionLabel.setOpacity(1.0);
             });
         });
 
@@ -395,7 +368,6 @@ public class ClassifyController implements Initializable {
         // Use theme-aware colors: check current mode instead of hardcoding dark colors
         boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
         String textPrimary = isDark ? "#F8F9FA" : "#0F172A";
-        String textSecondary = isDark ? "#D1D5DB" : "#334155";
 
         predictionLabel.setText("Awaiting Image...");
         predictionLabel.setOpacity(1.0);
@@ -403,10 +375,6 @@ public class ClassifyController implements Initializable {
 
         confidenceLabel.setText("");
         inferenceTimeLabel.setText("");
-
-        descriptionLabel.setText("Upload a dermoscopy image to see classification results and Grad-CAM explanation.");
-        descriptionLabel.setOpacity(1.0);
-        descriptionLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: " + textSecondary + "; -fx-line-spacing: 4;");
 
         resetBars();
 
@@ -416,10 +384,16 @@ public class ClassifyController implements Initializable {
         currentConfidence    = 0;
         currentInferenceTime = 0;
         lastResult           = null;
-        heatmapVisible       = false;
         gradCamToggle.setSelected(false);
         gradCamToggle.setDisable(true);
         if (exportReportButton != null) exportReportButton.setDisable(true);
+
+        if (notesArea != null) {
+            notesArea.clear();
+            notesArea.setDisable(true);
+        }
+        if (saveNotesButton != null) saveNotesButton.setDisable(true);
+        if (notesStatusLabel != null) notesStatusLabel.setText("");
 
         saveToHistoryButton.setDisable(true);
         saveToHistoryButton.setText("Save to Patient History");
@@ -431,6 +405,29 @@ public class ClassifyController implements Initializable {
         if (riskBanner != null) {
             riskBanner.setVisible(false);
             riskBanner.setManaged(false);
+        }
+    }
+
+    @FXML
+    private void handleSaveNotes() {
+        if (currentImageFile == null) return;
+        
+        String notes = notesArea.getText();
+        try {
+            String path = currentImageFile.getAbsolutePath();
+            int dotIndex = path.lastIndexOf('.');
+            String notesPath = (dotIndex == -1 ? path : path.substring(0, dotIndex)) + ".notes.txt";
+            java.nio.file.Files.writeString(java.nio.file.Path.of(notesPath), notes);
+            
+            notesStatusLabel.setText("Saved!");
+            AnimationUtil.fadeIn(notesStatusLabel, 1500);
+            
+            javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(3));
+            pause.setOnFinished(e -> AnimationUtil.fadeOut(notesStatusLabel, 500));
+            pause.play();
+        } catch (java.io.IOException e) {
+            e.printStackTrace();
+            notesStatusLabel.setText("Error!");
         }
     }
 
@@ -466,13 +463,11 @@ public class ClassifyController implements Initializable {
         Image original = inputImageView.getImage();
         Image heatmap  = heatmapImageView.getImage();
 
-        String topClass    = SkinClassifier.CLASS_FULL_NAMES[lastResult.classIndex];
-        double confidence  = lastResult.confidence;
-        String inferenceMs = lastResult.inferenceTimeMs + " ms";
+        String notes = notesArea != null ? notesArea.getText() : "";
 
         ReportExportUtil.saveReportAsImage(
                 exportReportButton.getScene().getWindow(),
-                original, heatmap, topClass, confidence, inferenceMs
+                original, heatmap, lastResult, notes
         );
     }
 
@@ -483,7 +478,6 @@ public class ClassifyController implements Initializable {
             generateAndShowHeatmap();
         } else {
             heatmapImageView.setVisible(false);
-            heatmapVisible = false;
         }
     }
 
@@ -499,13 +493,16 @@ public class ClassifyController implements Initializable {
 
         File file = fileChooser.showSaveDialog(exportReportButton.getScene().getWindow());
 
+        String notes = notesArea != null ? notesArea.getText() : "";
+
         if (file != null) {
             try {
                 PdfReportExporter.exportClinicalReport(
                         file, 
                         lastResult, 
                         inputImageView.getImage(), 
-                        heatmapImageView.getImage()
+                        heatmapImageView.getImage(),
+                        notes
                 );
                 StackPane root = (StackPane) exportReportButton.getScene().getRoot();
                 ToastUtil.showToast(root, "PDF Report exported successfully!", ToastUtil.ToastType.SUCCESS);
@@ -523,6 +520,26 @@ public class ClassifyController implements Initializable {
 
     private void loadAndClassify(Path imagePath) {
         currentImagePath = imagePath;
+        currentImageFile = imagePath.toFile();
+
+        if (notesArea != null) {
+            notesArea.setDisable(false);
+            try {
+                String path = currentImageFile.getAbsolutePath();
+                int dotIndex = path.lastIndexOf('.');
+                String notesPath = (dotIndex == -1 ? path : path.substring(0, dotIndex)) + ".notes.txt";
+                java.nio.file.Path notesFilePath = java.nio.file.Path.of(notesPath);
+                if (java.nio.file.Files.exists(notesFilePath)) {
+                    notesArea.setText(java.nio.file.Files.readString(notesFilePath));
+                } else {
+                    notesArea.clear();
+                }
+            } catch (Exception e) {
+                notesArea.clear();
+                e.printStackTrace();
+            }
+        }
+        if (saveNotesButton != null) saveNotesButton.setDisable(false);
 
         try {
             Image fxImage = new Image(imagePath.toUri().toString());
@@ -592,12 +609,11 @@ public class ClassifyController implements Initializable {
         confidenceStatLabel.setText(String.format("%.1f%%", result.confidence));
         inferenceTimeLabel.setText(String.format("Inference time: %d ms", result.inferenceTimeMs));
 
-        descriptionLabel.setText(CLASS_DESCRIPTIONS[result.classIndex]);
+        // Update description (we removed descriptionLabel, so we skip this)
 
         AnimationUtil.fadeIn(confidenceLabel,    700);
         AnimationUtil.fadeIn(confidenceStatLabel, 800);
         AnimationUtil.fadeIn(inferenceTimeLabel,  900);
-        AnimationUtil.fadeIn(descriptionLabel,   1000);
 
         ProgressBar[] bars = {bar0, bar1, bar2, bar3, bar4, bar5, bar6};
         Label[]       pcts = {pct0, pct1, pct2, pct3, pct4, pct5, pct6};
@@ -663,7 +679,6 @@ public class ClassifyController implements Initializable {
                 Image fxHeatmap = SwingFXUtils.toFXImage(heatmapTask.getValue(), null);
                 heatmapImageView.setImage(fxHeatmap);
                 heatmapImageView.setVisible(true);
-                heatmapVisible = true;
                 loadingBox.setVisible(false);
             });
         });

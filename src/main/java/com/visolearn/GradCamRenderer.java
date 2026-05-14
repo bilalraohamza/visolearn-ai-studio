@@ -86,8 +86,6 @@ public class GradCamRenderer {
      * B = round(0.406 * 255) = 104
      * After normalization these become 0.0 in all channels.
      */
-    private static final int OCCLUDE_COLOR =
-            (0xFF << 24) | (124 << 16) | (116 << 8) | 104;
 
     /** Gaussian blur kernel radius for smoothing the saliency map. */
     private static final int BLUR_RADIUS = 45;

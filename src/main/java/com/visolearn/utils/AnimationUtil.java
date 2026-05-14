@@ -75,6 +75,30 @@ public final class AnimationUtil {
     }
 
     /**
+     * Fades a node from fully opaque to fully transparent.
+     *
+     * <p>If animations are disabled, the node is set to {@code opacity = 0}
+     * immediately with no transition.</p>
+     *
+     * @param node     The target {@link Node}.
+     * @param duration Transition duration in milliseconds.
+     */
+    public static void fadeOut(Node node, int duration) {
+        if (!animationsEnabled()) {
+            node.setOpacity(0.0);
+            return;
+        }
+
+        node.setOpacity(1.0);
+
+        FadeTransition fade = new FadeTransition(Duration.millis(duration), node);
+        fade.setFromValue(1.0);
+        fade.setToValue(0.0);
+        fade.setInterpolator(Interpolator.EASE_IN);
+        fade.play();
+    }
+
+    /**
      * Slides a node upward from a vertical offset while simultaneously fading it in.
      *
      * <p>If animations are disabled, the node is snapped to its final position

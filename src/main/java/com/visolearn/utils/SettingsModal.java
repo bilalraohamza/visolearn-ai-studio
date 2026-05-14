@@ -50,7 +50,6 @@ public final class SettingsModal {
     private static String textSecondary()     { return SettingsManager.isDarkMode() ? "#9CA3AF" : "#64748B"; }
     private static String textMuted()         { return SettingsManager.isDarkMode() ? "#6B7280" : "#475569"; }
     private static String dividerColor()      { return SettingsManager.isDarkMode() ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.08)"; }
-    private static String controlBg()         { return SettingsManager.isDarkMode() ? "#1E1E2A" : "#EEF4F8"; }
     private static String controlBorder()     { return SettingsManager.isDarkMode() ? "rgba(255,255,255,0.15)" : "rgba(15,23,42,0.16)"; }
     private static String settingPanelBg()    { return SettingsManager.isDarkMode() ? "rgba(255,255,255,0.03)" : "rgba(15,23,42,0.04)"; }
     private static String sliderTrackBg()     { return SettingsManager.isDarkMode() ? "#374151" : "#CBD5E1"; }
@@ -116,7 +115,6 @@ public final class SettingsModal {
 
     /** Walk all ComboBoxes inside a node tree and add showing/hidden listeners that
      *  temporarily suppress the overlay cancel click so dropdown selection works. */
-    @SuppressWarnings("unchecked")
     private static void hookComboBoxSuppression(javafx.scene.Node root, boolean[] suppressCancel) {
         if (root instanceof ComboBox<?> cb) {
             cb.showingProperty().addListener((obs, wasShowing, isShowing) -> {

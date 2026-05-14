@@ -1,5 +1,6 @@
 package com.visolearn.utils;
 
+import com.visolearn.SkinClassifier;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -121,9 +122,8 @@ public final class ReportExportUtil {
             Window owner,
             Image  original,
             Image  heatmap,
-            String topClass,
-            double confidence,
-            String inferenceTime) {
+            SkinClassifier.PredictionResult result,
+            String notes) {
 
         // ── Step 1: Let the user choose the output file ──────────────────────
         File outputFile = promptSaveLocation(owner);
@@ -132,7 +132,7 @@ public final class ReportExportUtil {
         }
 
         // ── Step 2-5: Generate the snapshot ──────────────────────────────────
-        WritableImage fxImage = generateReportSnapshot(original, heatmap, topClass, confidence, inferenceTime);
+        WritableImage fxImage = generateReportSnapshot(original, heatmap, result, notes);
 
         // ── Step 6: Convert to BufferedImage and write to disk ───────────────
         BufferedImage bufferedImage = SwingFXUtils.fromFXImage(fxImage, null);
@@ -147,7 +147,7 @@ public final class ReportExportUtil {
 
             if (written) {
                 System.out.println("[ReportExportUtil] Report saved ("
-                        + scale + "×): " + outputFile.getAbsolutePath());
+                        + getSnapshotScale() + "×): " + outputFile.getAbsolutePath());
                 ToastUtil.showToast(
                         findRootStackPane(owner),
                         "Report saved successfully!",
@@ -169,11 +169,10 @@ public final class ReportExportUtil {
     public static WritableImage generateReportSnapshot(
             Image  original,
             Image  heatmap,
-            String topClass,
-            double confidence,
-            String inferenceTime) {
+            SkinClassifier.PredictionResult result,
+            String notes) {
 
-        VBox reportLayout = buildReportLayout(original, heatmap, topClass, confidence, inferenceTime);
+        VBox reportLayout = buildReportLayout(original, heatmap, result, notes);
         new javafx.scene.Scene(reportLayout);
         reportLayout.applyCss();
         reportLayout.layout();
@@ -224,9 +223,12 @@ public final class ReportExportUtil {
     private static VBox buildReportLayout(
             Image  original,
             Image  heatmap,
-            String topClass,
-            double confidence,
-            String inferenceTime) {
+            SkinClassifier.PredictionResult result,
+            String notes) {
+
+        String topClass = SkinClassifier.CLASS_FULL_NAMES[result.classIndex];
+        double confidence = result.confidence;
+        String inferenceTime = result.inferenceTimeMs + " ms";
 
         VBox root = new VBox();
         root.setPrefWidth(REPORT_WIDTH);
@@ -244,6 +246,12 @@ public final class ReportExportUtil {
                 buildDivider(),
                 buildSectionSpacer(24),
                 buildImageSection(original, heatmap),
+                buildSectionSpacer(24),
+                buildClassProbabilitiesTable(result),
+                buildSectionSpacer(24),
+                buildDivider(),
+                buildSectionSpacer(24),
+                buildClinicianNotesSection(notes),
                 buildSectionSpacer(24),
                 buildDivider(),
                 buildSectionSpacer(16),
@@ -555,6 +563,82 @@ public final class ReportExportUtil {
 
         card.getChildren().addAll(imageFrame, titleLabel, subtitleLabel);
         return card;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Section: Class Probabilities Table
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static VBox buildClassProbabilitiesTable(SkinClassifier.PredictionResult result) {
+        VBox section = new VBox(16);
+        section.setPadding(new Insets(0, 36, 0, 36));
+
+        VBox tableContainer = new VBox(0);
+        tableContainer.setStyle(
+                "-fx-background-color: " + COLOR_CARD_BG + ";"  +
+                "-fx-background-radius: 10px;"                   +
+                "-fx-border-color: " + COLOR_BORDER + ";"        +
+                "-fx-border-radius: 10px;"                       +
+                "-fx-border-width: 1px;"
+        );
+
+        for (int i = 0; i < 7; i++) {
+            HBox row = new HBox();
+            row.setPadding(new Insets(12, 20, 12, 20));
+            if (i < 6) {
+                row.setStyle("-fx-border-color: " + COLOR_BORDER + "; -fx-border-width: 0 0 1 0;");
+            }
+            
+            Label nameLabel = new Label(SkinClassifier.CLASS_FULL_NAMES[i]);
+            nameLabel.setFont(Font.font("System", FontWeight.NORMAL, 12));
+            nameLabel.setStyle("-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";");
+            
+            Label probLabel = new Label(String.format("%.2f%%", result.allProbabilities[i] * 100));
+            probLabel.setFont(Font.font("System", FontWeight.BOLD, 12));
+            probLabel.setStyle("-fx-text-fill: " + COLOR_TEXT_PRIMARY + ";");
+            
+            Region spacer = new Region();
+            HBox.setHgrow(spacer, Priority.ALWAYS);
+            
+            row.getChildren().addAll(nameLabel, spacer, probLabel);
+            tableContainer.getChildren().add(row);
+        }
+
+        section.getChildren().addAll(buildSectionTitle("Class Probabilities (Softmax Output)"), tableContainer);
+        return section;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Section: Clinician Notes
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static VBox buildClinicianNotesSection(String notes) {
+        VBox section = new VBox(14);
+        section.setPadding(new Insets(0, 36, 0, 36));
+
+        if (notes == null || notes.isBlank()) {
+            notes = "No clinician notes provided.";
+        }
+
+        Label notesLabel = new Label(notes);
+        notesLabel.setFont(Font.font("System", FontWeight.NORMAL, 12));
+        notesLabel.setStyle("-fx-text-fill: " + COLOR_TEXT_SECONDARY + ";");
+        notesLabel.setWrapText(true);
+        notesLabel.setLineSpacing(3);
+
+        VBox notesPanel = new VBox();
+        notesPanel.setPadding(new Insets(16));
+        notesPanel.setStyle(
+                "-fx-background-color: " + COLOR_CARD_BG + ";"  +
+                "-fx-background-radius: 8px;"                   +
+                "-fx-border-color: " + COLOR_BORDER + ";"        +
+                "-fx-border-radius: 8px;"                       +
+                "-fx-border-width: 1px;"
+        );
+        notesPanel.getChildren().add(notesLabel);
+
+        section.getChildren().addAll(buildSectionTitle("Clinician Notes / Observations"), notesPanel);
+        return section;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -41,11 +41,27 @@ public final class DatabaseUtil {
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS Patients (
-                    id   INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT    NOT NULL,
-                    dob  TEXT
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name         TEXT    NOT NULL,
+                    dob          TEXT,
+                    gender       TEXT,
+                    phone        TEXT,
+                    skin_type    TEXT,
+                    doctor_notes TEXT
                 )
                 """);
+
+            // ── Schema migration for existing databases ──────────────────
+            // SQLite doesn't support ALTER TABLE ... IF NOT EXISTS, so we
+            // attempt each ALTER and silently catch "duplicate column" errors.
+            String[] newCols = {"gender TEXT", "phone TEXT", "skin_type TEXT", "doctor_notes TEXT"};
+            for (String col : newCols) {
+                try {
+                    stmt.execute("ALTER TABLE Patients ADD COLUMN " + col);
+                } catch (SQLException ignored) {
+                    // Column already exists — safe to ignore
+                }
+            }
 
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS Predictions (
@@ -55,10 +71,19 @@ public final class DatabaseUtil {
                     predicted_class TEXT    NOT NULL,
                     confidence      REAL,
                     inference_time  INTEGER,
+                    notes           TEXT,
                     timestamp       TEXT    NOT NULL DEFAULT (CURRENT_TIMESTAMP),
                     FOREIGN KEY (patient_id) REFERENCES Patients(id) ON DELETE CASCADE
                 )
                 """);
+
+            // Migration: add notes column to existing Predictions table
+            try {
+                stmt.execute("ALTER TABLE Predictions ADD COLUMN notes TEXT");
+            } catch (SQLException ignored) {
+                // Column already exists
+            }
+
             stmt.execute("PRAGMA foreign_keys = ON");
         }
     }

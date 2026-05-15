@@ -83,34 +83,37 @@
                              prefWidth="80" maxWidth="80" resizable="false"
                              style="-fx-alignment: CENTER;"/>
                 <TableColumn fx:id="predictedClassColumn" text="Predicted Class"
-                             prefWidth="250"
+                             prefWidth="200"
                              style="-fx-alignment: CENTER-LEFT;"/>
                 <TableColumn fx:id="confidenceColumn"  text="Confidence"
-                             prefWidth="130"
+                             prefWidth="110"
                              style="-fx-alignment: CENTER;"/>
                 <TableColumn fx:id="timestampColumn"   text="Date"
-                             prefWidth="160"
+                             prefWidth="130"
                              style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="notesColumn"       text="Doctor Notes"
+                             prefWidth="200"
+                             style="-fx-alignment: CENTER-LEFT;"/>
             </columns>
             <VBox.margin><Insets top="16" left="20" right="20"/></VBox.margin>
         </TableView>
 
-        <Region fx:id="tableEmptyState" style="-fx-pref-height: 120;"/>
+        <Region fx:id="tableEmptyState" style="-fx-pref-height: 60;"/>
 
         <Region styleClass="bg-card" style="-fx-pref-height: 1;">
-            <VBox.margin><Insets top="16" bottom="0"/></VBox.margin>
+            <VBox.margin><Insets top="8" bottom="0"/></VBox.margin>
         </Region>
 
-        <HBox spacing="24" alignment="TOP_CENTER" style="-fx-padding: 20 20 20 20;">
+        <HBox spacing="24" alignment="TOP_CENTER" style="-fx-padding: 16 20 16 20;">
             <VBox spacing="10" alignment="TOP_CENTER">
                 <Text text="Condition Distribution" fill="#F8F9FA"
                       style="-fx-font-family: 'System'; -fx-font-size: 15px; -fx-font-weight: bold;"/>
                 <PieChart fx:id="distributionChart"
                           legendVisible="true"
                           styleClass="bg-base"
-                          minWidth="360" minHeight="260"
-                          prefWidth="360" prefHeight="260"
-                          maxWidth="360" maxHeight="260"/>
+                          minWidth="320" minHeight="220"
+                          prefWidth="320" prefHeight="220"
+                          maxWidth="320" maxHeight="220"/>
             </VBox>
 
             <VBox spacing="12" alignment="TOP_LEFT" styleClass="summary-panel">
@@ -134,6 +137,16 @@
                     <Label fx:id="totalInferenceLabel" text="0 ms"
                            styleClass="text-primary text-bold text-md"/>
                 </HBox>
+
+                <!-- Patient Doctor Notes (from registration) -->
+                <Region style="-fx-pref-height: 1; -fx-background-color: rgba(255,255,255,0.08);">
+                    <VBox.margin><Insets top="4" bottom="4"/></VBox.margin>
+                </Region>
+                <Text text="Patient Notes" fill="#F59E0B"
+                      style="-fx-font-family: 'System'; -fx-font-size: 13px; -fx-font-weight: bold;"/>
+                <Label fx:id="patientNotesLabel" text="No notes available."
+                       wrapText="true" styleClass="text-muted text-sm"
+                       style="-fx-max-width: 260;"/>
             </VBox>
         </HBox>
 

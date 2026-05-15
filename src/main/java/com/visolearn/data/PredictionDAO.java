@@ -91,8 +91,8 @@ public class PredictionDAO {
 
         String sql = """
             INSERT INTO Predictions
-                (patient_id, image_path, predicted_class, confidence, inference_time)
-            VALUES (?, ?, ?, ?, ?)
+                (patient_id, image_path, predicted_class, confidence, inference_time, notes)
+            VALUES (?, ?, ?, ?, ?, ?)
             """;
 
         try (Connection conn = DatabaseUtil.getConnection();
@@ -104,6 +104,7 @@ public class PredictionDAO {
             ps.setString(3, prediction.predictedClass);
             ps.setDouble(4, prediction.confidence);
             ps.setInt(5, prediction.inferenceTime);
+            ps.setString(6, prediction.notes);
 
             int affected = ps.executeUpdate();
             if (affected == 0) {
@@ -136,7 +137,7 @@ public class PredictionDAO {
 
         String sql = """
             SELECT id, patient_id, image_path, predicted_class,
-                   confidence, inference_time, timestamp
+                   confidence, inference_time, timestamp, notes
             FROM   Predictions
             WHERE  patient_id = ?
             ORDER BY timestamp DESC
@@ -156,7 +157,8 @@ public class PredictionDAO {
                             rs.getString("predicted_class"),
                             rs.getDouble("confidence"),
                             rs.getInt("inference_time"),
-                            rs.getString("timestamp")
+                            rs.getString("timestamp"),
+                            rs.getString("notes")
                     ));
                 }
             }
@@ -228,5 +230,24 @@ public class PredictionDAO {
     private static String getExtension(String fileName) {
         int lastDot = fileName.lastIndexOf('.');
         return lastDot >= 0 ? fileName.substring(lastDot).toLowerCase() : "";
+    }
+
+    /**
+     * Updates the per-session doctor notes for a single prediction.
+     *
+     * @param predictionId The prediction's primary key.
+     * @param notes        New notes text (may be {@code null} to clear).
+     * @throws SQLException If the update fails.
+     */
+    public void updateNotes(int predictionId, String notes) throws SQLException {
+        String sql = "UPDATE Predictions SET notes = ? WHERE id = ?";
+
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, notes);
+            ps.setInt(2, predictionId);
+            ps.executeUpdate();
+        }
     }
 }

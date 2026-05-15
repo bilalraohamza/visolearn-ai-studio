@@ -2,7 +2,7 @@ package com.visolearn.data.model;
 
 
 /**
- * Immutable data model representing a single AI inference session for a
+ * Data model representing a single AI inference session for a
  * patient in VisoLearn AI Studio.
  *
  * <p>An instance is constructed by {@link com.visolearn.data.PredictionDAO}
@@ -44,6 +44,13 @@ public class Prediction {
     public final String timestamp;
 
     /**
+     * Per-session clinical notes written by the attending doctor.
+     * This field is mutable so the doctor can add/edit notes after inference.
+     * May be {@code null} if no notes have been written yet.
+     */
+    public String notes;
+
+    /**
      * Constructs a new {@link Prediction} record.
      *
      * @param id              SQLite-generated primary key.
@@ -53,10 +60,12 @@ public class Prediction {
      * @param confidence      Confidence percentage (0–100).
      * @param inferenceTime   Inference time in milliseconds.
      * @param timestamp       ISO 8601 timestamp string.
+     * @param notes           Per-session doctor notes (may be {@code null}).
      */
     public Prediction(int id, int patientId, String imagePath,
                       String predictedClass, double confidence,
-                      int inferenceTime, String timestamp) {
+                      int inferenceTime, String timestamp,
+                      String notes) {
         this.id              = id;
         this.patientId        = patientId;
         this.imagePath        = imagePath;
@@ -64,6 +73,7 @@ public class Prediction {
         this.confidence       = confidence;
         this.inferenceTime    = inferenceTime;
         this.timestamp        = timestamp;
+        this.notes            = notes;
     }
 
     /**

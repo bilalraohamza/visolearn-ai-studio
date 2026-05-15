@@ -52,9 +52,11 @@ public class PatientDAO {
         boolean hasFilter = searchStr != null && !searchStr.trim().isEmpty();
 
         if (hasFilter) {
-            sql = "SELECT id, name, dob FROM Patients WHERE name LIKE ? ORDER BY name";
+            sql = "SELECT id, name, dob, gender, phone, skin_type, doctor_notes "
+                + "FROM Patients WHERE name LIKE ? ORDER BY name";
         } else {
-            sql = "SELECT id, name, dob FROM Patients ORDER BY name";
+            sql = "SELECT id, name, dob, gender, phone, skin_type, doctor_notes "
+                + "FROM Patients ORDER BY name";
         }
 
         try (Connection conn = DatabaseUtil.getConnection();
@@ -70,7 +72,11 @@ public class PatientDAO {
                     results.add(new Patient(
                             rs.getInt("id"),
                             rs.getString("name"),
-                            rs.getString("dob")
+                            rs.getString("dob"),
+                            rs.getString("gender"),
+                            rs.getString("phone"),
+                            rs.getString("skin_type"),
+                            rs.getString("doctor_notes")
                     ));
                 }
             }
@@ -80,15 +86,23 @@ public class PatientDAO {
     }
 
     /**
-     * Inserts a new patient into the database.
+     * Inserts a new patient into the database with all clinical fields.
      *
-     * @param name Patient's full name.
-     * @param dob  Date of birth in {@code YYYY-MM-DD} format (may be {@code null}).
+     * @param name        Patient's full name (required).
+     * @param dob         Date of birth in {@code YYYY-MM-DD} format (may be {@code null}).
+     * @param gender      Gender / biological sex (may be {@code null}).
+     * @param phone       Contact phone number (may be {@code null}).
+     * @param skinType    Fitzpatrick skin phototype I–VI (may be {@code null}).
+     * @param doctorNotes Free-text clinical notes (may be {@code null}).
      * @return The newly assigned SQLite rowid (returned as the {@code id} field).
      * @throws SQLException If the insert fails (e.g., unique constraint violation).
      */
-    public int insert(String name, String dob) throws SQLException {
-        String sql = "INSERT INTO Patients (name, dob) VALUES (?, ?)";
+    public int insert(String name, String dob,
+                      String gender, String phone,
+                      String skinType, String doctorNotes) throws SQLException {
+
+        String sql = "INSERT INTO Patients (name, dob, gender, phone, skin_type, doctor_notes) "
+                   + "VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql,
@@ -96,6 +110,10 @@ public class PatientDAO {
 
             ps.setString(1, name);
             ps.setString(2, dob);
+            ps.setString(3, gender);
+            ps.setString(4, phone);
+            ps.setString(5, skinType);
+            ps.setString(6, doctorNotes);
 
             int affected = ps.executeUpdate();
             if (affected == 0) {

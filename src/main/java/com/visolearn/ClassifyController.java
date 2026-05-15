@@ -300,7 +300,8 @@ public class ClassifyController implements Initializable {
                         currentPrediction,
                         currentConfidence,
                         currentInferenceTime,
-                        ""
+                        "",
+                        null  // notes — not set from the Classify tab
                 );
                 return predictionDAO.insertPrediction(newRecord, currentImageFile);
             }

@@ -63,80 +63,102 @@ public class MainApp extends Application {
     @Override
     public void start(Stage primaryStage) throws IOException {
 
-        // Load the main FXML layout file from resources
-        FXMLLoader loader = new FXMLLoader(
-                Objects.requireNonNull(
-                        getClass().getResource("/main.fxml"),
-                        "main.fxml not found in resources"
-                )
-        );
+        // ── Step 1: Show splash immediately — user sees feedback at once ───────
+        SplashScreen splash = new SplashScreen();
+        splash.show();
+        splash.setStatus("Starting VisoLearn AI Studio…");
 
-        // Create the scene with the loaded layout
-        Scene scene = new Scene(loader.load(), MIN_WIDTH, MIN_HEIGHT);
-        MainController.applyTheme(scene, SettingsManager.isDarkMode());
-        SettingsManager.darkModeProperty().addListener((obs, oldValue, isDark) -> {
-            // Only re-render when the value genuinely changed.
-            // restore() on cancel fires this listener too but with the same value,
-            // so we guard here to prevent a redundant (and jarring) re-render.
-            if (!oldValue.equals(isDark)) {
-                MainController.applyTheme(scene, isDark);
+        // ── Step 2: Defer heavy loading so start() returns instantly ──────────
+        // This ensures the splash screen renders immediately without being blocked
+        Platform.runLater(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(
+                        Objects.requireNonNull(
+                                getClass().getResource("/main.fxml"),
+                                "main.fxml not found in resources"
+                        )
+                );
+
+                Scene scene = new Scene(loader.load(), MIN_WIDTH, MIN_HEIGHT);
+                MainController.applyTheme(scene, SettingsManager.isDarkMode());
+                SettingsManager.darkModeProperty().addListener((obs, oldValue, isDark) -> {
+                    if (!oldValue.equals(isDark)) {
+                        MainController.applyTheme(scene, isDark);
+                    }
+                });
+
+                // Configure primary stage but do NOT show it yet
+                primaryStage.setTitle(APP_TITLE);
+                primaryStage.setScene(scene);
+                primaryStage.setMinWidth(MIN_WIDTH);
+                primaryStage.setMinHeight(MIN_HEIGHT);
+                primaryStage.centerOnScreen();
+
+                primaryStage.setOnCloseRequest(e -> {
+                    if (sharedClassifier != null) {
+                        sharedClassifier.close();
+                        System.out.println("MainApp: classifier released.");
+                    }
+                });
+
+                // ── Step 3: Initialize classifier on background thread ────────────────
+                Task<Void> initTask = new Task<>() {
+                    @Override
+                    protected Void call() throws Exception {
+                        splash.setStatus("Preparing inference engine");
+                        sharedClassifier = new SkinClassifier();
+
+                        splash.setStatus("Loading EfficientNet-B4 + DenseNet-169 models");
+                        sharedClassifier.initialize();
+
+                        splash.setStatus("Models ready — launching studio");
+                        return null;
+                    }
+                };
+
+                initTask.setOnSucceeded(e -> Platform.runLater(() -> {
+                    System.out.println("MainApp: shared classifier ready.");
+                    notifyControllersReady(loader);
+
+                    javafx.animation.PauseTransition delay =
+                            new javafx.animation.PauseTransition(javafx.util.Duration.millis(400));
+                    delay.setOnFinished(ev -> {
+                        splash.dismiss();
+                        primaryStage.show();
+                        primaryStage.centerOnScreen();
+
+                        if (!SettingsManager.isDarkMode()) {
+                            javafx.animation.PauseTransition reapply =
+                                    new javafx.animation.PauseTransition(javafx.util.Duration.millis(150));
+                            reapply.setOnFinished(re -> MainController.applyTheme(scene, SettingsManager.isDarkMode()));
+                            reapply.play();
+                        }
+                    });
+                    delay.play();
+                }));
+
+                initTask.setOnFailed(e -> Platform.runLater(() -> {
+                    splash.setStatus("⚠ Failed to load models — see console for details.");
+                    System.err.println("MainApp: classifier failed to load — " +
+                            initTask.getException().getMessage());
+
+                    javafx.animation.PauseTransition errDelay =
+                            new javafx.animation.PauseTransition(javafx.util.Duration.millis(2500));
+                    errDelay.setOnFinished(ev -> {
+                        splash.dismiss();
+                        primaryStage.show();
+                    });
+                    errDelay.play();
+                }));
+
+                Thread initThread = new Thread(initTask, "ModelInit");
+                initThread.setDaemon(true);
+                initThread.start();
+
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         });
-
-        // Configure the primary stage (main window)
-        primaryStage.setTitle(APP_TITLE);
-        primaryStage.setScene(scene);
-        primaryStage.setMinWidth(MIN_WIDTH);
-        primaryStage.setMinHeight(MIN_HEIGHT);
-        primaryStage.centerOnScreen();
-
-        // Release classifier resources when window closes
-        primaryStage.setOnCloseRequest(e -> {
-            if (sharedClassifier != null) {
-                sharedClassifier.close();
-                System.out.println("MainApp: classifier released.");
-            }
-        });
-
-        primaryStage.show();
-
-        // Re-apply theme after show() because tab content nodes (history_tab, batch_tab, etc.)
-        // may not be fully attached to the scene graph during the first applyTheme call above.
-        // A short delay ensures the skin/layout pass has completed before we walk the tree.
-        if (!SettingsManager.isDarkMode()) {
-            javafx.animation.PauseTransition reapply = new javafx.animation.PauseTransition(
-                    javafx.util.Duration.millis(150));
-            reapply.setOnFinished(e -> MainController.applyTheme(scene, SettingsManager.isDarkMode()));
-            reapply.play();
-        }
-
-        // Initialize shared classifier on background thread
-        // Both ClassifyController and BatchController will use this
-        Task<Void> initTask = new Task<>() {
-            @Override
-            protected Void call() throws Exception {
-                sharedClassifier = new SkinClassifier();
-                sharedClassifier.initialize();
-                return null;
-            }
-        };
-
-        initTask.setOnSucceeded(e -> {
-            Platform.runLater(() -> {
-                System.out.println("MainApp: shared classifier ready.");
-                // Notify controllers that classifier is ready
-                notifyControllersReady(loader);
-            });
-        });
-
-        initTask.setOnFailed(e -> {
-            System.err.println("MainApp: classifier failed to load — " +
-                    initTask.getException().getMessage());
-        });
-
-        Thread initThread = new Thread(initTask);
-        initThread.setDaemon(true);
-        initThread.start();
 
         System.out.println("VisoLearn AI Studio started successfully.");
     }

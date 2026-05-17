@@ -83,17 +83,23 @@
                              prefWidth="80" maxWidth="80" resizable="false"
                              style="-fx-alignment: CENTER;"/>
                 <TableColumn fx:id="predictedClassColumn" text="Predicted Class"
-                             prefWidth="200"
+                             prefWidth="180"
                              style="-fx-alignment: CENTER-LEFT;"/>
                 <TableColumn fx:id="confidenceColumn"  text="Confidence"
+                             prefWidth="100"
+                             style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="riskColumn"        text="Risk Level"
                              prefWidth="110"
                              style="-fx-alignment: CENTER;"/>
                 <TableColumn fx:id="timestampColumn"   text="Date"
-                             prefWidth="130"
+                             prefWidth="100"
                              style="-fx-alignment: CENTER;"/>
                 <TableColumn fx:id="notesColumn"       text="Doctor Notes"
-                             prefWidth="200"
+                             prefWidth="180"
                              style="-fx-alignment: CENTER-LEFT;"/>
+                <TableColumn fx:id="actionsColumn"     text="Actions"
+                             prefWidth="160" minWidth="160" resizable="false"
+                             style="-fx-alignment: CENTER;"/>
             </columns>
             <VBox.margin><Insets top="16" left="20" right="20"/></VBox.margin>
         </TableView>

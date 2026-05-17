@@ -24,6 +24,8 @@ import com.visolearn.data.PredictionDAO;
 import com.visolearn.data.model.Patient;
 import com.visolearn.data.model.Prediction;
 import com.visolearn.utils.AnimationUtil;
+import com.visolearn.utils.ImageValidator;
+import com.visolearn.utils.ImageValidator.ValidationResult;
 import com.visolearn.utils.PdfReportExporter;
 import com.visolearn.utils.ReportExportUtil;
 import com.visolearn.utils.RiskAssessor;
@@ -352,6 +354,23 @@ public class ClassifyController implements Initializable {
         File selected = fileChooser.showOpenDialog(uploadButton.getScene().getWindow());
 
         if (selected != null) {
+            ValidationResult vr = ImageValidator.validate(selected);
+            if (!vr.valid()) {
+                ToastUtil.showToast(
+                        (StackPane) uploadButton.getScene().getRoot(),
+                        vr.title() + ": " + vr.detail(),
+                        ToastUtil.ToastType.ERROR
+                );
+                return;
+            }
+            if (vr.isWarning()) {
+                ToastUtil.showToast(
+                        (StackPane) uploadButton.getScene().getRoot(),
+                        vr.title() + ": " + vr.detail(),
+                        ToastUtil.ToastType.INFO
+                );
+                // Warning is non-fatal — fall through and load the image.
+            }
             currentImageFile = selected;
             loadAndClassify(selected.toPath());
         }
@@ -711,9 +730,27 @@ public class ClassifyController implements Initializable {
         imageContainer.setOnDragDropped(event -> {
             var files = event.getDragboard().getFiles();
             if (!files.isEmpty()) {
-                File dropped = files.get(0);
-                String name  = dropped.getName().toLowerCase();
+                File   dropped = files.get(0);
+                String name    = dropped.getName().toLowerCase();
                 if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png")) {
+                    ValidationResult vr = ImageValidator.validate(dropped);
+                    if (!vr.valid()) {
+                        ToastUtil.showToast(
+                                (StackPane) imageContainer.getScene().getRoot(),
+                                vr.title() + ": " + vr.detail(),
+                                ToastUtil.ToastType.ERROR
+                        );
+                        event.consume();
+                        return;
+                    }
+                    if (vr.isWarning()) {
+                        ToastUtil.showToast(
+                                (StackPane) imageContainer.getScene().getRoot(),
+                                vr.title() + ": " + vr.detail(),
+                                ToastUtil.ToastType.INFO
+                        );
+                        // Warning is non-fatal — fall through and load the image.
+                    }
                     currentImageFile = dropped;
                     loadAndClassify(dropped.toPath());
                 }

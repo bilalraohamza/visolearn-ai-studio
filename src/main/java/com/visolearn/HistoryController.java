@@ -14,14 +14,22 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.text.Text;
+import javafx.stage.FileChooser;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.Duration;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
@@ -43,9 +51,11 @@ public class HistoryController implements Initializable {
     @FXML private TableView<Prediction>            predictionsTable;
     @FXML private TableColumn<Prediction, String>  predictedClassColumn;
     @FXML private TableColumn<Prediction, Double>  confidenceColumn;
+    @FXML private TableColumn<Prediction, String>  riskColumn;
     @FXML private TableColumn<Prediction, String>  timestampColumn;
     @FXML private TableColumn<Prediction, String>  imageColumn;
     @FXML private TableColumn<Prediction, String>  notesColumn;
+    @FXML private TableColumn<Prediction, Prediction> actionsColumn;
 
     @FXML private PieChart distributionChart;
     @FXML private Label    totalSessionsLabel;
@@ -271,6 +281,226 @@ public class HistoryController implements Initializable {
                 }
             }
         });
+
+        // ── Risk Level column ────────────────────────────────────────────────
+        riskColumn.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleStringProperty(
+                        computeRisk(data.getValue().predictedClass, data.getValue().confidence)));
+        riskColumn.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String risk, boolean empty) {
+                super.updateItem(risk, empty);
+                if (empty || risk == null) {
+                    setText(null);
+                    setStyle("");
+                    setGraphic(null);
+                } else {
+                    String color  = switch (risk) {
+                        case "URGENT"   -> "#EF4444";
+                        case "MODERATE" -> "#F59E0B";
+                        default         -> "#10B981";
+                    };
+                    String label  = switch (risk) {
+                        case "URGENT"   -> "⚠ Urgent";
+                        case "MODERATE" -> "● Moderate";
+                        default         -> "✔ Low";
+                    };
+                    Label badge = new Label(label);
+                    badge.setStyle(
+                        "-fx-text-fill: " + color + ";" +
+                        "-fx-font-size: 12px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-background-color: " + color + "22;" +
+                        "-fx-background-radius: 4;" +
+                        "-fx-padding: 3 8 3 8;"
+                    );
+                    setGraphic(badge);
+                    setText(null);
+                }
+            }
+        });
+
+        // ── Actions column ───────────────────────────────────────────────────
+        actionsColumn.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleObjectProperty<>(data.getValue()));
+        actionsColumn.setCellFactory(col -> new TableCell<>() {
+            private final Button viewBtn   = makeActionBtn("👁",  "#00B4D8");
+            private final Button deleteBtn = makeActionBtn("🗑",  "#EF4444");
+            private final Button exportBtn = makeActionBtn("⤓",  "#10B981");
+            private final HBox   box       = new HBox(6, viewBtn, deleteBtn, exportBtn);
+
+            {
+                box.setAlignment(Pos.CENTER);
+
+                viewBtn.setOnAction(e -> {
+                    Prediction p = (Prediction) getTableRow().getItem();
+                    if (p != null) openImageViewer(p);
+                });
+
+                deleteBtn.setOnAction(e -> {
+                    Prediction p = (Prediction) getTableRow().getItem();
+                    if (p != null) confirmAndDeletePrediction(p);
+                });
+
+                exportBtn.setOnAction(e -> {
+                    Prediction p = (Prediction) getTableRow().getItem();
+                    if (p != null) exportPredictionImage(p);
+                });
+            }
+
+            @Override
+            protected void updateItem(Prediction item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty || item == null ? null : box);
+            }
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Action column helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Derives a risk level string from class name + confidence without a PredictionResult. */
+    private static String computeRisk(String predictedClass, double confidence) {
+        boolean isMelanomaOrBCC = "Melanoma".equalsIgnoreCase(predictedClass)
+                || "Basal Cell Carcinoma".equalsIgnoreCase(predictedClass)
+                || "BCC".equalsIgnoreCase(predictedClass);
+        boolean isAK = "Actinic Keratosis".equalsIgnoreCase(predictedClass)
+                || "AK".equalsIgnoreCase(predictedClass);
+        if (isMelanomaOrBCC && confidence > 60.0) return "URGENT";
+        if (isMelanomaOrBCC || (isAK && confidence > 60.0)) return "MODERATE";
+        return "LOW";
+    }
+
+    /** Creates a compact square icon button for the actions cell. */
+    private static Button makeActionBtn(String icon, String color) {
+        Button btn = new Button(icon);
+        btn.setStyle(
+            "-fx-background-color: " + color + "22;" +
+            "-fx-text-fill: " + color + ";" +
+            "-fx-font-size: 13px;" +
+            "-fx-cursor: hand;" +
+            "-fx-background-radius: 6;" +
+            "-fx-min-width: 32; -fx-min-height: 28;" +
+            "-fx-padding: 2 6 2 6;"
+        );
+        btn.setOnMouseEntered(e -> btn.setStyle(
+            "-fx-background-color: " + color + "44;" +
+            "-fx-text-fill: " + color + ";" +
+            "-fx-font-size: 13px;" +
+            "-fx-cursor: hand;" +
+            "-fx-background-radius: 6;" +
+            "-fx-min-width: 32; -fx-min-height: 28;" +
+            "-fx-padding: 2 6 2 6;"
+        ));
+        btn.setOnMouseExited(e -> btn.setStyle(
+            "-fx-background-color: " + color + "22;" +
+            "-fx-text-fill: " + color + ";" +
+            "-fx-font-size: 13px;" +
+            "-fx-cursor: hand;" +
+            "-fx-background-radius: 6;" +
+            "-fx-min-width: 32; -fx-min-height: 28;" +
+            "-fx-padding: 2 6 2 6;"
+        ));
+        return btn;
+    }
+
+    /**
+     * Opens a modal window showing the full-size cached scan image.
+     */
+    private void openImageViewer(Prediction p) {
+        Path imgPath = p.getImagePath();
+        if (!imgPath.toFile().exists()) {
+            ToastUtil.showToast(findRootPane(), "Image file not found on disk.", ToastUtil.ToastType.ERROR);
+            return;
+        }
+        Image img = new Image(imgPath.toUri().toString());
+        ImageView iv = new ImageView(img);
+        iv.setFitWidth(600);
+        iv.setFitHeight(600);
+        iv.setPreserveRatio(true);
+        iv.setSmooth(true);
+
+        VBox root = new VBox(12);
+        root.setAlignment(Pos.CENTER);
+        root.setPadding(new Insets(16));
+        root.setStyle("-fx-background-color: #1A1A24;");
+
+        Label title = new Label(p.predictedClass + "  ·  " + String.format("%.2f%%", p.confidence)
+                + "  ·  " + (p.timestamp != null && p.timestamp.length() >= 10 ? p.timestamp.substring(0, 10) : p.timestamp));
+        title.setStyle("-fx-text-fill: #F8F9FA; -fx-font-size: 14px; -fx-font-weight: bold;");
+
+        root.getChildren().addAll(title, iv);
+
+        Stage stage = new Stage();
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setTitle("Scan Viewer — " + p.predictedClass);
+        stage.setScene(new Scene(root));
+        stage.showAndWait();
+    }
+
+    /**
+     * Confirms then deletes a single prediction row (DB record only; cached image is retained).
+     */
+    private void confirmAndDeletePrediction(Prediction p) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Delete Scan Record");
+        alert.setHeaderText("Delete this scan record?");
+        alert.setContentText("Predicted: " + p.predictedClass + "  (" + String.format("%.2f%%", p.confidence) + ")\n"
+                + "Date: " + p.timestamp + "\n\nThis cannot be undone.");
+        com.visolearn.MainController.applyThemeToDialog(alert, com.visolearn.utils.SettingsManager.isDarkMode());
+
+        alert.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                Task<Void> task = new Task<>() {
+                    @Override protected Void call() throws Exception {
+                        predictionDAO.deleteById(p.id);
+                        return null;
+                    }
+                };
+                task.setOnSucceeded(e -> {
+                    ToastUtil.showToast(findRootPane(), "Scan record deleted.", ToastUtil.ToastType.SUCCESS);
+                    if (selectedPatient != null) loadPatientHistory(selectedPatient.id);
+                });
+                task.setOnFailed(e -> ToastUtil.showToast(findRootPane(), "Delete failed.", ToastUtil.ToastType.ERROR));
+                new Thread(task, "DeletePrediction-" + p.id).start();
+            }
+        });
+    }
+
+    /**
+     * Saves the cached scan image to a user-chosen location via FileChooser.
+     */
+    private void exportPredictionImage(Prediction p) {
+        Path srcPath = p.getImagePath();
+        if (!srcPath.toFile().exists()) {
+            ToastUtil.showToast(findRootPane(), "Image file not found on disk.", ToastUtil.ToastType.ERROR);
+            return;
+        }
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Export Scan Image");
+        fc.setInitialFileName(p.predictedClass.replaceAll("\\s+", "_") + "_scan.png");
+        fc.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("PNG Image", "*.png"),
+                new FileChooser.ExtensionFilter("JPEG Image", "*.jpg")
+        );
+        File dest = fc.showSaveDialog(historyRoot.getScene().getWindow());
+        if (dest == null) return;
+
+        Task<Void> task = new Task<>() {
+            @Override protected Void call() throws Exception {
+                // If the user chose PNG but the cached file is JPEG (or vice versa),
+                // re-encode via ImageIO so the format always matches the chosen extension.
+                String ext = dest.getName().toLowerCase().endsWith(".jpg") ? "jpg" : "png";
+                BufferedImage bi = ImageIO.read(srcPath.toFile());
+                if (bi == null) throw new IOException("Cannot decode cached image.");
+                ImageIO.write(bi, ext, dest);
+                return null;
+            }
+        };
+        task.setOnSucceeded(e -> ToastUtil.showToast(findRootPane(), "Image exported: " + dest.getName(), ToastUtil.ToastType.SUCCESS));
+        task.setOnFailed(e -> ToastUtil.showToast(findRootPane(), "Export failed: " + task.getException().getMessage(), ToastUtil.ToastType.ERROR));
+        new Thread(task, "ExportImage-" + p.id).start();
     }
 
     private void setupSearchDebouncer() {

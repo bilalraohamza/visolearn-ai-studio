@@ -1,6 +1,8 @@
 package com.visolearn;
 
 import com.visolearn.utils.AnimationUtil;
+import com.visolearn.utils.ImageValidator;
+import com.visolearn.utils.ImageValidator.ValidationResult;
 import com.visolearn.utils.ToastUtil;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -461,6 +463,24 @@ public class BatchController implements Initializable {
             final BatchResult row    = placeholders.get(i);
 
             CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+
+                // ── Pre-flight validation ────────────────────────────────────
+                // Reject corrupt, empty, or thumbnail-sized images before they
+                // reach the ONNX pipeline and silently produce garbage results.
+                ValidationResult vr = ImageValidator.validate(imageFile);
+                if (!vr.valid()) {
+                    System.err.println("Batch validation failed for "
+                            + imageFile.getName() + ": " + vr.title());
+                    Platform.runLater(() -> {
+                        row.fail();
+                        resultsTable.refresh();
+                        int done = completedCount.incrementAndGet();
+                        batchProgressBar.setProgress((double) done / total);
+                        progressCountLabel.setText(done + " / " + total);
+                        progressLabel.setText("Skipped (invalid): " + imageFile.getName());
+                    });
+                    return;
+                }
 
                 try {
                     // SkinClassifier.predict() uses shared Predictor instances.

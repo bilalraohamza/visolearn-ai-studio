@@ -77,11 +77,13 @@ public class SkinClassifier implements AutoCloseable {
     // Model & Predictor Fields
     // ─────────────────────────────────────────────────────────────────────────
 
+    // ZooModel is thread-safe: multiple Predictor instances can be created
+    // from the same model concurrently. Only Predictor itself is not thread-safe.
     private ZooModel<NDList, NDList>   effNetModel;
-    private Predictor<NDList, NDList>  effNetPredictor;
+    private Predictor<NDList, NDList>  effNetPredictor;   // used by single-image predict()
 
     private ZooModel<NDList, NDList>   denseNetModel;
-    private Predictor<NDList, NDList>  denseNetPredictor;
+    private Predictor<NDList, NDList>  denseNetPredictor; // used by single-image predict()
 
     private final ImagePreprocessor    preprocessor;
     private List<String>               classLabels;
@@ -125,6 +127,111 @@ public class SkinClassifier implements AutoCloseable {
             this.allProbabilities = allProbabilities;
             this.inferenceTimeMs  = inferenceTimeMs;
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Per-Thread Predictor Pair
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A short-lived pair of {@link Predictor} instances — one per ONNX model —
+     * intended to be used by a single batch worker thread and closed when done.
+     *
+     * <p>{@link Predictor} is <em>not</em> thread-safe: it holds mutable inference
+     * state internally. {@link ZooModel}, however, <em>is</em> thread-safe and
+     * can create many {@code Predictor} instances concurrently. This class
+     * therefore lets each batch worker own an independent predictor pair sourced
+     * from the same shared models — giving true parallel inference with no
+     * synchronization needed at the call site.</p>
+     *
+     * <p>Usage pattern:
+     * <pre>{@code
+     * try (SkinClassifier.PredictorPair pair = classifier.newPredictorPair()) {
+     *     PredictionResult r = pair.predict(imagePath);
+     * }
+     * }</pre>
+     */
+    public class PredictorPair implements AutoCloseable {
+
+        private final Predictor<NDList, NDList> effNet;
+        private final Predictor<NDList, NDList> denseNet;
+
+        private PredictorPair(Predictor<NDList, NDList> effNet,
+                              Predictor<NDList, NDList> denseNet) {
+            this.effNet   = effNet;
+            this.denseNet = denseNet;
+        }
+
+        /**
+         * Runs ensemble inference on an image file using this pair's private
+         * predictors. Safe to call concurrently with other {@code PredictorPair}
+         * instances — no synchronization required.
+         *
+         * @param imagePath Absolute path to the source image.
+         * @return A fully populated {@link PredictionResult}.
+         * @throws Exception if preprocessing or inference fails.
+         */
+        public PredictionResult predict(Path imagePath) throws Exception {
+            long startTime = System.currentTimeMillis();
+            try (NDManager manager = NDManager.newBaseManager()) {
+                NDArray input = preprocessor.preprocessFromFile(manager, imagePath);
+                return runEnsemble(input, startTime);
+            }
+        }
+
+        /**
+         * Runs ensemble inference on an in-memory image using this pair's private
+         * predictors.
+         *
+         * @param image A fully decoded {@link BufferedImage}.
+         * @return A fully populated {@link PredictionResult}.
+         * @throws Exception if preprocessing or inference fails.
+         */
+        public PredictionResult predictFromImage(BufferedImage image) throws Exception {
+            long startTime = System.currentTimeMillis();
+            try (NDManager manager = NDManager.newBaseManager()) {
+                NDArray input = preprocessor.preprocessFromImage(manager, image);
+                return runEnsemble(input, startTime);
+            }
+        }
+
+        /** Delegates to the shared ensemble logic using this pair's predictors. */
+        private PredictionResult runEnsemble(NDArray inputTensor, long startTime)
+                throws Exception {
+            return SkinClassifier.this.executeEnsemble(inputTensor, startTime, effNet, denseNet);
+        }
+
+        /**
+         * Closes both predictors, releasing their native ONNX Runtime resources.
+         * The parent {@link ZooModel} instances are not affected.
+         */
+        @Override
+        public void close() {
+            if (effNet   != null) effNet.close();
+            if (denseNet != null) denseNet.close();
+        }
+    }
+
+    /**
+     * Creates a new {@link PredictorPair} backed by the already-loaded ONNX models.
+     *
+     * <p>Call this once per batch worker thread and use it for all images that
+     * worker processes. Close the pair when the worker finishes to release its
+     * native predictor memory. {@link ZooModel#newPredictor()} is thread-safe
+     * and can be called concurrently from multiple threads.</p>
+     *
+     * @return A fresh {@link PredictorPair} owned by the caller.
+     * @throws IllegalStateException if {@link #initialize()} has not been called yet.
+     */
+    public PredictorPair newPredictorPair() {
+        if (effNetModel == null || denseNetModel == null) {
+            throw new IllegalStateException(
+                    "SkinClassifier.initialize() must be called before newPredictorPair().");
+        }
+        return new PredictorPair(
+                effNetModel.newPredictor(),
+                denseNetModel.newPredictor()
+        );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -196,7 +303,7 @@ public class SkinClassifier implements AutoCloseable {
         long startTime = System.currentTimeMillis();
         try (NDManager predictionManager = NDManager.newBaseManager()) {
             NDArray inputTensor = preprocessor.preprocessFromFile(predictionManager, imagePath);
-            return executeEnsemble(inputTensor, startTime);
+            return executeEnsemble(inputTensor, startTime, effNetPredictor, denseNetPredictor);
         }
     }
 
@@ -215,7 +322,7 @@ public class SkinClassifier implements AutoCloseable {
         long startTime = System.currentTimeMillis();
         try (NDManager predictionManager = NDManager.newBaseManager()) {
             NDArray inputTensor = preprocessor.preprocessFromImage(predictionManager, image);
-            return executeEnsemble(inputTensor, startTime);
+            return executeEnsemble(inputTensor, startTime, effNetPredictor, denseNetPredictor);
         }
     }
 
@@ -227,6 +334,11 @@ public class SkinClassifier implements AutoCloseable {
      * Runs the input tensor through both ONNX models, averages their raw logits,
      * applies softmax, and returns the winning class with its full probability
      * distribution.
+     *
+     * <p>This overload accepts explicit predictor instances so it can be called
+     * from both the shared {@link #predict}/{@link #predictFromImage} methods
+     * (which use the single-instance predictors) and from {@link PredictorPair}
+     * (which supplies per-thread private predictors for true parallelism).</p>
      *
      * <h4>Memory-Safety Contract:</h4>
      * <p>Both {@link NDList} objects returned by {@link Predictor#predict(Object)}
@@ -242,46 +354,31 @@ public class SkinClassifier implements AutoCloseable {
      * via {@code toFloatArray()}, which copies the values onto the Java heap
      * where they are safely accessible after the native buffers are freed.</p>
      *
-     * @param inputTensor A preprocessed, normalised {@link NDArray} of shape
-     *                    {@code [1, 3, H, W]} ready for both models.
-     * @param startTime   {@code System.currentTimeMillis()} captured at the
-     *                    public API entry point, used for end-to-end timing.
+     * @param inputTensor  A preprocessed, normalised {@link NDArray} of shape
+     *                     {@code [1, 3, H, W]} ready for both models.
+     * @param startTime    {@code System.currentTimeMillis()} captured at the
+     *                     public API entry point, used for end-to-end timing.
+     * @param effPredictor The EfficientNet-B4 predictor to use for this call.
+     * @param densePredictor The DenseNet-169 predictor to use for this call.
      * @return A fully populated {@link PredictionResult}.
      * @throws Exception if either predictor throws during inference.
      */
-    private PredictionResult executeEnsemble(NDArray inputTensor, long startTime) throws Exception {
+    private PredictionResult executeEnsemble(NDArray inputTensor, long startTime,
+            Predictor<NDList, NDList> effPredictor,
+            Predictor<NDList, NDList> densePredictor) throws Exception {
 
         NDList inputList = new NDList(inputTensor);
-
-        // ── FIX: Wrap NDList outputs in try-with-resources ───────────────────
-        //
-        // NDList implements AutoCloseable. Each predict() call allocates native
-        // off-heap memory that the GC cannot reclaim. Without explicit close(),
-        // memory grows by ~(model_output_size × 2) per image during batch runs.
-        //
-        // By declaring both outputs as resources in a single try-with-resources
-        // block, the JVM guarantees both are closed (in reverse order: denseNet
-        // first, then effNet) as soon as the float[] values are extracted —
-        // even if an exception is thrown by either predict() call.
-        //
-        // The float[] arrays (effNetLogits, denseNetLogits) are Java heap objects
-        // produced by toFloatArray(), which performs a native→heap copy. They
-        // remain fully valid after the NDLists are closed.
 
         final float[] effNetLogits;
         final float[] denseNetLogits;
 
-        try (NDList effNetOutput   = effNetPredictor.predict(inputList);
-             NDList denseNetOutput = denseNetPredictor.predict(inputList)) {
+        try (NDList effNetOutput   = effPredictor.predict(inputList);
+             NDList denseNetOutput = densePredictor.predict(inputList)) {
 
-            // Extract float arrays while the native buffers are still open.
-            // toFloatArray() copies native memory → Java heap, so the arrays
-            // are safe to use after this try block releases the native memory.
             effNetLogits   = effNetOutput.get(0).toFloatArray();
             denseNetLogits = denseNetOutput.get(0).toFloatArray();
 
-        } // <-- effNetOutput.close() and denseNetOutput.close() called here
-        //     Native ONNX Runtime output buffers are freed deterministically.
+        } // <-- NDList native buffers freed deterministically here
 
         // ── Average the raw logits from both models ───────────────────────────
         //

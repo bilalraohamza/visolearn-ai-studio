@@ -174,10 +174,10 @@
                 <TextArea fx:id="notesArea" wrapText="true"
                           promptText="Enter clinical observations, patient history, or research notes here..."
                           VBox.vgrow="ALWAYS" styleClass="notes-area"/>
-                <HBox alignment="CENTER_RIGHT">
-                    <Button fx:id="saveNotesButton" text="Save Notes"
-                            disable="true" onAction="#handleSaveNotes"
-                            styleClass="secondary-btn" style="-fx-padding: 8 16;"/>
+                <HBox alignment="CENTER_RIGHT" spacing="8">
+                    <Label fx:id="notesStatusLabel" styleClass="text-secondary text-sm"
+                           text="Notes are saved automatically with patient history."
+                           style="-fx-font-style: italic;"/>
                 </HBox>
             </VBox>
 

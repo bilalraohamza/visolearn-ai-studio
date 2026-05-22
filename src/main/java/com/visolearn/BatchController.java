@@ -319,36 +319,27 @@ public class BatchController implements Initializable {
         wireTileClick(tile3, 3);
         wireTileClick(tile4, 4);
 
-        // ── Shared classifier ────────────────────────────────────────────────
-        Task<Void> initTask = new Task<>() {
-            @Override
-            protected Void call() throws Exception {
-                int attempts = 0;
-                while (MainApp.getSharedClassifier() == null && attempts < 30) {
-                    Thread.sleep(500);
-                    attempts++;
-                }
-                classifier = MainApp.getSharedClassifier();
-                if (classifier == null) {
-                    throw new Exception("Shared classifier not available.");
-                }
-                return null;
-            }
-        };
-
-        initTask.setOnSucceeded(e -> Platform.runLater(() -> {
-            selectFolderButton.setDisable(false);
-            System.out.println("BatchController: shared classifier connected.");
-        }));
-
-        initTask.setOnFailed(e -> Platform.runLater(() ->
-                progressLabel.setText("Model failed to load.")));
-
+        // Disable select button synchronously until the classifier is ready
         selectFolderButton.setDisable(true);
 
-        Thread initThread = new Thread(initTask);
-        initThread.setDaemon(true);
-        initThread.start();
+        // Subscribe to the classifier future instead of polling in a loop.
+        // whenComplete() fires the instant initialization succeeds or fails —
+        // no 15-second hard timeout, no NullPointerException on slow machines.
+        MainApp.getClassifierFuture().whenComplete((readyClassifier, ex) ->
+            Platform.runLater(() -> {
+                if (ex != null) {
+                    // Initialization failed — show a clear error in the progress label
+                    progressLabel.setText("Model failed to load: " + ex.getMessage());
+                    System.err.println("BatchController: classifier error — " + ex.getMessage());
+                } else {
+                    // Initialization succeeded — wire up the classifier and unlock the UI
+                    classifier = readyClassifier;
+                    selectFolderButton.setDisable(false);
+                    System.out.println("BatchController: classifier ready.");
+                }
+            })
+        );
+
 
         setupAnimations();
     }
@@ -447,9 +438,13 @@ public class BatchController implements Initializable {
         AtomicInteger completedCount = new AtomicInteger(0);
 
         // ── Create fixed-thread pool ─────────────────────────────────────────
+        // threadIndex gives each worker a unique name (e.g. "batch-worker-1",
+        // "batch-worker-2") regardless of pool size. Using threadCount here
+        // would give every thread the same name, making stack traces useless.
+        AtomicInteger threadIndex = new AtomicInteger(0);
         ExecutorService pool = Executors.newFixedThreadPool(threadCount,
                 r -> {
-                    Thread t = new Thread(r, "batch-worker-" + threadCount);
+                    Thread t = new Thread(r, "batch-worker-" + threadIndex.incrementAndGet());
                     t.setDaemon(true);
                     return t;
                 });
@@ -465,8 +460,6 @@ public class BatchController implements Initializable {
             CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
 
                 // ── Pre-flight validation ────────────────────────────────────
-                // Reject corrupt, empty, or thumbnail-sized images before they
-                // reach the ONNX pipeline and silently produce garbage results.
                 ValidationResult vr = ImageValidator.validate(imageFile);
                 if (!vr.valid()) {
                     System.err.println("Batch validation failed for "
@@ -482,27 +475,23 @@ public class BatchController implements Initializable {
                     return;
                 }
 
-                try {
-                    // SkinClassifier.predict() uses shared Predictor instances.
-                    // Synchronising on the classifier serialises ONNX calls
-                    // while allowing the pool to handle I/O and preprocessing
-                    // in parallel across threads.
-                    SkinClassifier.PredictionResult result;
-                    synchronized (classifier) {
-                        result = classifier.predict(imagePath);
-                    }
+                // ── Per-worker PredictorPair ─────────────────────────────────
+                // Each worker creates its own pair of Predictor instances from
+                // the shared (thread-safe) ZooModel objects. No synchronization
+                // is needed: DJL Predictor is per-thread; ZooModel is shared.
+                // The try-with-resources guarantees the pair is always closed,
+                // releasing native ONNX Runtime memory when the worker finishes.
+                try (SkinClassifier.PredictorPair pair = classifier.newPredictorPair()) {
 
-                    String fullName =
-                            SkinClassifier.CLASS_FULL_NAMES[result.classIndex];
-                    double rawConf  = result.confidence;   // already 0–100 float
+                    SkinClassifier.PredictionResult result = pair.predict(imagePath);
+
+                    String fullName = SkinClassifier.CLASS_FULL_NAMES[result.classIndex];
+                    double rawConf  = result.confidence;
                     String timeStr  = result.inferenceTimeMs + " ms";
 
-                    // Update this row's observable fields on the FX thread
                     Platform.runLater(() -> {
                         row.complete(fullName, rawConf, timeStr);
-                        // Force TableView to refresh the mutated row
                         resultsTable.refresh();
-
                         int done  = completedCount.incrementAndGet();
                         batchProgressBar.setProgress((double) done / total);
                         progressCountLabel.setText(done + " / " + total);
@@ -522,6 +511,7 @@ public class BatchController implements Initializable {
                 }
 
             }, pool);
+
 
             futures.add(future);
         }
@@ -666,15 +656,11 @@ public class BatchController implements Initializable {
         }
     }
 
-    // Inactive tile style — dim background, no purple tint
-    private static final String TILE_INACTIVE =
-            "-fx-background-color: rgba(255,255,255,0.04);" +
-            "-fx-background-radius: 8; -fx-padding: 10 14 10 14;" +
-            "-fx-border-color: rgba(255,255,255,0.07);" +
-            "-fx-border-radius: 8; -fx-border-width: 1;" +
-            "-fx-min-width: 56; -fx-cursor: hand;";
+    // Inactive tile style — computed per call so it adapts to dark/light theme.
+    // Static constants are NOT used for inactive because the dark-mode values
+    // (near-white rgba overlays, #F8F9FA text) are invisible in light mode.
 
-    // Active tile style — purple tint and glow border
+    // Active tile style — purple tint and glow border (looks correct in both themes)
     private static final String TILE_ACTIVE =
             "-fx-background-color: rgba(167,139,250,0.16);" +
             "-fx-background-radius: 8; -fx-padding: 10 14 10 14;" +
@@ -683,9 +669,7 @@ public class BatchController implements Initializable {
             "-fx-min-width: 56; -fx-cursor: hand;" +
             "-fx-effect: dropshadow(gaussian,rgba(167,139,250,0.25),8,0,0,0);";
 
-    // Label styles matched to active / inactive state
-    private static final String TILE_NUM_INACTIVE =
-            "-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;";
+    // Label styles for the active state (purple — same in both themes)
     private static final String TILE_NUM_ACTIVE =
             "-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #A78BFA;";
     private static final String TILE_LBL_INACTIVE =
@@ -693,26 +677,48 @@ public class BatchController implements Initializable {
     private static final String TILE_LBL_ACTIVE =
             "-fx-font-size: 9px; -fx-text-fill: #A78BFA; -fx-font-weight: bold;";
 
+
     /**
      * Highlights the tile that corresponds to {@code activeThread} and dims
-     * all others. Both the container VBox and its two child Labels (number +
-     * caption) are re-styled so the colour change is immediately visible.
+     * all others. Reads the current theme at call time so inactive tiles use
+     * the correct text and border colours in both dark and light modes.
      *
      * @param activeThread Thread count whose tile should be highlighted (1–4).
      */
     private void highlightTile(int activeThread) {
+        boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
+
+        // Inactive tile container: dark mode uses a translucent white overlay;
+        // light mode uses a neutral translucent grey so the border is visible.
+        String tileInactive = isDark
+                ? "-fx-background-color: rgba(255,255,255,0.04);" +
+                  "-fx-background-radius: 8; -fx-padding: 10 14 10 14;" +
+                  "-fx-border-color: rgba(255,255,255,0.12);" +
+                  "-fx-border-radius: 8; -fx-border-width: 1;" +
+                  "-fx-min-width: 56; -fx-cursor: hand;"
+                : "-fx-background-color: rgba(0,0,0,0.04);" +
+                  "-fx-background-radius: 8; -fx-padding: 10 14 10 14;" +
+                  "-fx-border-color: rgba(0,0,0,0.12);" +
+                  "-fx-border-radius: 8; -fx-border-width: 1;" +
+                  "-fx-min-width: 56; -fx-cursor: hand;";
+
+        // Inactive number label: white in dark mode, near-black in light mode.
+        String tileNumInactive = isDark
+                ? "-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"
+                : "-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #1E293B;";
+
         VBox[] tiles = { tile1, tile2, tile3, tile4 };
         for (int i = 0; i < tiles.length; i++) {
             if (tiles[i] == null) continue;
             boolean active = (i + 1) == activeThread;
-            tiles[i].setStyle(active ? TILE_ACTIVE : TILE_INACTIVE);
+            tiles[i].setStyle(active ? TILE_ACTIVE : tileInactive);
             // Child 0 = number label, Child 1 = caption label
             if (tiles[i].getChildren().size() >= 2) {
                 javafx.scene.control.Label numLbl =
                         (javafx.scene.control.Label) tiles[i].getChildren().get(0);
                 javafx.scene.control.Label capLbl =
                         (javafx.scene.control.Label) tiles[i].getChildren().get(1);
-                numLbl.setStyle(active ? TILE_NUM_ACTIVE : TILE_NUM_INACTIVE);
+                numLbl.setStyle(active ? TILE_NUM_ACTIVE : tileNumInactive);
                 capLbl.setStyle(active ? TILE_LBL_ACTIVE : TILE_LBL_INACTIVE);
             }
         }

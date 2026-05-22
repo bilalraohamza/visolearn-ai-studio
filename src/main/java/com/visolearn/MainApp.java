@@ -10,6 +10,7 @@ import com.visolearn.utils.SettingsManager;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * VisoLearn AI Studio — Main Application Entry Point.
@@ -42,14 +43,44 @@ public class MainApp extends Application {
     private static SkinClassifier sharedClassifier;
 
     /**
-     * Returns the shared SkinClassifier instance.
-     * Called by ClassifyController and BatchController
-     * instead of creating their own instances.
+     * Completed exactly once when the shared classifier finishes initialising.
      *
-     * @return the single shared SkinClassifier
+     * <p>Controllers subscribe via {@link #getClassifierFuture()} instead of
+     * polling {@link #getSharedClassifier()} in a loop, so there is no
+     * hard timeout and no NPE risk if initialisation takes longer than expected
+     * on slow hardware.</p>
+     *
+     * <ul>
+     *   <li>On success → completed with the ready {@link SkinClassifier}.</li>
+     *   <li>On failure → completed exceptionally with the root cause.</li>
+     * </ul>
+     */
+    private static final CompletableFuture<SkinClassifier> classifierFuture =
+            new CompletableFuture<>();
+
+    /**
+     * Returns the shared SkinClassifier instance.
+     * May return {@code null} before initialisation completes.
+     * Prefer {@link #getClassifierFuture()} for new code.
+     *
+     * @return the single shared SkinClassifier, or {@code null} if not yet ready
      */
     public static SkinClassifier getSharedClassifier() {
         return sharedClassifier;
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} that is resolved as soon as the
+     * shared classifier is ready (or fails).
+     *
+     * <p>Controllers should use this instead of polling
+     * {@link #getSharedClassifier()} so they are notified the instant the
+     * model finishes loading — no timeout, no NPE.</p>
+     *
+     * @return the classifier future (never {@code null})
+     */
+    public static CompletableFuture<SkinClassifier> getClassifierFuture() {
+        return classifierFuture;
     }
 
     /**
@@ -118,6 +149,7 @@ public class MainApp extends Application {
 
                 initTask.setOnSucceeded(e -> Platform.runLater(() -> {
                     System.out.println("MainApp: shared classifier ready.");
+                    classifierFuture.complete(sharedClassifier);  // unblocks all subscribers
                     notifyControllersReady(loader);
 
                     javafx.animation.PauseTransition delay =
@@ -138,9 +170,13 @@ public class MainApp extends Application {
                 }));
 
                 initTask.setOnFailed(e -> Platform.runLater(() -> {
-                    splash.setStatus("⚠ Failed to load models — see console for details.");
-                    System.err.println("MainApp: classifier failed to load — " +
-                            initTask.getException().getMessage());
+                    Throwable cause = initTask.getException();
+                    classifierFuture.completeExceptionally(  // unblocks subscribers with error
+                            cause != null ? cause : new RuntimeException("Model init failed"));
+
+                    splash.setStatus("\u26A0 Failed to load models — see console for details.");
+                    System.err.println("MainApp: classifier failed to load — "
+                            + (cause != null ? cause.getMessage() : "unknown error"));
 
                     javafx.animation.PauseTransition errDelay =
                             new javafx.animation.PauseTransition(javafx.util.Duration.millis(2500));

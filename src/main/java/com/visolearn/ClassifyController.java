@@ -85,7 +85,6 @@ public class ClassifyController implements Initializable {
     @FXML private Label confidenceStatLabel;
     @FXML private Label inferenceTimeLabel;
     @FXML private TextArea notesArea;
-    @FXML private Button saveNotesButton;
     @FXML private Label notesStatusLabel;
     @FXML private HBox  riskBanner;
     @FXML private Label riskLabel;
@@ -205,46 +204,33 @@ public class ClassifyController implements Initializable {
         // NOTE: saveToHistoryButton action is wired via onAction="#handleSaveToHistory"
         // in classify_tab.fxml. Do NOT add setOnAction here — it conflicts with FXML binding.
 
-        Task<Void> initTask = new Task<>() {
-            @Override
-            protected Void call() throws Exception {
-                int attempts = 0;
-                while (MainApp.getSharedClassifier() == null && attempts < 30) {
-                    Thread.sleep(500);
-                    attempts++;
-                }
-                classifier = MainApp.getSharedClassifier();
-                if (classifier == null) {
-                    throw new Exception("Shared classifier not available.");
-                }
-                return null;
-            }
-        };
-
-        initTask.setOnSucceeded(e -> {
-            Platform.runLater(() -> {
-                gradCamRenderer = new GradCamRenderer(classifier);
-                uploadButton.setDisable(false);
-                predictionLabel.setText("Awaiting Image...");
-                predictionLabel.setOpacity(1.0);
-            });
-        });
-
-        initTask.setOnFailed(e -> {
-            Platform.runLater(() -> {
-                predictionLabel.setText("Model failed to load.");
-                predictionLabel.setStyle(
-                        "-fx-text-fill: #E24B4A; -fx-font-size: 14px;");
-            });
-        });
-
+        // Disable controls synchronously until the classifier is ready
         uploadButton.setDisable(true);
         if (exportReportButton != null) exportReportButton.setDisable(true);
         predictionLabel.setText("Loading model...");
 
-        Thread initThread = new Thread(initTask);
-        initThread.setDaemon(true);
-        initThread.start();
+        // Subscribe to the classifier future instead of polling in a loop.
+        // whenComplete() fires the instant initialization succeeds or fails —
+        // no 15-second hard timeout, no NullPointerException on slow machines.
+        MainApp.getClassifierFuture().whenComplete((readyClassifier, ex) ->
+            Platform.runLater(() -> {
+                if (ex != null) {
+                    // Initialization failed — show a clear error message
+                    predictionLabel.setText("Model failed to load.");
+                    predictionLabel.setStyle("-fx-text-fill: #E24B4A; -fx-font-size: 14px;");
+                    System.err.println("ClassifyController: classifier error — " + ex.getMessage());
+                } else {
+                    // Initialization succeeded — wire up the classifier and unlock the UI
+                    classifier = readyClassifier;
+                    gradCamRenderer = new GradCamRenderer(classifier);
+                    uploadButton.setDisable(false);
+                    predictionLabel.setText("Awaiting Image...");
+                    predictionLabel.setOpacity(1.0);
+                    System.out.println("ClassifyController: classifier ready.");
+                }
+            })
+        );
+
 
         setupDragAndDrop();
         setupAnimations();
@@ -295,6 +281,10 @@ public class ClassifyController implements Initializable {
         saveToHistoryButton.setDisable(true);
         saveToHistoryButton.setText("Saving...");
 
+        // Snapshot notes text NOW on the FX thread — TextArea.getText() must NOT
+        // be called from a background thread (Task.call runs off-FX-thread).
+        final String notesSnapshot = (notesArea != null) ? notesArea.getText() : "";
+
         Task<Integer> saveTask = new Task<>() {
             @Override
             protected Integer call() throws Exception {
@@ -306,7 +296,7 @@ public class ClassifyController implements Initializable {
                         currentConfidence,
                         currentInferenceTime,
                         "",
-                        null  // notes — not set from the Classify tab
+                        notesSnapshot  // notes — captured from the Clinician Notes text area
                 );
                 return predictionDAO.insertPrediction(newRecord, currentImageFile);
             }
@@ -415,8 +405,6 @@ public class ClassifyController implements Initializable {
             notesArea.clear();
             notesArea.setDisable(true);
         }
-        if (saveNotesButton != null) saveNotesButton.setDisable(true);
-        if (notesStatusLabel != null) notesStatusLabel.setText("");
 
         saveToHistoryButton.setDisable(true);
         saveToHistoryButton.setText("Save to Patient History");
@@ -435,28 +423,6 @@ public class ClassifyController implements Initializable {
         }
     }
 
-    @FXML
-    private void handleSaveNotes() {
-        if (currentImageFile == null) return;
-        
-        String notes = notesArea.getText();
-        try {
-            String path = currentImageFile.getAbsolutePath();
-            int dotIndex = path.lastIndexOf('.');
-            String notesPath = (dotIndex == -1 ? path : path.substring(0, dotIndex)) + ".notes.txt";
-            java.nio.file.Files.writeString(java.nio.file.Path.of(notesPath), notes);
-            
-            notesStatusLabel.setText("Saved!");
-            AnimationUtil.fadeIn(notesStatusLabel, 1500);
-            
-            javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(3));
-            pause.setOnFinished(e -> AnimationUtil.fadeOut(notesStatusLabel, 500));
-            pause.play();
-        } catch (java.io.IOException e) {
-            e.printStackTrace();
-            notesStatusLabel.setText("Error!");
-        }
-    }
 
     /**
      * Shows a popup to let the user select between PNG and PDF export.
@@ -556,22 +522,8 @@ public class ClassifyController implements Initializable {
 
         if (notesArea != null) {
             notesArea.setDisable(false);
-            try {
-                String path = currentImageFile.getAbsolutePath();
-                int dotIndex = path.lastIndexOf('.');
-                String notesPath = (dotIndex == -1 ? path : path.substring(0, dotIndex)) + ".notes.txt";
-                java.nio.file.Path notesFilePath = java.nio.file.Path.of(notesPath);
-                if (java.nio.file.Files.exists(notesFilePath)) {
-                    notesArea.setText(java.nio.file.Files.readString(notesFilePath));
-                } else {
-                    notesArea.clear();
-                }
-            } catch (Exception e) {
-                notesArea.clear();
-                e.printStackTrace();
-            }
+            notesArea.clear();
         }
-        if (saveNotesButton != null) saveNotesButton.setDisable(false);
 
         try {
             Image fxImage = new Image(imagePath.toUri().toString());

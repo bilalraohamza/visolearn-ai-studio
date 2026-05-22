@@ -96,6 +96,9 @@ public class ClassifyController implements Initializable {
     @FXML private ComboBox<Patient> patientComboBox;
     @FXML private Button            saveToHistoryButton;
 
+    @FXML private HBox errorBanner;
+    @FXML private Label errorLabel;
+
     // ─────────────────────────────────────────────────────────────────────────
     // Backend Components
     // ─────────────────────────────────────────────────────────────────────────
@@ -426,6 +429,10 @@ public class ClassifyController implements Initializable {
             riskBanner.setVisible(false);
             riskBanner.setManaged(false);
         }
+        if (errorBanner != null) {
+            errorBanner.setVisible(false);
+            errorBanner.setManaged(false);
+        }
     }
 
     @FXML
@@ -542,6 +549,11 @@ public class ClassifyController implements Initializable {
         currentImagePath = imagePath;
         currentImageFile = imagePath.toFile();
 
+        if (errorBanner != null) {
+            errorBanner.setVisible(false);
+            errorBanner.setManaged(false);
+        }
+
         if (notesArea != null) {
             notesArea.setDisable(false);
             try {
@@ -571,7 +583,12 @@ public class ClassifyController implements Initializable {
             gradCamToggle.setSelected(false);
             if (exportReportButton != null) exportReportButton.setDisable(true);
         } catch (Exception e) {
-            predictionLabel.setText("Cannot load image.");
+            predictionLabel.setText("Awaiting Image...");
+            if (errorBanner != null && errorLabel != null) {
+                errorLabel.setText("Failed to read image file: " + e.getMessage());
+                errorBanner.setVisible(true);
+                errorBanner.setManaged(true);
+            }
             return;
         }
 
@@ -605,10 +622,18 @@ public class ClassifyController implements Initializable {
 
         inferTask.setOnFailed(e -> {
             Platform.runLater(() -> {
-                predictionLabel.setText("Inference failed.");
+                predictionLabel.setText("Awaiting Image...");
+                if (errorBanner != null && errorLabel != null) {
+                    Throwable ex = inferTask.getException();
+                    errorLabel.setText("Inference failed: " + (ex != null ? ex.getMessage() : "Unknown error"));
+                    errorBanner.setVisible(true);
+                    errorBanner.setManaged(true);
+                }
                 loadingBox.setVisible(false);
                 uploadButton.setDisable(false);
-                System.err.println("Inference error: " + inferTask.getException().getMessage());
+                if (inferTask.getException() != null) {
+                    System.err.println("Inference error: " + inferTask.getException().getMessage());
+                }
             });
         });
 

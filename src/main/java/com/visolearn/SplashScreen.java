@@ -72,42 +72,56 @@ public class SplashScreen {
         VBox card = new VBox(0);
         card.setAlignment(Pos.TOP_CENTER);
         card.setPrefSize(CARD_W, CARD_H);
-        card.setStyle("-fx-background-radius: 18; -fx-background-color: #0F0F1C;");
+        card.setStyle(
+            "-fx-background-radius: 18;" +
+            "-fx-background-color: #252533;" +
+            "-fx-border-color: rgba(255,255,255,0.07);" +
+            "-fx-border-radius: 18;" +
+            "-fx-border-width: 1;"
+        );
 
         DropShadow shadow = new DropShadow();
-        shadow.setColor(Color.rgb(0, 0, 0, 0.82));
-        shadow.setRadius(52);
-        shadow.setOffsetY(14);
-        shadow.setSpread(0.04);
+        shadow.setColor(Color.rgb(0, 0, 0, 0.60));
+        shadow.setRadius(40);
+        shadow.setOffsetY(10);
+        shadow.setSpread(0.03);
         card.setEffect(shadow);
 
         // ── Animated top gradient bar ─────────────────────────────────────────
         Rectangle topBar = new Rectangle(CARD_W, 5);
         topBar.setArcWidth(36);
         topBar.setArcHeight(36);
+        // Logo gradient: blue → green (matches .logo-icon in styles.css)
         topBar.setFill(new LinearGradient(0, 0, 1, 0, true, CycleMethod.NO_CYCLE,
-                new Stop(0, Color.web("#10B981")),
-                new Stop(1, Color.web("#00B4D8"))));
+                new Stop(0, Color.web("#4d9de0")),
+                new Stop(0.5, Color.web("#10B981")),
+                new Stop(1, Color.web("#22c55e"))));
         // Clip top corners
         Rectangle topClip = new Rectangle(CARD_W, 5);
         topClip.setArcWidth(36);
         topClip.setArcHeight(36);
         topBar.setClip(topClip);
 
-        // Hue-cycle animation on the top bar
+        // Hue-cycle animation on the top bar (blue→green ↔ green→blue)
         topBarTimeline = new Timeline(
             new KeyFrame(Duration.ZERO,
                 new KeyValue(topBar.fillProperty(),
                     new LinearGradient(0,0,1,0,true,CycleMethod.NO_CYCLE,
-                        new Stop(0,Color.web("#10B981")), new Stop(1,Color.web("#00B4D8"))))),
-            new KeyFrame(Duration.seconds(2),
+                        new Stop(0,Color.web("#4d9de0")),
+                        new Stop(0.5,Color.web("#10B981")),
+                        new Stop(1,Color.web("#22c55e"))))),
+            new KeyFrame(Duration.seconds(2.5),
                 new KeyValue(topBar.fillProperty(),
                     new LinearGradient(0,0,1,0,true,CycleMethod.NO_CYCLE,
-                        new Stop(0,Color.web("#00B4D8")), new Stop(1,Color.web("#10B981"))))),
-            new KeyFrame(Duration.seconds(4),
+                        new Stop(0,Color.web("#22c55e")),
+                        new Stop(0.5,Color.web("#10B981")),
+                        new Stop(1,Color.web("#4d9de0"))))),
+            new KeyFrame(Duration.seconds(5),
                 new KeyValue(topBar.fillProperty(),
                     new LinearGradient(0,0,1,0,true,CycleMethod.NO_CYCLE,
-                        new Stop(0,Color.web("#10B981")), new Stop(1,Color.web("#00B4D8")))))
+                        new Stop(0,Color.web("#4d9de0")),
+                        new Stop(0.5,Color.web("#10B981")),
+                        new Stop(1,Color.web("#22c55e")))))
         );
         topBarTimeline.setCycleCount(Timeline.INDEFINITE);
 
@@ -116,21 +130,21 @@ public class SplashScreen {
         cardWithOrbs.setMaxSize(CARD_W, CARD_H);
         cardWithOrbs.setMinSize(CARD_W, CARD_H);
 
-        // Teal orb (top-left)
+        // Blue orb (top-left) — matches logo-icon blue #4d9de0
         Region orbA = new Region();
-        orbA.setPrefSize(180, 180);
+        orbA.setPrefSize(200, 200);
         orbA.setStyle("-fx-background-color: radial-gradient(focus-angle 0deg, " +
-                "focus-distance 0%, center 50% 50%, radius 50%, #10B98140, transparent);");
-        GaussianBlur blurA = new GaussianBlur(60);
+                "focus-distance 0%, center 50% 50%, radius 50%, #4d9de030, transparent);");
+        GaussianBlur blurA = new GaussianBlur(55);
         orbA.setEffect(blurA);
         StackPane.setAlignment(orbA, Pos.TOP_LEFT);
         StackPane.setMargin(orbA, new Insets(-20, 0, 0, -20));
 
-        // Cyan orb (bottom-right)
+        // Emerald orb (bottom-right) — matches primary #10B981 / #22c55e
         Region orbB = new Region();
-        orbB.setPrefSize(160, 160);
+        orbB.setPrefSize(170, 170);
         orbB.setStyle("-fx-background-color: radial-gradient(focus-angle 0deg, " +
-                "focus-distance 0%, center 50% 50%, radius 50%, #00B4D835, transparent);");
+                "focus-distance 0%, center 50% 50%, radius 50%, #10B98128, transparent);");
         GaussianBlur blurB = new GaussianBlur(50);
         orbB.setEffect(blurB);
         StackPane.setAlignment(orbB, Pos.BOTTOM_RIGHT);
@@ -157,7 +171,7 @@ public class SplashScreen {
         tagRow.setAlignment(Pos.CENTER);
         Label dot1 = styledDot();
         Label tag  = new Label("Dermoscopy AI  ·  EfficientNet-B4  +  DenseNet-169");
-        tag.setStyle("-fx-font-family: 'Segoe UI', 'Inter', Roboto, sans-serif; -fx-font-size: 14px; -fx-text-fill: #94A3B8; -fx-font-weight: 500;");
+        tag.setStyle("-fx-font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; -fx-font-size: 13px; -fx-text-fill: #9CA3AF; -fx-font-weight: 500;");
         Label dot2 = styledDot();
         tagRow.getChildren().addAll(dot1, tag, dot2);
 
@@ -173,9 +187,9 @@ public class SplashScreen {
         statusRow.setAlignment(Pos.CENTER);
         statusLabel = new Label("Initializing");
         statusLabel.setStyle(
-            "-fx-font-family: 'Segoe UI', 'Inter', Roboto, sans-serif;" +
-            "-fx-font-size: 14px;" +
-            "-fx-text-fill: #CBD5E1;" +
+            "-fx-font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;" +
+            "-fx-font-size: 13px;" +
+            "-fx-text-fill: #D1D5DB;" +
             "-fx-font-weight: 600;"
         );
         statusRow.getChildren().add(statusLabel);
@@ -192,9 +206,9 @@ public class SplashScreen {
         Label footerLabel = new Label(
             "v1.2   ·   © 2026 Rao Hamza Bilal   ·   Trained on ISIC HAM10000 Dataset");
         footerLabel.setStyle(
-            "-fx-font-family: 'Segoe UI', 'Inter', Roboto, sans-serif;" +
+            "-fx-font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;" +
             "-fx-font-size: 12px;" +
-            "-fx-text-fill: #475569;"
+            "-fx-text-fill: #4B5563;"
         );
         footer.getChildren().add(footerLabel);
 
@@ -205,7 +219,7 @@ public class SplashScreen {
 
         // ── Scene ─────────────────────────────────────────────────────────────
         Scene scene = new Scene(root, CARD_W + 48, CARD_H + 48);
-        scene.setFill(Color.web("#0F0F1C"));
+        scene.setFill(Color.web("#1A1A24"));
         stage.setScene(scene);
         stage.centerOnScreen();
 
@@ -262,8 +276,8 @@ public class SplashScreen {
         track.setPrefWidth(BAR_W);
         track.setPrefHeight(6); // Thinner line
         track.setStyle(
-            "-fx-background-color: #1E293B;" + 
-            "-fx-background-radius: 3;"
+            "-fx-background-color: #1E1E2A;" +
+            "-fx-background-radius: 4;"
         );
 
         // Fill (coloured static bar) — matching the app's Emerald primary color
@@ -272,15 +286,15 @@ public class SplashScreen {
         fillBar.setPrefWidth(BAR_W); // 100% width
         fillBar.setMaxWidth(BAR_W);
         fillBar.setStyle(
-            "-fx-background-color: #10B981;" + // Solid Emerald
-            "-fx-background-radius: 3;"
+            "-fx-background-color: linear-gradient(to right, #4d9de0, #10B981, #22c55e);" +
+            "-fx-background-radius: 4;"
         );
 
         // Stronger glow effect on fill matching the app color
         DropShadow glow = new DropShadow();
-        glow.setColor(Color.web("#10B981", 0.70));
-        glow.setRadius(16);
-        glow.setSpread(0.4);
+        glow.setColor(Color.web("#10B981", 0.55));
+        glow.setRadius(12);
+        glow.setSpread(0.3);
         fillBar.setEffect(glow);
 
         StackPane bar = new StackPane();
@@ -295,7 +309,7 @@ public class SplashScreen {
     /** Small accent dot. */
     private Label styledDot() {
         Label d = new Label("•");
-        d.setStyle("-fx-text-fill: rgba(16,185,129,0.5); -fx-font-size: 14px;");
+        d.setStyle("-fx-text-fill: rgba(77,157,224,0.6); -fx-font-size: 14px;");
         return d;
     }
 

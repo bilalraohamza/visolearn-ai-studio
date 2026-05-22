@@ -51,7 +51,7 @@ public class ImagePreprocessor {
      * Preprocesses an already-loaded BufferedImage and returns
      * an NDArray tensor ready for ONNX model inference.
      *
-     * This overload is used by GradCamRenderer's occlusion loop
+     * This overload is used by OcclusionRenderer's occlusion loop
      * to avoid re-reading from disk for each of the 49 occluded
      * variants. The normalization pipeline is identical to
      * preprocessFromFile — same mean, std, channel order, and size.

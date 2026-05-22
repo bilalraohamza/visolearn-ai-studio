@@ -45,7 +45,7 @@ import java.util.ResourceBundle;
 /**
  * ClassifyController controls Tab 1 of the VisoLearn AI Studio GUI.
  * Handles image upload, inference, confidence bar updates,
- * and Grad-CAM heatmap overlay toggle.
+ * and occlusion-sensitivity heatmap overlay toggle.
  *
  * <p><b>Threading model:</b> All DJL inference runs on a background
  * {@link Task} thread. All UI updates run on the JavaFX Application Thread
@@ -76,7 +76,7 @@ public class ClassifyController implements Initializable {
     @FXML private Button    uploadButton;
     @FXML private Button    clearButton;
     @FXML private Button    exportReportButton;
-    @FXML private CheckBox  gradCamToggle;
+    @FXML private CheckBox  occlusionToggle;
     @FXML private HBox      loadingBox;
     @FXML private Label     loadingLabel;
 
@@ -105,13 +105,13 @@ public class ClassifyController implements Initializable {
     /** Skin lesion classifier using ensemble EfficientNet-B4 + DenseNet-169 ONNX models. */
     private SkinClassifier classifier;
 
-    /** Grad-CAM heatmap renderer. */
-    private GradCamRenderer gradCamRenderer;
+    /** Occlusion-sensitivity heatmap renderer. */
+    private OcclusionRenderer occlusionRenderer;
 
     /** Currently loaded image file path. */
     private Path currentImagePath;
 
-    /** Latest prediction result for Grad-CAM generation. */
+    /** Latest prediction result for occlusion map generation. */
     private SkinClassifier.PredictionResult lastResult;
 
     private final PatientDAO    patientDAO    = new PatientDAO();
@@ -144,7 +144,7 @@ public class ClassifyController implements Initializable {
         // Load patients into the dropdown on startup
         loadPatientsIntoDropdown();
         heatmapImageView.opacityProperty().bind(
-                SettingsManager.gradCamOpacityProperty());
+                SettingsManager.heatmapOpacityProperty());
 
         // Bind image sizes to container size
         inputImageView.fitWidthProperty().bind(imageContainer.widthProperty().subtract(4));
@@ -223,7 +223,7 @@ public class ClassifyController implements Initializable {
                 } else {
                     // Initialization succeeded — wire up the classifier and unlock the UI
                     classifier = readyClassifier;
-                    gradCamRenderer = new GradCamRenderer(classifier);
+                    occlusionRenderer = new OcclusionRenderer(classifier);
                     uploadButton.setDisable(false);
                     predictionLabel.setText("Awaiting Image...");
                     predictionLabel.setOpacity(1.0);
@@ -396,8 +396,8 @@ public class ClassifyController implements Initializable {
         currentConfidence    = 0;
         currentInferenceTime = 0;
         lastResult           = null;
-        gradCamToggle.setSelected(false);
-        gradCamToggle.setDisable(true);
+        occlusionToggle.setSelected(false);
+        occlusionToggle.setDisable(true);
         if (exportReportButton != null) exportReportButton.setDisable(true);
 
         if (notesArea != null) {
@@ -463,10 +463,10 @@ public class ClassifyController implements Initializable {
         );
     }
 
-    /** Handles the Grad-CAM toggle checkbox. */
+    /** Handles the occlusion-sensitivity heatmap toggle checkbox. */
     @FXML
-    private void handleGradCamToggle() {
-        if (gradCamToggle.isSelected() && lastResult != null) {
+    private void handleOcclusionToggle() {
+        if (occlusionToggle.isSelected() && lastResult != null) {
             generateAndShowHeatmap();
         } else {
             heatmapImageView.setVisible(false);
@@ -531,7 +531,7 @@ public class ClassifyController implements Initializable {
             AnimationUtil.fadeIn(inputImageView, 500);
             placeholderBox.setVisible(false);
             heatmapImageView.setVisible(false);
-            gradCamToggle.setSelected(false);
+            occlusionToggle.setSelected(false);
             if (exportReportButton != null) exportReportButton.setDisable(true);
         } catch (Exception e) {
             predictionLabel.setText("Awaiting Image...");
@@ -647,7 +647,7 @@ public class ClassifyController implements Initializable {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Grad-CAM Heatmap Generation
+    // Occlusion-Sensitivity Heatmap Generation
     // ─────────────────────────────────────────────────────────────────────────
 
     private void generateAndShowHeatmap() {
@@ -660,7 +660,7 @@ public class ClassifyController implements Initializable {
         Task<BufferedImage> heatmapTask = new Task<>() {
             @Override
             protected BufferedImage call() throws Exception {
-                return gradCamRenderer.generateHeatmap(
+                return occlusionRenderer.generateHeatmap(
                         currentImagePath, lastResult,
                         (completed, total) -> Platform.runLater(() ->
                                 loadingLabel.setText(
@@ -682,7 +682,7 @@ public class ClassifyController implements Initializable {
         heatmapTask.setOnFailed(e -> {
             Platform.runLater(() -> {
                 loadingBox.setVisible(false);
-                System.err.println("Grad-CAM error: " + heatmapTask.getException().getMessage());
+                System.err.println("Occlusion map error: " + heatmapTask.getException().getMessage());
             });
         });
 

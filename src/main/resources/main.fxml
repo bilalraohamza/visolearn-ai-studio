@@ -22,7 +22,7 @@
                         </StackPane>
                         <VBox spacing="1">
                             <Label text="VisoLearn AI Studio" styleClass="logo-text"/>
-                            <Label text="Skin Lesion Classification with Grad-CAM Explanation"
+                            <Label text="Skin Lesion Classification with Occlusion Sensitivity Analysis"
                                    styleClass="logo-sub"/>
                         </VBox>
                     </HBox>

@@ -6,7 +6,7 @@ import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 
 /**
- * GradCamRenderer generates occlusion sensitivity saliency maps
+ * OcclusionRenderer generates occlusion sensitivity saliency maps
  * for skin lesion images classified by the EfficientNet-B4 model.
  *
  * <h2>Method: Occlusion Sensitivity Analysis</h2>
@@ -43,9 +43,9 @@ import java.nio.file.Path;
  * Total: approximately 5-8 seconds. Runs on a background thread.
  *
  * @author Rao Hamza Bilal
- * @version 2.0
+ * @version 2.1 (renamed from GradCamRenderer — method is occlusion sensitivity, not Grad-CAM)
  */
-public class GradCamRenderer {
+public class OcclusionRenderer {
 
     /**
      * Callback interface for reporting per-pass progress.
@@ -94,11 +94,11 @@ public class GradCamRenderer {
     private final SkinClassifier classifier;
 
     /**
-     * Constructs a GradCamRenderer backed by the given classifier.
+     * Constructs an OcclusionRenderer backed by the given classifier.
      *
      * @param classifier the shared SkinClassifier from MainApp
      */
-    public GradCamRenderer(SkinClassifier classifier) {
+    public OcclusionRenderer(SkinClassifier classifier) {
         this.classifier = classifier;
     }
 

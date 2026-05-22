@@ -49,9 +49,9 @@
             </HBox>
 
             <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 16 0 0 0;">
-                <CheckBox fx:id="gradCamToggle"
-                          text="Overlay Grad-CAM Heatmap"
-                          onAction="#handleGradCamToggle"
+                <CheckBox fx:id="occlusionToggle"
+                          text="Overlay Occlusion Sensitivity Map"
+                          onAction="#handleOcclusionToggle"
                           styleClass="text-secondary text-md"/>
                 <Region HBox.hgrow="ALWAYS"/>
                 <HBox alignment="CENTER_RIGHT" spacing="8"

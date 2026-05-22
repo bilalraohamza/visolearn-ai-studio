@@ -310,7 +310,7 @@ public class SkinClassifier implements AutoCloseable {
     /**
      * Secondary prediction entry point for in-memory {@link BufferedImage} objects.
      *
-     * <p>Required by {@code GradCamRenderer} which synthesises occluded image
+     * <p>Required by {@code OcclusionRenderer} which synthesises occluded image
      * variants programmatically during saliency map generation. Each occlusion
      * pass produces a fresh {@link BufferedImage} that bypasses the filesystem.</p>
      *

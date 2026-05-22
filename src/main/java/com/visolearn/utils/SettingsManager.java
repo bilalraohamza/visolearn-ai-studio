@@ -23,7 +23,7 @@ public final class SettingsManager {
     private static final String KEY_IS_DARK_MODE = "is_dark_mode";
     private static final String KEY_COLOR_THEME = "color_theme";
 
-    private static final double DEFAULT_GRADCAM_OPACITY = 0.60;
+    private static final double DEFAULT_HEATMAP_OPACITY = 0.60;
     private static final boolean DEFAULT_ANIMATIONS_ENABLED = true;
     private static final boolean DEFAULT_DARK_MODE = true;
     private static final String DEFAULT_EXPORT_RESOLUTION = "High / Retina (2x)";
@@ -31,8 +31,8 @@ public final class SettingsManager {
     private static final Preferences PREFS =
             Preferences.userNodeForPackage(SettingsModal.class);
 
-    private static final DoubleProperty gradCamOpacity =
-            new SimpleDoubleProperty(readGradCamOpacity());
+    private static final DoubleProperty heatmapOpacity =
+            new SimpleDoubleProperty(readHeatmapOpacity());
     private static final BooleanProperty animationsEnabled =
             new SimpleBooleanProperty(readAnimationsEnabled());
     private static final StringProperty exportResolution =
@@ -45,16 +45,16 @@ public final class SettingsManager {
                 "SettingsManager is a static utility class.");
     }
 
-    public static DoubleProperty gradCamOpacityProperty() {
-        return gradCamOpacity;
+    public static DoubleProperty heatmapOpacityProperty() {
+        return heatmapOpacity;
     }
 
-    public static double getGradCamOpacity() {
-        return gradCamOpacity.get();
+    public static double getHeatmapOpacity() {
+        return heatmapOpacity.get();
     }
 
-    public static void setGradCamOpacity(double value) {
-        gradCamOpacity.set(clamp(value, 0.0, 1.0));
+    public static void setHeatmapOpacity(double value) {
+        heatmapOpacity.set(clamp(value, 0.0, 1.0));
     }
 
     public static BooleanProperty animationsEnabledProperty() {
@@ -97,7 +97,7 @@ public final class SettingsManager {
 
     public static Snapshot snapshot() {
         return new Snapshot(
-                getGradCamOpacity(),
+                getHeatmapOpacity(),
                 isAnimationsEnabled(),
                 getExportResolution(),
                 isDarkMode()
@@ -107,7 +107,7 @@ public final class SettingsManager {
     public static void restore(Snapshot snapshot) {
         if (snapshot == null) return;
 
-        setGradCamOpacity(snapshot.gradCamOpacity());
+        setHeatmapOpacity(snapshot.heatmapOpacity());
         setAnimationsEnabled(snapshot.animationsEnabled());
         setExportResolution(snapshot.exportResolution());
         // Only fire the darkMode property listener if the value actually changed.
@@ -119,7 +119,7 @@ public final class SettingsManager {
     }
 
     public static void persist() {
-        PREFS.putDouble(KEY_GRADCAM_OPACITY, getGradCamOpacity());
+        PREFS.putDouble(KEY_GRADCAM_OPACITY, getHeatmapOpacity());
         PREFS.putBoolean(KEY_ANIMATIONS_ENABLED, isAnimationsEnabled());
         PREFS.put(KEY_EXPORT_RESOLUTION, getExportResolution());
         PREFS.putBoolean(KEY_IS_DARK_MODE, isDarkMode());
@@ -128,9 +128,9 @@ public final class SettingsManager {
                 : "Clinical (Light)");
     }
 
-    private static double readGradCamOpacity() {
+    private static double readHeatmapOpacity() {
         return clamp(PREFS.getDouble(
-                KEY_GRADCAM_OPACITY, DEFAULT_GRADCAM_OPACITY), 0.0, 1.0);
+                KEY_GRADCAM_OPACITY, DEFAULT_HEATMAP_OPACITY), 0.0, 1.0);
     }
 
     private static boolean readAnimationsEnabled() {
@@ -158,7 +158,7 @@ public final class SettingsManager {
     }
 
     public record Snapshot(
-            double gradCamOpacity,
+            double heatmapOpacity,
             boolean animationsEnabled,
             String exportResolution,
             boolean darkMode

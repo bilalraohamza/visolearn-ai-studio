@@ -113,7 +113,7 @@ public final class ReportExportUtil {
      *
      * @param owner         The owning {@link Window} for the {@link FileChooser} dialog.
      * @param original      The raw input scan {@link Image}.
-     * @param heatmap       The Grad-CAM saliency map {@link Image}.
+     * @param heatmap       The occlusion sensitivity saliency map {@link Image}.
      * @param topClass      The predicted diagnostic class label (e.g., {@code "Diabetic Retinopathy"}).
      * @param confidence    Prediction confidence as a fraction, 0.0–1.0 (e.g., {@code 0.9734}).
      * @param inferenceTime Human-readable inference duration string (e.g., {@code "142 ms"}).
@@ -502,7 +502,7 @@ public final class ReportExportUtil {
 
     /**
      * Builds the side-by-side image display section showing the original scan
-     * and the Grad-CAM saliency heatmap with descriptive labels.
+     * and the occlusion sensitivity saliency heatmap with descriptive labels.
      */
     private static VBox buildImageSection(Image original, Image heatmap) {
         VBox section = new VBox(16);
@@ -513,7 +513,7 @@ public final class ReportExportUtil {
 
         VBox originalCard = buildImageCard(original, "Input Scan",
                 "Raw diagnostic input image");
-        VBox heatmapCard  = buildImageCard(heatmap, "Grad-CAM Saliency Map",
+        VBox heatmapCard  = buildImageCard(heatmap, "Occlusion Sensitivity Map",
                 "Highlighted regions of diagnostic interest");
 
         HBox.setHgrow(originalCard, Priority.ALWAYS);
@@ -687,7 +687,7 @@ public final class ReportExportUtil {
                 "Model Findings:  The AI model classified the input scan as \"" + topClass + "\" " +
                         "with a " + confidenceGrade + " confidence score of " +
                         String.format("%.2f%%", confidence) + ". " +
-                        "The Grad-CAM saliency map highlights the image regions that most strongly " +
+                        "The occlusion sensitivity map highlights the image regions that most strongly " +
                         "influenced this classification. Warmer (red/yellow) regions indicate higher " +
                         "model attention. Cooler (blue) regions were less influential in the decision."
         );

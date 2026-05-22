@@ -240,12 +240,12 @@ public final class SettingsModal {
         labelRow.setAlignment(Pos.CENTER_LEFT);
 
         VBox textBlock = buildTextBlock(
-                "Grad-CAM Overlay Opacity",
+                "Occlusion Map Overlay Opacity",
                 "Controls the intensity of the saliency heatmap overlay");
         HBox.setHgrow(textBlock, Priority.ALWAYS);
 
         Label valueReadout = new Label(
-                String.format("%.0f%%", SettingsManager.getGradCamOpacity() * 100));
+                String.format("%.0f%%", SettingsManager.getHeatmapOpacity() * 100));
         valueReadout.setFont(Font.font("System", FontWeight.BOLD, 12));
         valueReadout.setMinWidth(46);
         valueReadout.setAlignment(Pos.CENTER);
@@ -256,7 +256,7 @@ public final class SettingsModal {
                         "-fx-padding: 2 7 2 7;"
         );
 
-        Slider slider = new Slider(0.0, 1.0, SettingsManager.getGradCamOpacity());
+        Slider slider = new Slider(0.0, 1.0, SettingsManager.getHeatmapOpacity());
         slider.setShowTickMarks(false);
         slider.setShowTickLabels(false);
         slider.setMajorTickUnit(0.25);
@@ -269,7 +269,7 @@ public final class SettingsModal {
         slider.valueProperty().addListener((obs, oldValue, value) -> {
             double opacity = value.doubleValue();
             valueReadout.setText(String.format("%.0f%%", opacity * 100));
-            SettingsManager.setGradCamOpacity(opacity);
+            SettingsManager.setHeatmapOpacity(opacity);
         });
 
         labelRow.getChildren().addAll(textBlock, valueReadout);

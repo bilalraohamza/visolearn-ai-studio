@@ -37,9 +37,8 @@ import javafx.scene.chart.PieChart;
 
 public class HistoryController implements Initializable {
 
-    private static HistoryController instance;
-    public static HistoryController getInstance() { return instance; }
-
+    // ─────────────────────────────────────────────────────────────────────────
+    // FXML-injected fields
     @FXML private SplitPane         historyRoot;
     @FXML private TextField         searchField;
     @FXML private ListView<Patient> patientListView;
@@ -71,7 +70,10 @@ public class HistoryController implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        instance = this;
+        // Register with the ControllerBus so other controllers can reach this
+        // instance via ControllerBus.ifPresent(HistoryController.class, ...)
+        // without holding a strong static reference.
+        ControllerBus.register(this);
         setupTableColumns();
         setupSearchDebouncer();
         setupPatientListSelection();
@@ -571,11 +573,9 @@ public class HistoryController implements Initializable {
                 deleteTask.setOnSucceeded(e -> {
                     ToastUtil.showToast(findRootPane(), "Patient deleted successfully.", ToastUtil.ToastType.SUCCESS);
                     searchPatients(searchField.getText());
-
-                    javafx.application.Platform.runLater(() -> {
-                        ClassifyController cc = ClassifyController.getInstance();
-                        if (cc != null) cc.refreshPatientDropdown();
-                    });
+                    // Refresh the patient dropdown in the Classify tab.
+                    // ControllerBus.ifPresent() is null-safe and always dispatches on the FX thread.
+                    ControllerBus.ifPresent(ClassifyController.class, ClassifyController::refreshPatientDropdown);
                 });
 
                 deleteTask.setOnFailed(e -> {
@@ -764,10 +764,8 @@ public class HistoryController implements Initializable {
         task.setOnSucceeded(e -> {
             ToastUtil.showToast(findRootPane(), "Patient registered successfully.", ToastUtil.ToastType.SUCCESS);
             searchPatients(searchField.getText());
-            javafx.application.Platform.runLater(() -> {
-                ClassifyController cc = ClassifyController.getInstance();
-                if (cc != null) cc.refreshPatientDropdown();
-            });
+            // Refresh the patient dropdown in the Classify tab.
+            ControllerBus.ifPresent(ClassifyController.class, ClassifyController::refreshPatientDropdown);
         });
 
         new Thread(task, "PatientRegister").start();

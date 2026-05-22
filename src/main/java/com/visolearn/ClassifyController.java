@@ -121,8 +121,6 @@ public class ClassifyController implements Initializable {
     private String currentPrediction;
     private double currentConfidence;
     private int    currentInferenceTime;
-    private static ClassifyController instance;
-    public static ClassifyController getInstance() { return instance; }
     // ─────────────────────────────────────────────────────────────────────────
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -139,7 +137,10 @@ public class ClassifyController implements Initializable {
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        instance = this;
+        // Register with the ControllerBus so other controllers can reach this
+        // instance via ControllerBus.ifPresent(ClassifyController.class, ...) 
+        // without holding a strong static reference.
+        ControllerBus.register(this);
         // Load patients into the dropdown on startup
         loadPatientsIntoDropdown();
         heatmapImageView.opacityProperty().bind(
@@ -311,11 +312,9 @@ public class ClassifyController implements Initializable {
             );
             // Refresh the History tab so the new record appears immediately
             // without requiring the user to re-select the patient manually.
-            javafx.application.Platform.runLater(() -> {
-                HistoryController hc = HistoryController.getInstance();
-                if (hc != null) hc.refreshCurrentPatient();
-            });
+            ControllerBus.ifPresent(HistoryController.class, HistoryController::refreshCurrentPatient);
         });
+
 
         saveTask.setOnFailed(e -> {
             saveToHistoryButton.setDisable(false);

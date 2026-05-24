@@ -46,6 +46,8 @@ public class HistoryController implements Initializable {
     @FXML private TextField         searchField;
     @FXML private ListView<Patient> patientListView;
     @FXML private Label             noPatientsLabel;
+    @FXML private VBox              emptyStateBox;
+    @FXML private javafx.scene.canvas.Canvas emptyStateCanvas;
     @FXML private Button            registerPatientButton;
     @FXML private Button            deletePatientButton;
 
@@ -89,8 +91,10 @@ public class HistoryController implements Initializable {
         // Theme-aware styles for Session Summary card labels
         boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
         updateSummaryCardStyles(isDark);
+        drawEmptyStateIllustration(emptyStateCanvas);
         com.visolearn.utils.SettingsManager.darkModeProperty().addListener((obs, oldVal, newVal) -> {
             updateSummaryCardStyles(newVal);
+            drawEmptyStateIllustration(emptyStateCanvas);
         });
 
         // Advanced cell factory for custom styling of name and DOB
@@ -566,7 +570,7 @@ public class HistoryController implements Initializable {
     }
 
     private void setupButtonHandlers() {
-        registerPatientButton.setOnAction(e -> showRegisterPatientDialog());
+        registerPatientButton.setOnAction(e -> handleRegisterPatient());
         deletePatientButton.setOnAction(e -> deleteSelectedPatient());
     }
 
@@ -614,7 +618,21 @@ public class HistoryController implements Initializable {
         task.setOnSucceeded(e -> {
             List<Patient> patients = task.getValue();
             patientListView.setItems(FXCollections.observableList(patients));
-            noPatientsLabel.setVisible(patients.isEmpty());
+            if (patients.isEmpty()) {
+                emptyStateBox.setVisible(true);
+                emptyStateBox.setManaged(true);
+                patientListView.setVisible(false);
+                patientListView.setManaged(false);
+                noPatientsLabel.setVisible(false);
+                noPatientsLabel.setManaged(false);
+            } else {
+                emptyStateBox.setVisible(false);
+                emptyStateBox.setManaged(false);
+                patientListView.setVisible(true);
+                patientListView.setManaged(true);
+                noPatientsLabel.setVisible(false);
+                noPatientsLabel.setManaged(false);
+            }
         });
         new Thread(task, "PatientSearch-init").start();
     }
@@ -626,7 +644,12 @@ public class HistoryController implements Initializable {
         task.setOnSucceeded(e -> {
             List<Patient> results = task.getValue();
             patientListView.setItems(FXCollections.observableList(results));
+            emptyStateBox.setVisible(false);
+            emptyStateBox.setManaged(false);
             noPatientsLabel.setVisible(results.isEmpty());
+            noPatientsLabel.setManaged(results.isEmpty());
+            patientListView.setVisible(!results.isEmpty());
+            patientListView.setManaged(!results.isEmpty());
         });
         new Thread(task, "PatientSearch-" + Thread.currentThread().getId()).start();
     }
@@ -676,7 +699,8 @@ public class HistoryController implements Initializable {
         }
     }
 
-    private void showRegisterPatientDialog() {
+    @FXML
+    private void handleRegisterPatient() {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Register New Patient");
         dialog.setHeaderText("Enter patient details below.");
@@ -783,7 +807,7 @@ public class HistoryController implements Initializable {
 
         task.setOnSucceeded(e -> {
             ToastUtil.showToast(findRootPane(), "Patient registered successfully.", ToastUtil.ToastType.SUCCESS);
-            searchPatients(searchField.getText());
+            loadAllPatients();
             // Refresh the patient dropdown in the Classify tab.
             ControllerBus.ifPresent(ClassifyController.class, ClassifyController::refreshPatientDropdown);
         });
@@ -797,6 +821,46 @@ public class HistoryController implements Initializable {
             return sp;
         }
         throw new IllegalStateException("Scene root must be a StackPane.");
+    }
+
+    private void drawEmptyStateIllustration(javafx.scene.canvas.Canvas canvas) {
+        if (canvas == null) return;
+        javafx.scene.canvas.GraphicsContext gc = canvas.getGraphicsContext2D();
+        boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
+        String strokeColor = isDark ? "#374151" : "#CBD5E1";
+        String accentColor = "#10B981";
+
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        gc.save();
+        gc.scale(1.5, 1.5);
+
+        gc.setStroke(javafx.scene.paint.Color.web(strokeColor));
+        gc.setLineWidth(2);
+        
+        // Card outline
+        gc.strokeRoundRect(10, 10, 100, 70, 12, 12);
+
+        // Avatar circle top center
+        gc.setStroke(javafx.scene.paint.Color.web(accentColor));
+        gc.strokeOval(42, 20, 36, 36);
+
+        // Name lines
+        gc.setStroke(javafx.scene.paint.Color.web(strokeColor));
+        gc.setLineWidth(2);
+        gc.strokeLine(30, 62, 90, 62);
+        gc.strokeLine(40, 70, 80, 70);
+
+        // small "+" circle in bottom-right corner
+        gc.setFill(javafx.scene.paint.Color.web(accentColor));
+        gc.fillOval(90, 60, 20, 20);
+        
+        // white + inside
+        gc.setStroke(javafx.scene.paint.Color.WHITE);
+        gc.setLineWidth(2);
+        gc.strokeLine(100, 65, 100, 75);
+        gc.strokeLine(95, 70, 105, 70);
+
+        gc.restore();
     }
 
     private void updateSummaryCardStyles(boolean isDark) {

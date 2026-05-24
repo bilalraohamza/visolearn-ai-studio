@@ -42,9 +42,25 @@
         <Label fx:id="noPatientsLabel"
                text="No patients found."
                styleClass="text-muted text-md"
-               visible="false">
+               visible="false"
+               managed="false">
             <VBox.margin><Insets left="12"/></VBox.margin>
         </Label>
+
+        <VBox fx:id="emptyStateBox" alignment="CENTER" spacing="16" visible="false" managed="false">
+            <padding>
+                <Insets top="40" right="40" bottom="40" left="40"/>
+            </padding>
+            <javafx.scene.canvas.Canvas fx:id="emptyStateCanvas" width="180" height="135"/>
+            <Label text="No patients registered yet"
+                   style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA;"/>
+            <Label text="Register your first patient to start&#10;tracking scan history"
+                   textAlignment="CENTER"
+                   style="-fx-font-size: 13px; -fx-text-fill: #9CA3AF;"/>
+            <Button text="+ Register New Patient"
+                    styleClass="register-btn"
+                    onAction="#handleRegisterPatient"/>
+        </VBox>
 
         <Button fx:id="registerPatientButton"
                 text="+ Register New Patient"

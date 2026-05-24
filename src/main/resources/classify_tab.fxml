@@ -140,47 +140,40 @@
                 <Region HBox.hgrow="ALWAYS"/>
                 <Label text="Softmax Output" styleClass="hint-label"/>
             </HBox>
-            <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 0 0 12 0;">
-                <Label text="Actinic Keratosis (AK)"    prefWidth="180" styleClass="prob-label"/>
-                <ProgressBar fx:id="bar0" progress="0" HBox.hgrow="ALWAYS"
-                             maxWidth="Infinity" prefHeight="10" style="-fx-accent: #38BDF8;"/>
-                <Label fx:id="pct0" text="0%" prefWidth="45" styleClass="prob-pct"/>
+            <HBox alignment="CENTER_LEFT" spacing="10" style="-fx-padding: 0 0 12 0;">
+                <Label fx:id="lbl0" text="Actinic Keratosis" prefWidth="155" style="-fx-font-size: 13px; -fx-text-fill: #9CA3AF;"/>
+                <ProgressBar fx:id="bar0" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" prefHeight="8" style="-fx-accent: #374151;"/>
+                <Label fx:id="pct0" text="0%" prefWidth="44" style="-fx-font-size: 12px; -fx-text-fill: #6B7280; -fx-alignment: CENTER_RIGHT;"/>
             </HBox>
-            <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 0 0 12 0;">
-                <Label text="Basal Cell Carcinoma (BCC)" prefWidth="180" styleClass="prob-label"/>
-                <ProgressBar fx:id="bar1" progress="0" HBox.hgrow="ALWAYS"
-                             maxWidth="Infinity" prefHeight="10" style="-fx-accent: #F472B6;"/>
-                <Label fx:id="pct1" text="0%" prefWidth="45" styleClass="prob-pct"/>
+            <HBox alignment="CENTER_LEFT" spacing="10" style="-fx-padding: 0 0 12 0;">
+                <Label fx:id="lbl1" text="Basal Cell Carcinoma" prefWidth="155" style="-fx-font-size: 13px; -fx-text-fill: #9CA3AF;"/>
+                <ProgressBar fx:id="bar1" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" prefHeight="8" style="-fx-accent: #374151;"/>
+                <Label fx:id="pct1" text="0%" prefWidth="44" style="-fx-font-size: 12px; -fx-text-fill: #6B7280; -fx-alignment: CENTER_RIGHT;"/>
             </HBox>
-            <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 0 0 12 0;">
-                <Label text="Benign Keratosis (BKL)"    prefWidth="180" styleClass="prob-label"/>
-                <ProgressBar fx:id="bar2" progress="0" HBox.hgrow="ALWAYS"
-                             maxWidth="Infinity" prefHeight="10" style="-fx-accent: #A78BFA;"/>
-                <Label fx:id="pct2" text="0%" prefWidth="45" styleClass="prob-pct"/>
+            <HBox alignment="CENTER_LEFT" spacing="10" style="-fx-padding: 0 0 12 0;">
+                <Label fx:id="lbl2" text="Benign Keratosis" prefWidth="155" style="-fx-font-size: 13px; -fx-text-fill: #9CA3AF;"/>
+                <ProgressBar fx:id="bar2" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" prefHeight="8" style="-fx-accent: #374151;"/>
+                <Label fx:id="pct2" text="0%" prefWidth="44" style="-fx-font-size: 12px; -fx-text-fill: #6B7280; -fx-alignment: CENTER_RIGHT;"/>
             </HBox>
-            <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 0 0 12 0;">
-                <Label text="Dermatofibroma (DF)"       prefWidth="180" styleClass="prob-label"/>
-                <ProgressBar fx:id="bar3" progress="0" HBox.hgrow="ALWAYS"
-                             maxWidth="Infinity" prefHeight="10" style="-fx-accent: #FB923C;"/>
-                <Label fx:id="pct3" text="0%" prefWidth="45" styleClass="prob-pct"/>
+            <HBox alignment="CENTER_LEFT" spacing="10" style="-fx-padding: 0 0 12 0;">
+                <Label fx:id="lbl3" text="Dermatofibroma" prefWidth="155" style="-fx-font-size: 13px; -fx-text-fill: #9CA3AF;"/>
+                <ProgressBar fx:id="bar3" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" prefHeight="8" style="-fx-accent: #374151;"/>
+                <Label fx:id="pct3" text="0%" prefWidth="44" style="-fx-font-size: 12px; -fx-text-fill: #6B7280; -fx-alignment: CENTER_RIGHT;"/>
             </HBox>
-            <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 0 0 12 0;">
-                <Label text="Melanoma (MEL)"             prefWidth="180" styleClass="prob-label-red"/>
-                <ProgressBar fx:id="bar4" progress="0" HBox.hgrow="ALWAYS"
-                             maxWidth="Infinity" prefHeight="10" style="-fx-accent: #EF4444;"/>
-                <Label fx:id="pct4" text="0%" prefWidth="45" styleClass="prob-pct-red"/>
+            <HBox alignment="CENTER_LEFT" spacing="10" style="-fx-padding: 0 0 12 0;">
+                <Label fx:id="lbl4" text="Melanoma" prefWidth="155" style="-fx-font-size: 13px; -fx-text-fill: #9CA3AF;"/>
+                <ProgressBar fx:id="bar4" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" prefHeight="8" style="-fx-accent: #374151;"/>
+                <Label fx:id="pct4" text="0%" prefWidth="44" style="-fx-font-size: 12px; -fx-text-fill: #6B7280; -fx-alignment: CENTER_RIGHT;"/>
             </HBox>
-            <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 0 0 12 0;">
-                <Label text="Melanocytic Nevus (NV)"    prefWidth="180" styleClass="prob-label-emerald"/>
-                <ProgressBar fx:id="bar5" progress="0" HBox.hgrow="ALWAYS"
-                             maxWidth="Infinity" prefHeight="10" style="-fx-accent: #10B981;"/>
-                <Label fx:id="pct5" text="0%" prefWidth="45" styleClass="prob-pct-emerald"/>
+            <HBox alignment="CENTER_LEFT" spacing="10" style="-fx-padding: 0 0 12 0;">
+                <Label fx:id="lbl5" text="Melanocytic Nevus" prefWidth="155" style="-fx-font-size: 13px; -fx-text-fill: #9CA3AF;"/>
+                <ProgressBar fx:id="bar5" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" prefHeight="8" style="-fx-accent: #374151;"/>
+                <Label fx:id="pct5" text="0%" prefWidth="44" style="-fx-font-size: 12px; -fx-text-fill: #6B7280; -fx-alignment: CENTER_RIGHT;"/>
             </HBox>
-            <HBox alignment="CENTER_LEFT" spacing="12">
-                <Label text="Vascular Lesion (VASC)"    prefWidth="180" styleClass="prob-label"/>
-                <ProgressBar fx:id="bar6" progress="0" HBox.hgrow="ALWAYS"
-                             maxWidth="Infinity" prefHeight="10" style="-fx-accent: #FBBF24;"/>
-                <Label fx:id="pct6" text="0%" prefWidth="45" styleClass="prob-pct"/>
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <Label fx:id="lbl6" text="Vascular Lesion" prefWidth="155" style="-fx-font-size: 13px; -fx-text-fill: #9CA3AF;"/>
+                <ProgressBar fx:id="bar6" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" prefHeight="8" style="-fx-accent: #374151;"/>
+                <Label fx:id="pct6" text="0%" prefWidth="44" style="-fx-font-size: 12px; -fx-text-fill: #6B7280; -fx-alignment: CENTER_RIGHT;"/>
             </HBox>
         </VBox>
 

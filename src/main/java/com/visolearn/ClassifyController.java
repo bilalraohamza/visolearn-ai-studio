@@ -121,6 +121,7 @@ public class ClassifyController implements Initializable {
 
     @FXML private ProgressBar bar0, bar1, bar2, bar3, bar4, bar5, bar6;
     @FXML private Label       pct0, pct1, pct2, pct3, pct4, pct5, pct6;
+    @FXML private Label       lbl0, lbl1, lbl2, lbl3, lbl4, lbl5, lbl6;
 
     @FXML private ComboBox<Patient> patientComboBox;
     @FXML private Button            saveToHistoryButton;
@@ -660,11 +661,28 @@ public class ClassifyController implements Initializable {
 
         ProgressBar[] bars = {bar0, bar1, bar2, bar3, bar4, bar5, bar6};
         Label[]       pcts = {pct0, pct1, pct2, pct3, pct4, pct5, pct6};
+        Label[]       lbls = {lbl0, lbl1, lbl2, lbl3, lbl4, lbl5, lbl6};
+
+        boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
+        String defaultLabelColor = isDark ? "#9CA3AF" : "#475569";
 
         for (int i = 0; i < 7; i++) {
             float prob = result.allProbabilities[i];
             AnimationUtil.animateProgressBar(bars[i], prob, 900);
             pcts[i].setText(String.format("%.1f%%", prob * 100));
+
+            if (i == result.classIndex) {
+                String accentColor = (i == 4 || i == 1) ? "#EF4444" : "#10B981";
+                bars[i].setStyle("-fx-accent: " + accentColor + "; -fx-pref-height: 10;");
+                lbls[i].setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: " + accentColor + ";");
+                pcts[i].setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: " + accentColor + ";");
+                lbls[i].setText("✓  " + SkinClassifier.CLASS_FULL_NAMES[i]);
+            } else {
+                bars[i].setStyle("-fx-accent: #374151; -fx-pref-height: 8;");
+                lbls[i].setStyle("-fx-font-size: 13px; -fx-text-fill: " + defaultLabelColor + ";");
+                pcts[i].setStyle("-fx-font-size: 12px; -fx-text-fill: #6B7280;");
+                lbls[i].setText(SkinClassifier.CLASS_FULL_NAMES[i]);
+            }
         }
 
         RiskLevel riskLevel = classificationService.assessRisk(result);
@@ -965,9 +983,18 @@ public class ClassifyController implements Initializable {
     private void resetBars() {
         ProgressBar[] bars = {bar0, bar1, bar2, bar3, bar4, bar5, bar6};
         Label[]       pcts = {pct0, pct1, pct2, pct3, pct4, pct5, pct6};
+        Label[]       lbls = {lbl0, lbl1, lbl2, lbl3, lbl4, lbl5, lbl6};
+
+        boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
+        String defaultLabelColor = isDark ? "#9CA3AF" : "#475569";
+
         for (int i = 0; i < 7; i++) {
             bars[i].setProgress(0);
             pcts[i].setText("0%");
+            bars[i].setStyle("-fx-accent: #374151; -fx-pref-height: 8;");
+            lbls[i].setText(SkinClassifier.CLASS_FULL_NAMES[i]);
+            lbls[i].setStyle("-fx-font-size: 13px; -fx-text-fill: " + defaultLabelColor + ";");
+            pcts[i].setStyle("-fx-font-size: 12px; -fx-text-fill: #6B7280;");
         }
     }
     /** Public method to allow HistoryController to trigger a refresh */

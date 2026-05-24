@@ -32,7 +32,7 @@
             <HBox alignment="CENTER_LEFT" style="-fx-padding: 8 0 0 0;">
                 <Label fx:id="bestEpochLabel" text="Loading data..." styleClass="hint-label"/>
                 <Region HBox.hgrow="ALWAYS"/>
-                <Label text="peak" styleClass="text-emerald text-bold text-sm"/>
+                <Label fx:id="peakLabel" text="peak" styleClass="text-emerald text-bold text-sm"/>
             </HBox>
         </VBox>
 

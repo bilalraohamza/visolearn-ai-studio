@@ -31,7 +31,7 @@
     <HBox spacing="12" alignment="CENTER_LEFT" styleClass="glass-card"
           style="-fx-padding: 14 16 14 16;">
         <Label text="&#128193;" styleClass="text-secondary text-lg"
-               style="-fx-padding: 0 4 0 0;"/>
+               style="-fx-padding: 0 4 0 0; -fx-text-fill: #9CA3AF;"/>
         <TextField fx:id="folderPathField"
                    promptText="Select a folder containing JPG / PNG images..."
                    HBox.hgrow="ALWAYS" editable="false"
@@ -151,7 +151,7 @@
           style="-fx-padding: 0;" spacing="0">
 
         <HBox alignment="CENTER_LEFT" styleClass="table-header-bar">
-            <Label text="Analysis Results"
+            <Label fx:id="analysisResultsLabel" text="Analysis Results"
                    styleClass="text-primary text-bold text-md"/>
             <Region HBox.hgrow="ALWAYS"/>
             <HBox alignment="CENTER_LEFT" spacing="14">

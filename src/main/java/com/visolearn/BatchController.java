@@ -97,6 +97,7 @@ public class BatchController implements Initializable {
     @FXML private ProgressBar  batchProgressBar;
     @FXML private Label        progressLabel;
     @FXML private Label        progressCountLabel;
+    @FXML private Label        analysisResultsLabel;
     @FXML private HBox         summaryBox;
     @FXML private Label        totalImagesLabel;
     @FXML private Label        topClassLabel;
@@ -271,6 +272,20 @@ public class BatchController implements Initializable {
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
+        // ── Custom TableView placeholder ─────────────────────────────────────
+        Label placeholder = new Label("Select a folder and click Run Analysis to start parallel batch inference");
+        placeholder.setStyle("-fx-text-fill: #6B7280; -fx-font-size: 13px;");
+        resultsTable.setPlaceholder(placeholder);
+
+        // ── Theme-aware style for Analysis Results section label ─────────────
+        if (analysisResultsLabel != null) {
+            boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
+            analysisResultsLabel.setStyle(isDark ? "-fx-text-fill: #F8F9FA;" : "");
+            com.visolearn.utils.SettingsManager.darkModeProperty().addListener((obs, oldVal, newVal) -> {
+                analysisResultsLabel.setStyle(newVal ? "-fx-text-fill: #F8F9FA;" : "");
+            });
+        }
+
         // ── Table columns ────────────────────────────────────────────────────
         fileNameColumn.setCellValueFactory(
                 new PropertyValueFactory<>("fileName"));

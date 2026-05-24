@@ -63,6 +63,9 @@ public class HistoryController implements Initializable {
     @FXML private Label    totalSessionsLabel;
     @FXML private Label    avgConfidenceLabel;
     @FXML private Label    totalInferenceLabel;
+    @FXML private Label    totalSessionsDescLabel;
+    @FXML private Label    avgConfidenceDescLabel;
+    @FXML private Label    totalInferenceDescLabel;
     @FXML private Label    patientNotesLabel;
 
     private final PatientService        patientService        = new PatientService(new PatientDAO());
@@ -82,6 +85,13 @@ public class HistoryController implements Initializable {
         setupPatientListSelection();
         setupButtonHandlers();
         setupAnimations();
+
+        // Theme-aware styles for Session Summary card labels
+        boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
+        updateSummaryCardStyles(isDark);
+        com.visolearn.utils.SettingsManager.darkModeProperty().addListener((obs, oldVal, newVal) -> {
+            updateSummaryCardStyles(newVal);
+        });
 
         // Advanced cell factory for custom styling of name and DOB
         patientListView.setCellFactory(lv -> new ListCell<Patient>() {
@@ -154,6 +164,11 @@ public class HistoryController implements Initializable {
 
     private void setupTableColumns() {
         predictionsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+
+        // ── Custom placeholder: default Modena text is black (invisible on dark bg) ─
+        Label noContent = new Label("No sessions found for this patient");
+        noContent.setStyle("-fx-text-fill: #6B7280; -fx-font-size: 13px;");
+        predictionsTable.setPlaceholder(noContent);
 
         predictedClassColumn.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue().predictedClass));
         predictedClassColumn.setCellFactory(col -> new TableCell<>() {
@@ -782,5 +797,38 @@ public class HistoryController implements Initializable {
             return sp;
         }
         throw new IllegalStateException("Scene root must be a StackPane.");
+    }
+
+    private void updateSummaryCardStyles(boolean isDark) {
+        if (totalSessionsLabel != null) {
+            totalSessionsLabel.setStyle(isDark 
+                ? "-fx-text-fill: #F8F9FA; -fx-font-size: 18px; -fx-font-weight: bold;" 
+                : "-fx-text-fill: #0F172A; -fx-font-size: 18px; -fx-font-weight: bold;");
+        }
+        if (avgConfidenceLabel != null) {
+            avgConfidenceLabel.setStyle(isDark 
+                ? "-fx-text-fill: #F8F9FA; -fx-font-size: 18px; -fx-font-weight: bold;" 
+                : "-fx-text-fill: #0F172A; -fx-font-size: 18px; -fx-font-weight: bold;");
+        }
+        if (totalInferenceLabel != null) {
+            totalInferenceLabel.setStyle(isDark 
+                ? "-fx-text-fill: #F8F9FA; -fx-font-size: 18px; -fx-font-weight: bold;" 
+                : "-fx-text-fill: #0F172A; -fx-font-size: 18px; -fx-font-weight: bold;");
+        }
+        if (totalSessionsDescLabel != null) {
+            totalSessionsDescLabel.setStyle(isDark 
+                ? "-fx-text-fill: #9CA3AF; -fx-font-size: 12px;" 
+                : "-fx-text-fill: #64748B; -fx-font-size: 12px;");
+        }
+        if (avgConfidenceDescLabel != null) {
+            avgConfidenceDescLabel.setStyle(isDark 
+                ? "-fx-text-fill: #9CA3AF; -fx-font-size: 12px;" 
+                : "-fx-text-fill: #64748B; -fx-font-size: 12px;");
+        }
+        if (totalInferenceDescLabel != null) {
+            totalInferenceDescLabel.setStyle(isDark 
+                ? "-fx-text-fill: #9CA3AF; -fx-font-size: 12px;" 
+                : "-fx-text-fill: #64748B; -fx-font-size: 12px;");
+        }
     }
 }

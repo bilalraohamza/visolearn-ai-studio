@@ -97,6 +97,9 @@
     -fx-background-color: #3B82F6;
     -fx-border-color: #3B82F6;
 }
+/* Checkbox label text — midnight-blue theme overrides base dark default */
+.check-box .label       { -fx-text-fill: #9CA3AF; }
+.check-box:hover .label { -fx-text-fill: #F8F9FA; }
 
 /* ===== TableView ===== */
 .table-view {
@@ -162,3 +165,37 @@
 .scroll-pane               { -fx-background-color: transparent; -fx-background: #0A1628; }
 .scroll-pane > .viewport   { -fx-background-color: transparent; }
 .scroll-pane               { -fx-background-insets: 0; -fx-padding: 0; }
+
+/* ===== Classify Tab — Notes + Patient combo ===== */
+.notes-area {
+    -fx-control-inner-background: #0D1B35;
+    -fx-text-fill: #F8F9FA;
+    -fx-prompt-text-fill: #4B5563;
+    -fx-background-color: transparent;
+    -fx-border-color: #3B4A6B;
+    -fx-border-radius: 4;
+}
+.notes-area .content        { -fx-background-color: #0D1B35; }
+.notes-area:focused .content { -fx-background-color: #0D1B35; }
+.notes-area:focused          { -fx-border-color: #3B82F6; }
+
+.patient-combo {
+    -fx-background-color: #0D1B35;
+    -fx-control-inner-background: #0D1B35;
+    -fx-text-fill: #F8F9FA;
+    -fx-border-color: #3B4A6B;
+    -fx-border-radius: 4;
+}
+.patient-combo .list-cell   { -fx-text-fill: #F8F9FA; -fx-background-color: transparent; }
+.patient-combo .arrow-button { -fx-background-color: transparent; }
+.patient-combo .arrow        { -fx-background-color: #9CA3AF; }
+
+/* ===== Global Dark Theme overrides ===== */
+.label { -fx-text-fill: #F8F9FA; }
+.text-field { -fx-text-fill: #F8F9FA; -fx-background-color: #1E1E2A; }
+.text-area { -fx-text-fill: #F8F9FA; -fx-border-color: #374151; }
+.text-area .content { -fx-background-color: #1E1E2A; }
+.text-area .scroll-pane { -fx-background-color: transparent; }
+.table-view .label { -fx-text-fill: #F8F9FA; }
+.titled-pane > .title > .text { -fx-fill: #F8F9FA; }
+.combo-box .list-cell { -fx-text-fill: #F8F9FA; }

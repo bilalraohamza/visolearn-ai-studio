@@ -896,6 +896,14 @@
     -fx-border-color: #374151;
     -fx-border-radius: 4;
 }
+/* Button cell (shows selected item) and dropdown arrow — both need
+   explicit colours; Modena defaults to black text on the button cell. */
+.patient-combo .list-cell {
+    -fx-text-fill: #F8F9FA;
+    -fx-background-color: transparent;
+}
+.patient-combo .arrow-button { -fx-background-color: transparent; }
+.patient-combo .arrow         { -fx-background-color: #9CA3AF; }
 .loading-label { -fx-font-size: 12px; -fx-text-fill: #10B981; -fx-font-weight: bold; }
 .risk-label    { -fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: white; }
 .ai-diagnosis  { -fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #F8F9FA; }
@@ -910,4 +918,14 @@
 .bar-pct         { -fx-font-size: 12px; -fx-text-fill: #9CA3AF; -fx-font-weight: bold; }
 .bar-pct-red     { -fx-font-size: 12px; -fx-text-fill: #EF4444; -fx-font-weight: bold; }
 .bar-pct-green   { -fx-font-size: 12px; -fx-text-fill: #10B981; -fx-font-weight: bold; }
+
+/* ===== Global Dark Theme overrides ===== */
+.label { -fx-text-fill: #F8F9FA; }
+.text-field { -fx-text-fill: #F8F9FA; -fx-background-color: #1E1E2A; }
+.text-area { -fx-text-fill: #F8F9FA; }
+.text-area .content { -fx-background-color: #1E1E2A; }
+.text-area .scroll-pane { -fx-background-color: transparent; }
+.table-view .label { -fx-text-fill: #F8F9FA; }
+.titled-pane > .title > .text { -fx-fill: #F8F9FA; }
+.combo-box .list-cell { -fx-text-fill: #F8F9FA; }
 

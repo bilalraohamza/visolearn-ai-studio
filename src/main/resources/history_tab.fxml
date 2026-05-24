@@ -125,21 +125,21 @@
             <VBox spacing="12" alignment="TOP_LEFT" styleClass="summary-panel">
                 <Text text="Session Summary" fill="#F8F9FA"
                       style="-fx-font-family: 'System'; -fx-font-size: 15px; -fx-font-weight: bold;"/>
-                <HBox spacing="8">
-                    <Text text="Total sessions:"   fill="#9CA3AF"
-                          style="-fx-font-family: 'System'; -fx-font-size: 13px;"/>
+                <HBox spacing="8" alignment="BASELINE_LEFT">
+                    <Label fx:id="totalSessionsDescLabel" text="Total sessions:"
+                           style="-fx-font-family: 'System'; -fx-font-size: 12px;"/>
                     <Label fx:id="totalSessionsLabel" text="0"
                            styleClass="text-primary text-bold text-md"/>
                 </HBox>
-                <HBox spacing="8">
-                    <Text text="Avg confidence:"  fill="#9CA3AF"
-                          style="-fx-font-family: 'System'; -fx-font-size: 13px;"/>
+                <HBox spacing="8" alignment="BASELINE_LEFT">
+                    <Label fx:id="avgConfidenceDescLabel" text="Avg confidence:"
+                           style="-fx-font-family: 'System'; -fx-font-size: 12px;"/>
                     <Label fx:id="avgConfidenceLabel" text="0%"
                            styleClass="text-primary text-bold text-md"/>
                 </HBox>
-                <HBox spacing="8">
-                    <Text text="Total inference time:" fill="#9CA3AF"
-                          style="-fx-font-family: 'System'; -fx-font-size: 13px;"/>
+                <HBox spacing="8" alignment="BASELINE_LEFT">
+                    <Label fx:id="totalInferenceDescLabel" text="Total inference time:"
+                           style="-fx-font-family: 'System'; -fx-font-size: 12px;"/>
                     <Label fx:id="totalInferenceLabel" text="0 ms"
                            styleClass="text-primary text-bold text-md"/>
                 </HBox>

@@ -35,6 +35,8 @@ public class DashboardController implements Initializable {
     @FXML
     private Label bestEpochLabel;
     @FXML
+    private Label peakLabel;
+    @FXML
     private Button reloadButton;
 
     // These MUST match the fx:id in your dashboard_tab.fxml
@@ -59,6 +61,15 @@ public class DashboardController implements Initializable {
 
         lossChart.setAnimated(false);
         accuracyChart.setAnimated(false);
+
+        // Apply dark-mode theme override for the peak label near Best Val Accuracy
+        if (peakLabel != null) {
+            boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
+            peakLabel.setStyle(isDark ? "-fx-text-fill: #F8F9FA;" : "");
+            com.visolearn.utils.SettingsManager.darkModeProperty().addListener((obs, oldVal, newVal) -> {
+                peakLabel.setStyle(newVal ? "-fx-text-fill: #F8F9FA;" : "");
+            });
+        }
 
         loadEnsembleData();
         setupDashboardAnimations();

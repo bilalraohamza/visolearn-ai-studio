@@ -11,6 +11,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.ListCell;
 import javafx.scene.image.Image;
@@ -111,6 +112,12 @@ public class ClassifyController implements Initializable {
     @FXML private Label notesStatusLabel;
     @FXML private HBox  riskBanner;
     @FXML private Label riskLabel;
+
+    @FXML private VBox saliencyOverlay;
+    @FXML private ProgressIndicator saliencySpinner;
+    @FXML private Label saliencyCountLabel;
+    @FXML private ProgressBar saliencyProgressBar;
+    @FXML private Label saliencyPctLabel;
 
     @FXML private ProgressBar bar0, bar1, bar2, bar3, bar4, bar5, bar6;
     @FXML private Label       pct0, pct1, pct2, pct3, pct4, pct5, pct6;
@@ -456,6 +463,11 @@ public class ClassifyController implements Initializable {
         if (errorBanner != null) {
             errorBanner.setVisible(false);
             errorBanner.setManaged(false);
+        }
+        if (saliencyOverlay != null) {
+            saliencyOverlay.setVisible(false);
+            saliencyOverlay.setManaged(false);
+            if (saliencyProgressBar != null) saliencyProgressBar.setProgress(0);
         }
     }
 
@@ -811,19 +823,22 @@ public class ClassifyController implements Initializable {
     private void generateAndShowHeatmap() {
         if (currentImagePath == null || lastResult == null) return;
 
-        loadingLabel.setText("Generating saliency map (0 / 49)...");
-        loadingBox.setVisible(true);
-        AnimationUtil.fadeIn(loadingBox, 300);
+        saliencyOverlay.setVisible(true);
+        saliencyOverlay.setManaged(true);
+        saliencyProgressBar.setProgress(0);
+        saliencyCountLabel.setText("Generating saliency map...");
+        saliencyPctLabel.setText("0 / 49 patches");
 
         Task<BufferedImage> heatmapTask = new Task<>() {
             @Override
             protected BufferedImage call() throws Exception {
                 return occlusionRenderer.generateHeatmap(
                         currentImagePath, lastResult,
-                        (completed, total) -> Platform.runLater(() ->
-                                loadingLabel.setText(
-                                        String.format("Saliency map... (%d / %d)", completed, total))
-                        )
+                        (completed, total) -> Platform.runLater(() -> {
+                            saliencyProgressBar.setProgress((double) completed / total);
+                            saliencyCountLabel.setText("Analyzing region " + completed + " of " + total);
+                            saliencyPctLabel.setText(completed + " / " + total + " patches");
+                        })
                 );
             }
         };
@@ -833,13 +848,23 @@ public class ClassifyController implements Initializable {
                 Image fxHeatmap = SwingFXUtils.toFXImage(heatmapTask.getValue(), null);
                 heatmapImageView.setImage(fxHeatmap);
                 heatmapImageView.setVisible(true);
-                loadingBox.setVisible(false);
+
+                javafx.animation.FadeTransition fade = new javafx.animation.FadeTransition(javafx.util.Duration.millis(400), saliencyOverlay);
+                fade.setFromValue(1.0);
+                fade.setToValue(0.0);
+                fade.setOnFinished(ev -> {
+                    saliencyOverlay.setVisible(false);
+                    saliencyOverlay.setManaged(false);
+                    saliencyOverlay.setOpacity(1.0);
+                });
+                fade.play();
             });
         });
 
         heatmapTask.setOnFailed(e -> {
             Platform.runLater(() -> {
-                loadingBox.setVisible(false);
+                saliencyOverlay.setVisible(false);
+                saliencyOverlay.setManaged(false);
                 System.err.println("Occlusion map error: " + heatmapTask.getException().getMessage());
             });
         });

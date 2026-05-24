@@ -39,6 +39,10 @@ import javafx.animation.KeyValue;
 import javafx.animation.PauseTransition;
 import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.KeyCode;
+import javafx.scene.control.TextInputControl;
 import javafx.util.Duration;
 
 import java.awt.image.BufferedImage;
@@ -128,6 +132,8 @@ public class ClassifyController implements Initializable {
 
     @FXML private HBox errorBanner;
     @FXML private Label errorLabel;
+    
+    @FXML private Label shortcutHintLabel;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Backend Components
@@ -278,6 +284,22 @@ public class ClassifyController implements Initializable {
         );
 
 
+        uploadButton.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                setupKeyboardShortcuts(newScene);
+            }
+        });
+
+        boolean isDark = SettingsManager.isDarkMode();
+        if (shortcutHintLabel != null) {
+            shortcutHintLabel.setStyle("-fx-text-fill: " + (isDark ? "#4B5563" : "#94A3B8") + "; -fx-font-size: 11px;");
+        }
+        SettingsManager.darkModeProperty().addListener((obs, oldVal, newVal) -> {
+            if (shortcutHintLabel != null) {
+                shortcutHintLabel.setStyle("-fx-text-fill: " + (newVal ? "#4B5563" : "#94A3B8") + "; -fx-font-size: 11px;");
+            }
+        });
+
         setupDragAndDrop();
         setupAnimations();
     }
@@ -285,6 +307,43 @@ public class ClassifyController implements Initializable {
     // ─────────────────────────────────────────────────────────────────────────
     // Patient History Integration
     // ─────────────────────────────────────────────────────────────────────────
+
+    private void setupKeyboardShortcuts(Scene scene) {
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.isControlDown()) {
+                switch (event.getCode()) {
+                    case O -> {
+                        handleUpload();
+                        event.consume();
+                    }
+                    case E -> {
+                        if (exportReportButton != null && !exportReportButton.isDisabled()) {
+                            handleExportReport();
+                            event.consume();
+                        }
+                    }
+                    case S -> {
+                        if (saveToHistoryButton != null && !saveToHistoryButton.isDisabled()) {
+                            handleSaveToHistory();
+                            event.consume();
+                        }
+                    }
+                }
+            }
+            if (event.getCode() == KeyCode.SPACE && occlusionToggle != null && !occlusionToggle.isDisabled()) {
+                if (scene.getFocusOwner() instanceof TextInputControl) return;
+                occlusionToggle.setSelected(!occlusionToggle.isSelected());
+                handleOcclusionToggle();
+                event.consume();
+            }
+            if (event.getCode() == KeyCode.ESCAPE) {
+                if (currentImageFile != null) {
+                    handleClear();
+                    event.consume();
+                }
+            }
+        });
+    }
 
     private void loadPatientsIntoDropdown() {
         Task<List<Patient>> loadTask = new Task<>() {

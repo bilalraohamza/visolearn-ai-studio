@@ -213,6 +213,10 @@
             </VBox>
         </HBox>
 
+        <Label fx:id="shortcutHintLabel" alignment="CENTER" maxWidth="Infinity"
+               style="-fx-text-fill: #6B7280; -fx-font-size: 11px; -fx-padding: 4 0 0 0;"
+               text="Ctrl+O  Open    Ctrl+S  Save    Ctrl+E  Export    Space  Toggle Saliency    Esc  Clear"/>
+
     </VBox>
 
 </HBox>

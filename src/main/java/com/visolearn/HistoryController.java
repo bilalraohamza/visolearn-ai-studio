@@ -18,6 +18,8 @@ import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.KeyCode;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -95,6 +97,17 @@ public class HistoryController implements Initializable {
         com.visolearn.utils.SettingsManager.darkModeProperty().addListener((obs, oldVal, newVal) -> {
             updateSummaryCardStyles(newVal);
             drawEmptyStateIllustration(emptyStateCanvas);
+        });
+
+        patientListView.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                newScene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+                    if (event.isControlDown() && event.getCode() == KeyCode.N) {
+                        handleRegisterPatient();
+                        event.consume();
+                    }
+                });
+            }
         });
 
         // Advanced cell factory for custom styling of name and DOB

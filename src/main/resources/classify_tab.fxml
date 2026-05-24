@@ -33,6 +33,25 @@
 
                 <ImageView fx:id="inputImageView"  opacity="0" preserveRatio="false" visible="false"/>
                 <ImageView fx:id="heatmapImageView" opacity="0" preserveRatio="false" visible="false"/>
+
+                <VBox fx:id="saliencyOverlay"
+                      visible="false" managed="false"
+                      alignment="CENTER" spacing="14"
+                      style="-fx-background-color: rgba(0,0,0,0.55); -fx-background-radius: 12;"
+                      StackPane.alignment="CENTER">
+                    <ProgressIndicator fx:id="saliencySpinner"
+                                       prefWidth="52" prefHeight="52"
+                                       style="-fx-progress-color: #10B981;"/>
+                    <Label fx:id="saliencyCountLabel"
+                           text="Generating saliency map"
+                           style="-fx-text-fill: #F8F9FA; -fx-font-size: 13px;"/>
+                    <ProgressBar fx:id="saliencyProgressBar"
+                                 prefWidth="160" prefHeight="6"
+                                 style="-fx-accent: #10B981;"/>
+                    <Label fx:id="saliencyPctLabel"
+                           text="0 / 49 patches"
+                           style="-fx-text-fill: #9CA3AF; -fx-font-size: 11px;"/>
+                </VBox>
             </StackPane>
 
             <HBox spacing="12" style="-fx-padding: 16 0 0 0;">

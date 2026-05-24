@@ -699,6 +699,61 @@ public class HistoryController implements Initializable {
         }
     }
 
+    private boolean validateField(TextField field, Label errorLabel, String errorMessage, boolean condition) {
+        if (!condition) {
+            field.setStyle("-fx-border-color: #EF4444; -fx-border-width: 1.5; -fx-border-radius: 6;");
+            errorLabel.setText(errorMessage);
+            errorLabel.setVisible(true);
+            errorLabel.setManaged(true);
+            return false;
+        } else {
+            field.setStyle("-fx-border-color: #10B981; -fx-border-width: 1.5; -fx-border-radius: 6;");
+            errorLabel.setVisible(false);
+            errorLabel.setManaged(false);
+            return true;
+        }
+    }
+
+    private boolean validateName(TextField nameField, Label nameError) {
+        String text = nameField.getText().trim();
+        return validateField(nameField, nameError, "Name is required (minimum 2 characters)", text.length() >= 2);
+    }
+
+    private boolean validateDob(TextField dobField, Label dobError) {
+        String text = dobField.getText().trim();
+        if (text.isEmpty()) {
+            dobField.setStyle("");
+            dobError.setVisible(false);
+            dobError.setManaged(false);
+            return true;
+        }
+        boolean matches = text.matches("^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$");
+        if (!matches) {
+            return validateField(dobField, dobError, "Enter a valid date (YYYY-MM-DD, not in future)", false);
+        }
+        try {
+            java.time.LocalDate date = java.time.LocalDate.parse(text);
+            if (date.isAfter(java.time.LocalDate.now())) {
+                return validateField(dobField, dobError, "Enter a valid date (YYYY-MM-DD, not in future)", false);
+            }
+        } catch (Exception e) {
+            return validateField(dobField, dobError, "Enter a valid date (YYYY-MM-DD, not in future)", false);
+        }
+        return validateField(dobField, dobError, "", true);
+    }
+
+    private boolean validatePhone(TextField phoneField, Label phoneError) {
+        String text = phoneField.getText().trim();
+        if (text.isEmpty()) {
+            phoneField.setStyle("");
+            phoneError.setVisible(false);
+            phoneError.setManaged(false);
+            return true;
+        }
+        boolean matches = text.matches("^\\+?[\\d\\s\\-]{7,15}$");
+        return validateField(phoneField, phoneError, "Enter a valid phone number", matches);
+    }
+
     @FXML
     private void handleRegisterPatient() {
         Dialog<ButtonType> dialog = new Dialog<>();
@@ -715,19 +770,47 @@ public class HistoryController implements Initializable {
         grid.setVgap(12);
         grid.setPadding(new Insets(20, 10, 10, 10));
 
+        Label nameError = new Label();
+        nameError.setVisible(false); nameError.setManaged(false);
+        nameError.setStyle("-fx-text-fill: #EF4444; -fx-font-size: 11px;");
+
+        Label dobError = new Label();
+        dobError.setVisible(false); dobError.setManaged(false);
+        dobError.setStyle("-fx-text-fill: #EF4444; -fx-font-size: 11px;");
+
+        Label phoneError = new Label();
+        phoneError.setVisible(false); phoneError.setManaged(false);
+        phoneError.setStyle("-fx-text-fill: #EF4444; -fx-font-size: 11px;");
+
         // ── Row 0: Full Name (required) ──────────────────────────────────
         TextField nameField = new TextField();
-        nameField.setPromptText("Full Name");
+        nameField.setPromptText("e.g. Ahmed Khan");
         nameField.setPrefWidth(300);
-        grid.add(new Label("Name *:"), 0, 0);
-        grid.add(nameField, 1, 0);
+        nameField.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+            if (!isFocused) validateName(nameField, nameError);
+        });
+
+        HBox nameLabelBox = new HBox(4);
+        Label nameLabelStr = new Label("Name");
+        Label nameAsterisk = new Label("*");
+        nameAsterisk.setStyle("-fx-text-fill: #EF4444; -fx-font-size: 12px;");
+        nameLabelBox.getChildren().addAll(nameLabelStr, nameAsterisk);
+
+        VBox nameBox = new VBox(2, nameField, nameError);
+        grid.add(nameLabelBox, 0, 0);
+        grid.add(nameBox, 1, 0);
 
         // ── Row 1: Date of Birth ─────────────────────────────────────────
         TextField dobField = new TextField();
         dobField.setPromptText("YYYY-MM-DD");
         dobField.setPrefWidth(300);
+        dobField.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+            if (!isFocused) validateDob(dobField, dobError);
+        });
+
+        VBox dobBox = new VBox(2, dobField, dobError);
         grid.add(new Label("Date of Birth:"), 0, 1);
-        grid.add(dobField, 1, 1);
+        grid.add(dobBox, 1, 1);
 
         // ── Row 2: Gender ────────────────────────────────────────────────
         ComboBox<String> genderCombo = new ComboBox<>();
@@ -739,10 +822,15 @@ public class HistoryController implements Initializable {
 
         // ── Row 3: Phone ─────────────────────────────────────────────────
         TextField phoneField = new TextField();
-        phoneField.setPromptText("+92-XXX-XXXXXXX");
+        phoneField.setPromptText("+92 300 0000000");
         phoneField.setPrefWidth(300);
+        phoneField.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+            if (!isFocused) validatePhone(phoneField, phoneError);
+        });
+
+        VBox phoneBox = new VBox(2, phoneField, phoneError);
         grid.add(new Label("Phone:"), 0, 3);
-        grid.add(phoneField, 1, 3);
+        grid.add(phoneBox, 1, 3);
 
         // ── Row 4: Fitzpatrick Skin Type ─────────────────────────────────
         ComboBox<String> skinTypeCombo = new ComboBox<>();
@@ -770,6 +858,21 @@ public class HistoryController implements Initializable {
 
         pane.setContent(grid);
 
+        final Button okButton = (Button) pane.lookupButton(ButtonType.OK);
+        okButton.addEventFilter(javafx.event.ActionEvent.ACTION, event -> {
+            boolean validName = validateName(nameField, nameError);
+            boolean validDob = validateDob(dobField, dobError);
+            boolean validPhone = validatePhone(phoneField, phoneError);
+
+            if (!validName || !validDob || !validPhone) {
+                event.consume(); // Prevent dialog from closing
+                
+                if (!validName) nameField.requestFocus();
+                else if (!validDob) dobField.requestFocus();
+                else if (!validPhone) phoneField.requestFocus();
+            }
+        });
+
         Optional<ButtonType> result = dialog.showAndWait();
         if (result.isEmpty() || result.get() != ButtonType.OK) return;
 
@@ -783,11 +886,6 @@ public class HistoryController implements Initializable {
         // Extract just the type label (e.g. "Type III") from the full description
         if (skinType != null && skinType.contains("\u2014")) {
             skinType = skinType.substring(0, skinType.indexOf("\u2014")).trim();
-        }
-
-        if (name.isEmpty()) {
-            ToastUtil.showToast(findRootPane(), "Patient name is required.", ToastUtil.ToastType.ERROR);
-            return;
         }
 
         final String finalSkinType = skinType;

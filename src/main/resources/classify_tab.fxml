@@ -74,9 +74,12 @@
               style="-fx-padding: 24;" spacing="16"
               VBox.vgrow="ALWAYS" alignment="CENTER_LEFT">
 
+            <!-- Risk banner — first child so URGENT appears above everything else -->
             <HBox fx:id="riskBanner" visible="false" managed="false"
-                  alignment="CENTER" style="-fx-padding: 8 16; -fx-background-radius: 6;">
-                <Label fx:id="riskLabel" styleClass="risk-label"/>
+                  alignment="CENTER_LEFT" maxWidth="Infinity"
+                  style="-fx-background-radius: 8; -fx-border-radius: 8;">
+                <Label fx:id="riskLabel" styleClass="risk-label" wrapText="true"
+                       HBox.hgrow="ALWAYS"/>
             </HBox>
 
             <HBox fx:id="errorBanner" visible="false" managed="false"

@@ -6,23 +6,25 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import com.visolearn.data.DatabaseUtil;
 import com.visolearn.utils.SettingsManager;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * VisoLearn AI Studio — Main Application Entry Point.
  * Launches the JavaFX desktop application for real-time
- * skin lesion classification using EfficientNet-B4.
+ * skin lesion classification using EfficientNet-B4 + DenseNet-169.
  *
- * Single shared SkinClassifier instance is created here
- * and passed to all controllers to prevent ONNX Runtime
- * from loading the same model file twice simultaneously.
+ * <h3>Dependency injection model</h3>
+ * <p>A single {@link AppContext} is constructed here and threaded to every
+ * controller that needs it via {@link FXMLLoader#setControllerFactory}.
+ * No static accessor methods expose the shared classifier — only controllers
+ * that explicitly receive an {@code AppContext} can reach it.</p>
  *
  * @author Rao Hamza Bilal
- * @version 1.0
+ * @version 2.0
  */
 public class MainApp extends Application {
 
@@ -36,57 +38,9 @@ public class MainApp extends Application {
     private static final double MIN_HEIGHT = 600;
 
     /**
-     * Single shared classifier instance used by all controllers.
-     * Static so it can be accessed by ClassifyController
-     * and BatchController without creating separate instances.
-     */
-    private static SkinClassifier sharedClassifier;
-
-    /**
-     * Completed exactly once when the shared classifier finishes initialising.
-     *
-     * <p>Controllers subscribe via {@link #getClassifierFuture()} instead of
-     * polling {@link #getSharedClassifier()} in a loop, so there is no
-     * hard timeout and no NPE risk if initialisation takes longer than expected
-     * on slow hardware.</p>
-     *
-     * <ul>
-     *   <li>On success → completed with the ready {@link SkinClassifier}.</li>
-     *   <li>On failure → completed exceptionally with the root cause.</li>
-     * </ul>
-     */
-    private static final CompletableFuture<SkinClassifier> classifierFuture =
-            new CompletableFuture<>();
-
-    /**
-     * Returns the shared SkinClassifier instance.
-     * May return {@code null} before initialisation completes.
-     * Prefer {@link #getClassifierFuture()} for new code.
-     *
-     * @return the single shared SkinClassifier, or {@code null} if not yet ready
-     */
-    public static SkinClassifier getSharedClassifier() {
-        return sharedClassifier;
-    }
-
-    /**
-     * Returns a {@link CompletableFuture} that is resolved as soon as the
-     * shared classifier is ready (or fails).
-     *
-     * <p>Controllers should use this instead of polling
-     * {@link #getSharedClassifier()} so they are notified the instant the
-     * model finishes loading — no timeout, no NPE.</p>
-     *
-     * @return the classifier future (never {@code null})
-     */
-    public static CompletableFuture<SkinClassifier> getClassifierFuture() {
-        return classifierFuture;
-    }
-
-    /**
-     * JavaFX start method — called automatically when app launches.
-     * Loads the main FXML layout, initializes the shared classifier,
-     * and sets up the primary stage.
+     * JavaFX start method — called automatically when the app launches.
+     * Loads the main FXML layout, initialises the shared classifier via
+     * a background task, and sets up the primary stage.
      *
      * @param primaryStage the main window provided by JavaFX
      * @throws IOException if the FXML file cannot be loaded
@@ -94,12 +48,15 @@ public class MainApp extends Application {
     @Override
     public void start(Stage primaryStage) throws IOException {
 
-        // ── Step 1: Show splash immediately — user sees feedback at once ───────
+        // ── Step 1: Construct application context — owns the classifier future ─
+        final AppContext ctx = new AppContext();
+
+        // ── Step 2: Show splash immediately — user sees feedback at once ───────
         SplashScreen splash = new SplashScreen();
         splash.show();
         splash.setStatus("Starting VisoLearn AI Studio…");
 
-        // ── Step 2: Defer heavy loading so start() returns instantly ──────────
+        // ── Step 3: Defer heavy loading so start() returns instantly ──────────
         // This ensures the splash screen renders immediately without being blocked
         Platform.runLater(() -> {
             try {
@@ -109,6 +66,27 @@ public class MainApp extends Application {
                                 "main.fxml not found in resources"
                         )
                 );
+
+                // ── Controller factory — explicit dependency injection ─────────
+                // Controllers that need the AppContext receive it here at
+                // construction time. All other controllers use their default
+                // no-arg constructor via reflection.
+                loader.setControllerFactory(type -> {
+                    try {
+                        if (type == ClassifyController.class) {
+                            return new ClassifyController(ctx);
+                        }
+                        if (type == BatchController.class) {
+                            return new BatchController(ctx);
+                        }
+                        // HistoryController, DashboardController, MainController
+                        // do not need the classifier — use default constructor.
+                        return type.getDeclaredConstructor().newInstance();
+                    } catch (Exception e) {
+                        throw new RuntimeException(
+                                "Failed to create controller: " + type.getName(), e);
+                    }
+                });
 
                 Scene scene = new Scene(loader.load(), MIN_WIDTH, MIN_HEIGHT);
                 MainController.applyTheme(scene, SettingsManager.isDarkMode());
@@ -125,32 +103,41 @@ public class MainApp extends Application {
                 primaryStage.setMinHeight(MIN_HEIGHT);
                 primaryStage.centerOnScreen();
 
+                // ── Classifier lifecycle — box reference so lambda can read it ─
+                final SkinClassifier[] classifierHolder = {null};
+
                 primaryStage.setOnCloseRequest(e -> {
-                    if (sharedClassifier != null) {
-                        sharedClassifier.close();
+                    if (classifierHolder[0] != null) {
+                        classifierHolder[0].close();
                         System.out.println("MainApp: classifier released.");
                     }
+                    DatabaseUtil.shutdown();
                 });
 
-                // ── Step 3: Initialize classifier on background thread ────────────────
-                Task<Void> initTask = new Task<>() {
+                // ── Step 4: Initialise classifier on background thread ─────────
+                Task<SkinClassifier> initTask = new Task<>() {
                     @Override
-                    protected Void call() throws Exception {
+                    protected SkinClassifier call() throws Exception {
                         splash.setStatus("Preparing inference engine");
-                        sharedClassifier = new SkinClassifier();
+                        SkinClassifier classifier = new SkinClassifier();
 
                         splash.setStatus("Loading EfficientNet-B4 + DenseNet-169 models");
-                        sharedClassifier.initialize();
+                        classifier.initialize();
 
                         splash.setStatus("Models ready — launching studio");
-                        return null;
+                        return classifier;
                     }
                 };
 
                 initTask.setOnSucceeded(e -> Platform.runLater(() -> {
+                    SkinClassifier classifier = initTask.getValue();
+                    classifierHolder[0] = classifier;
+
                     System.out.println("MainApp: shared classifier ready.");
-                    classifierFuture.complete(sharedClassifier);  // unblocks all subscribers
-                    notifyControllersReady(loader);
+                    ctx.completeClassifier(classifier);  // notifies all subscribers
+
+                    System.out.println("MainApp: shared classifier initialized " +
+                            "and ready for all tabs.");
 
                     javafx.animation.PauseTransition delay =
                             new javafx.animation.PauseTransition(javafx.util.Duration.millis(400));
@@ -162,7 +149,8 @@ public class MainApp extends Application {
                         if (!SettingsManager.isDarkMode()) {
                             javafx.animation.PauseTransition reapply =
                                     new javafx.animation.PauseTransition(javafx.util.Duration.millis(150));
-                            reapply.setOnFinished(re -> MainController.applyTheme(scene, SettingsManager.isDarkMode()));
+                            reapply.setOnFinished(re ->
+                                    MainController.applyTheme(scene, SettingsManager.isDarkMode()));
                             reapply.play();
                         }
                     });
@@ -171,10 +159,9 @@ public class MainApp extends Application {
 
                 initTask.setOnFailed(e -> Platform.runLater(() -> {
                     Throwable cause = initTask.getException();
-                    classifierFuture.completeExceptionally(  // unblocks subscribers with error
-                            cause != null ? cause : new RuntimeException("Model init failed"));
+                    ctx.failClassifier(cause);  // notifies all subscribers with error
 
-                    splash.setStatus("\u26A0 Failed to load models — see console for details.");
+                    splash.setStatus("⚠ Failed to load models — see console for details.");
                     System.err.println("MainApp: classifier failed to load — "
                             + (cause != null ? cause.getMessage() : "unknown error"));
 
@@ -197,17 +184,6 @@ public class MainApp extends Application {
         });
 
         System.out.println("VisoLearn AI Studio started successfully.");
-    }
-
-    /**
-     * Notifies all controllers that the shared classifier is ready.
-     * Called after the shared classifier finishes initializing.
-     *
-     * @param loader the FXMLLoader that loaded main.fxml
-     */
-    private void notifyControllersReady(FXMLLoader loader) {
-        System.out.println("MainApp: shared classifier initialized " +
-                "and ready for all tabs.");
     }
 
     /**

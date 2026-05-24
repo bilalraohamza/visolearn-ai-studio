@@ -5,6 +5,9 @@ import com.visolearn.data.PatientDAO;
 import com.visolearn.data.PredictionDAO;
 import com.visolearn.data.model.Patient;
 import com.visolearn.data.model.Prediction;
+import com.visolearn.service.ClassificationService;
+import com.visolearn.service.PatientService;
+import com.visolearn.utils.UITokens;
 import com.visolearn.utils.AnimationUtil;
 import com.visolearn.utils.ToastUtil;
 import javafx.animation.PauseTransition;
@@ -62,8 +65,8 @@ public class HistoryController implements Initializable {
     @FXML private Label    totalInferenceLabel;
     @FXML private Label    patientNotesLabel;
 
-    private final PatientDAO    patientDAO    = new PatientDAO();
-    private final PredictionDAO predictionDAO = new PredictionDAO();
+    private final PatientService        patientService        = new PatientService(new PatientDAO());
+    private final ClassificationService classificationService = new ClassificationService(new PredictionDAO());
 
     private Patient selectedPatient;
     private PauseTransition searchDebouncer;
@@ -90,7 +93,7 @@ public class HistoryController implements Initializable {
                     setText(null);
                 } else {
                     boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
-                    String mutedColor = isDark ? "#94A3B8" : "#475569";
+                    String mutedColor = UITokens.textMuted(isDark);
 
                     VBox rootBox = new VBox(4);
 
@@ -98,9 +101,9 @@ public class HistoryController implements Initializable {
                     HBox topRow = new HBox(8);
                     topRow.setAlignment(Pos.CENTER_LEFT);
                     Text icon = new Text("\u25CF");
-                    icon.setStyle("-fx-fill: #10B981; -fx-font-size: 10px;");
+                    icon.setStyle("-fx-fill: " + UITokens.EMERALD + "; -fx-font-size: 10px;");
                     Label nameLabel = new Label(patient.name);
-                    nameLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #10B981;");
+                    nameLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: " + UITokens.EMERALD + ";");
                     topRow.getChildren().addAll(icon, nameLabel);
 
                     // Row 2: DOB + Gender + Skin Type
@@ -149,9 +152,8 @@ public class HistoryController implements Initializable {
         AnimationUtil.applyButtonHover(deletePatientButton);
     }
 
-    @SuppressWarnings("deprecation")
     private void setupTableColumns() {
-        predictionsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        predictionsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         predictedClassColumn.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue().predictedClass));
         predictedClassColumn.setCellFactory(col -> new TableCell<>() {
@@ -180,8 +182,9 @@ public class HistoryController implements Initializable {
                     setStyle(null);
                 } else {
                     setText(String.format("%.2f%%", confidence));
-                    setStyle(confidence >= 90 ? "-fx-text-fill: #10B981; -fx-font-size: 14px; -fx-font-weight: bold;"
-                            : "-fx-text-fill: #F59E0B; -fx-font-size: 14px; -fx-font-weight: bold;");
+                    setStyle(confidence >= 90
+                        ? "-fx-text-fill: " + UITokens.EMERALD + "; -fx-font-size: 14px; -fx-font-weight: bold;"
+                        : "-fx-text-fill: " + UITokens.AMBER   + "; -fx-font-size: 14px; -fx-font-weight: bold;");
                 }
             }
         });
@@ -262,7 +265,8 @@ public class HistoryController implements Initializable {
                 Task<Void> saveTask = new Task<>() {
                     @Override
                     protected Void call() throws Exception {
-                        predictionDAO.updateNotes(pred.id, newNotes.isEmpty() ? null : newNotes);
+                        classificationService.updateNotes(pred.id,
+                                newNotes.isEmpty() ? null : newNotes);
                         return null;
                     }
                 };
@@ -297,10 +301,10 @@ public class HistoryController implements Initializable {
                     setStyle("");
                     setGraphic(null);
                 } else {
-                    String color  = switch (risk) {
-                        case "URGENT"   -> "#EF4444";
-                        case "MODERATE" -> "#F59E0B";
-                        default         -> "#10B981";
+                    String color = switch (risk) {
+                        case "URGENT"   -> UITokens.RED;
+                        case "MODERATE" -> UITokens.AMBER;
+                        default         -> UITokens.EMERALD;
                     };
                     String label  = switch (risk) {
                         case "URGENT"   -> "⚠ Urgent";
@@ -326,9 +330,9 @@ public class HistoryController implements Initializable {
         actionsColumn.setCellValueFactory(data ->
                 new javafx.beans.property.SimpleObjectProperty<>(data.getValue()));
         actionsColumn.setCellFactory(col -> new TableCell<>() {
-            private final Button viewBtn   = makeActionBtn("👁",  "#00B4D8");
-            private final Button deleteBtn = makeActionBtn("🗑",  "#EF4444");
-            private final Button exportBtn = makeActionBtn("⤓",  "#10B981");
+            private final Button viewBtn   = makeActionBtn("\uD83D\uDC41",  UITokens.CYAN);
+            private final Button deleteBtn = makeActionBtn("\uD83D\uDDD1",  UITokens.RED);
+            private final Button exportBtn = makeActionBtn("\u2913",         UITokens.EMERALD);
             private final HBox   box       = new HBox(6, viewBtn, deleteBtn, exportBtn);
 
             {
@@ -426,11 +430,12 @@ public class HistoryController implements Initializable {
         VBox root = new VBox(12);
         root.setAlignment(Pos.CENTER);
         root.setPadding(new Insets(16));
-        root.setStyle("-fx-background-color: #1A1A24;");
+        boolean isDark = com.visolearn.utils.SettingsManager.isDarkMode();
+        root.setStyle("-fx-background-color: " + UITokens.bgBase(isDark) + ";");
 
-        Label title = new Label(p.predictedClass + "  ·  " + String.format("%.2f%%", p.confidence)
-                + "  ·  " + (p.timestamp != null && p.timestamp.length() >= 10 ? p.timestamp.substring(0, 10) : p.timestamp));
-        title.setStyle("-fx-text-fill: #F8F9FA; -fx-font-size: 14px; -fx-font-weight: bold;");
+        Label title = new Label(p.predictedClass + "  \u00B7  " + String.format("%.2f%%", p.confidence)
+                + "  \u00B7  " + (p.timestamp != null && p.timestamp.length() >= 10 ? p.timestamp.substring(0, 10) : p.timestamp));
+        title.setStyle("-fx-text-fill: " + UITokens.textPrimary(isDark) + "; -fx-font-size: 14px; -fx-font-weight: bold;");
 
         root.getChildren().addAll(title, iv);
 
@@ -456,7 +461,7 @@ public class HistoryController implements Initializable {
             if (response == ButtonType.OK) {
                 Task<Void> task = new Task<>() {
                     @Override protected Void call() throws Exception {
-                        predictionDAO.deleteById(p.id);
+                        classificationService.deletePrediction(p.id);
                         return null;
                     }
                 };
@@ -565,7 +570,7 @@ public class HistoryController implements Initializable {
                 Task<Void> deleteTask = new Task<>() {
                     @Override
                     protected Void call() throws Exception {
-                        patientDAO.deleteById(selectedPatient.id);
+                        patientService.deletePatient(selectedPatient.id);
                         return null;
                     }
                 };
@@ -589,7 +594,7 @@ public class HistoryController implements Initializable {
 
     private void loadAllPatients() {
         Task<List<Patient>> task = new Task<>() {
-            @Override protected List<Patient> call() throws Exception { return patientDAO.searchByName(null); }
+            @Override protected List<Patient> call() throws Exception { return patientService.getAllPatients(); }
         };
         task.setOnSucceeded(e -> {
             List<Patient> patients = task.getValue();
@@ -601,7 +606,7 @@ public class HistoryController implements Initializable {
 
     private void searchPatients(String searchStr) {
         Task<List<Patient>> task = new Task<>() {
-            @Override protected List<Patient> call() throws Exception { return patientDAO.searchByName(searchStr); }
+            @Override protected List<Patient> call() throws Exception { return patientService.searchPatients(searchStr); }
         };
         task.setOnSucceeded(e -> {
             List<Patient> results = task.getValue();
@@ -613,7 +618,7 @@ public class HistoryController implements Initializable {
 
     private void loadPatientHistory(int patientId) {
         Task<List<Prediction>> task = new Task<>() {
-            @Override protected List<Prediction> call() throws Exception { return predictionDAO.getPredictionsByPatientId(patientId); }
+            @Override protected List<Prediction> call() throws Exception { return classificationService.getPredictionsForPatient(patientId); }
         };
 
         task.setOnSucceeded(e -> {
@@ -747,10 +752,10 @@ public class HistoryController implements Initializable {
         }
 
         final String finalSkinType = skinType;
-        Task<Integer> task = new Task<>() {
+        Task<Patient> task = new Task<>() {
             @Override
-            protected Integer call() throws Exception {
-                return new PatientDAO().insert(
+            protected Patient call() throws Exception {
+                return patientService.registerPatient(
                         name,
                         dob.isEmpty() ? null : dob,
                         gender,

@@ -94,6 +94,13 @@
     -fx-background-color: #0F9F75;
     -fx-border-color: #0F9F75;
 }
+/* Checkbox label text — explicit colour prevents Modena bleed-through */
+.check-box .label {
+    -fx-text-fill: #475569;
+}
+.check-box:hover .label {
+    -fx-text-fill: #0F172A;
+}
 
 .table-view {
     -fx-background-color: transparent;
@@ -649,6 +656,16 @@
     -fx-background-color: transparent;
     -fx-border-color: #CBD5E1;
     -fx-border-radius: 4;
+}
+/* TextArea inner scroll pane — must be targeted separately */
+.notes-area .content {
+    -fx-background-color: #FFFFFF;
+}
+.notes-area:focused .content {
+    -fx-background-color: #FFFFFF;
+}
+.notes-area:focused {
+    -fx-border-color: #0F9F75;
 }
 .patient-combo {
     -fx-background-color: #FFFFFF;

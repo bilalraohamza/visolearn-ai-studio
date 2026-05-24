@@ -68,6 +68,24 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class BatchController implements Initializable {
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Application context — injected via FXMLLoader.setControllerFactory()
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private final AppContext ctx;
+
+    /**
+     * Constructor called by {@link MainApp}'s controller factory.
+     * The {@link AppContext} is the only application-level dependency;
+     * no static accessors are used.
+     *
+     * @param ctx the application context carrying the classifier future
+     */
+    public BatchController(AppContext ctx) {
+        if (ctx == null) throw new IllegalArgumentException("AppContext must not be null");
+        this.ctx = ctx;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // FXML UI Elements
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -325,7 +343,7 @@ public class BatchController implements Initializable {
         // Subscribe to the classifier future instead of polling in a loop.
         // whenComplete() fires the instant initialization succeeds or fails —
         // no 15-second hard timeout, no NullPointerException on slow machines.
-        MainApp.getClassifierFuture().whenComplete((readyClassifier, ex) ->
+        ctx.getClassifierFuture().whenComplete((readyClassifier, ex) ->
             Platform.runLater(() -> {
                 if (ex != null) {
                     // Initialization failed — show a clear error in the progress label

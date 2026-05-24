@@ -167,6 +167,15 @@
     -fx-border-color: #10B981;
 }
 
+/* Checkbox label text — must be set explicitly; Modena defaults to black */
+.check-box .label {
+    -fx-text-fill: #9CA3AF;
+}
+
+.check-box:hover .label {
+    -fx-text-fill: #F8F9FA;
+}
+
 /* ===== TableView ===== */
 .table-view {
     -fx-background-color: transparent;
@@ -868,6 +877,17 @@
     -fx-background-color: transparent;
     -fx-border-color: #374151;
     -fx-border-radius: 4;
+}
+/* TextArea inner scroll pane — must be targeted separately;
+   -fx-background-color: transparent on the outer node has no effect on it */
+.notes-area .content {
+    -fx-background-color: #1E1E2A;
+}
+.notes-area:focused .content {
+    -fx-background-color: #1E1E2A;
+}
+.notes-area:focused {
+    -fx-border-color: #10B981;
 }
 .patient-combo {
     -fx-background-color: #1E1E2A;

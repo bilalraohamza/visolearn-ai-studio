@@ -19,20 +19,25 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import com.visolearn.data.model.Patient;
+import com.visolearn.service.ClassificationService;
+import com.visolearn.service.PatientService;
 import com.visolearn.data.PatientDAO;
 import com.visolearn.data.PredictionDAO;
-import com.visolearn.data.model.Patient;
-import com.visolearn.data.model.Prediction;
 import com.visolearn.utils.AnimationUtil;
 import com.visolearn.utils.ImageValidator;
 import com.visolearn.utils.ImageValidator.ValidationResult;
 import com.visolearn.utils.PdfReportExporter;
 import com.visolearn.utils.ReportExportUtil;
-import com.visolearn.utils.RiskAssessor;
 import com.visolearn.utils.RiskLevel;
 import com.visolearn.utils.SettingsManager;
 import com.visolearn.utils.ToastUtil;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
 import javafx.animation.PauseTransition;
+import javafx.animation.ScaleTransition;
+import javafx.animation.Timeline;
 import javafx.util.Duration;
 
 import java.awt.image.BufferedImage;
@@ -63,6 +68,24 @@ import java.util.ResourceBundle;
  * @version 1.2
  */
 public class ClassifyController implements Initializable {
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Application context — injected via FXMLLoader.setControllerFactory()
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private final AppContext ctx;
+
+    /**
+     * Constructor called by {@link MainApp}'s controller factory.
+     * The {@link AppContext} is the only application-level dependency;
+     * no static accessors are used.
+     *
+     * @param ctx the application context carrying the classifier future
+     */
+    public ClassifyController(AppContext ctx) {
+        if (ctx == null) throw new IllegalArgumentException("AppContext must not be null");
+        this.ctx = ctx;
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // FXML UI Elements
@@ -114,13 +137,27 @@ public class ClassifyController implements Initializable {
     /** Latest prediction result for occlusion map generation. */
     private SkinClassifier.PredictionResult lastResult;
 
-    private final PatientDAO    patientDAO    = new PatientDAO();
-    private final PredictionDAO predictionDAO = new PredictionDAO();
+    private final PatientService        patientService        = new PatientService(new PatientDAO());
+    private final ClassificationService classificationService = new ClassificationService(new PredictionDAO());
 
     private File   currentImageFile;
     private String currentPrediction;
     private double currentConfidence;
     private int    currentInferenceTime;
+
+    /**
+     * Background-color pulse Timeline shown when risk level is URGENT.
+     * Fades the banner between #FEF2F2 and #FECACA every 1.2 s.
+     * Null when not active.
+     */
+    private Timeline urgentBgPulse;
+
+    /**
+     * Scale pulse on the ⚠ riskLabel shown when risk level is URGENT.
+     * Breathes the label between 1.0× and 1.06× scale every 0.6 s (auto-reverse).
+     * Null when not active.
+     */
+    private ScaleTransition urgentIconPulse;
     // ─────────────────────────────────────────────────────────────────────────
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -213,7 +250,7 @@ public class ClassifyController implements Initializable {
         // Subscribe to the classifier future instead of polling in a loop.
         // whenComplete() fires the instant initialization succeeds or fails —
         // no 15-second hard timeout, no NullPointerException on slow machines.
-        MainApp.getClassifierFuture().whenComplete((readyClassifier, ex) ->
+        ctx.getClassifierFuture().whenComplete((readyClassifier, ex) ->
             Platform.runLater(() -> {
                 if (ex != null) {
                     // Initialization failed — show a clear error message
@@ -245,7 +282,7 @@ public class ClassifyController implements Initializable {
         Task<List<Patient>> loadTask = new Task<>() {
             @Override
             protected List<Patient> call() throws Exception {
-                return patientDAO.searchByName(null); // Load all patients
+                return patientService.getAllPatients();
             }
         };
 
@@ -289,17 +326,14 @@ public class ClassifyController implements Initializable {
         Task<Integer> saveTask = new Task<>() {
             @Override
             protected Integer call() throws Exception {
-                Prediction newRecord = new Prediction(
-                        0,
+                return classificationService.savePrediction(
                         selectedPatient.id,
-                        "",
                         currentPrediction,
                         currentConfidence,
                         currentInferenceTime,
-                        "",
-                        notesSnapshot  // notes — captured from the Clinician Notes text area
+                        currentImageFile,
+                        notesSnapshot
                 );
-                return predictionDAO.insertPrediction(newRecord, currentImageFile);
             }
         };
 
@@ -411,7 +445,10 @@ public class ClassifyController implements Initializable {
         confidenceLabel.setOpacity(0);
         confidenceStatLabel.setOpacity(0);
         inferenceTimeLabel.setOpacity(0);
-        
+
+        // Stop any running urgent animations before hiding the banner
+        stopUrgentAnimations();
+
         if (riskBanner != null) {
             riskBanner.setVisible(false);
             riskBanner.setManaged(false);
@@ -605,8 +642,6 @@ public class ClassifyController implements Initializable {
         confidenceStatLabel.setText(String.format("%.1f%%", result.confidence));
         inferenceTimeLabel.setText(String.format("Inference time: %d ms", result.inferenceTimeMs));
 
-        // Update description (we removed descriptionLabel, so we skip this)
-
         AnimationUtil.fadeIn(confidenceLabel,    700);
         AnimationUtil.fadeIn(confidenceStatLabel, 800);
         AnimationUtil.fadeIn(inferenceTimeLabel,  900);
@@ -620,30 +655,153 @@ public class ClassifyController implements Initializable {
             pcts[i].setText(String.format("%.1f%%", prob * 100));
         }
 
-        RiskLevel riskLevel = RiskAssessor.assess(result);
-        if (riskBanner != null && riskLabel != null) {
-            switch (riskLevel) {
-                case URGENT:
-                    riskBanner.setStyle("-fx-background-color: #EF4444; -fx-padding: 8 16; -fx-background-radius: 6;");
-                    riskLabel.setText("URGENT: Consult a dermatologist immediately");
-                    break;
-                case MODERATE:
-                    riskBanner.setStyle("-fx-background-color: #F59E0B; -fx-padding: 8 16; -fx-background-radius: 6;");
-                    riskLabel.setText("MODERATE RISK: Schedule a check-up");
-                    break;
-                case LOW:
-                    riskBanner.setStyle("-fx-background-color: #10B981; -fx-padding: 8 16; -fx-background-radius: 6;");
-                    riskLabel.setText("LOW RISK");
-                    break;
-            }
-            riskBanner.setVisible(true);
-            riskBanner.setManaged(true);
-            AnimationUtil.fadeIn(riskBanner, 600);
-        }
+        RiskLevel riskLevel = classificationService.assessRisk(result);
+        showRiskBanner(riskLevel);
 
         if (exportReportButton != null) exportReportButton.setDisable(false);
         saveToHistoryButton.setDisable(false);
         saveToHistoryButton.setText("Save to Patient History");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Risk Banner
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Applies the appropriate visual treatment to {@code riskBanner} for each
+     * risk level, starts or stops the URGENT animations, and makes the
+     * banner visible.
+     *
+     * <p>Call {@link #stopUrgentAnimations()} before hiding the banner to avoid
+     * stale animations running in the background.</p>
+     */
+    private void showRiskBanner(RiskLevel riskLevel) {
+        if (riskBanner == null || riskLabel == null) return;
+
+        // Always stop any previous animations before applying new styles
+        stopUrgentAnimations();
+
+        switch (riskLevel) {
+
+            case URGENT -> {
+                // ── Static base style — fixed 2px border, never animated ──────
+                final String URGENT_BASE =
+                        "-fx-background-color: #FEF2F2;"
+                        + "-fx-background-radius: 8;"
+                        + "-fx-border-color: #EF4444;"
+                        + "-fx-border-width: 2;"
+                        + "-fx-border-radius: 8;"
+                        + "-fx-padding: 12 20;";
+                final String URGENT_PEAK =
+                        "-fx-background-color: #FECACA;"
+                        + "-fx-background-radius: 8;"
+                        + "-fx-border-color: #EF4444;"
+                        + "-fx-border-width: 2;"
+                        + "-fx-border-radius: 8;"
+                        + "-fx-padding: 12 20;";
+
+                riskLabel.setText("\u26a0  URGENT \u2014 Consult a dermatologist immediately");
+                riskLabel.setStyle(
+                        "-fx-text-fill: #991B1B;"
+                        + "-fx-font-size: 14px;"
+                        + "-fx-font-weight: bold;"
+                );
+                riskBanner.setMaxWidth(Double.MAX_VALUE);
+                riskBanner.setOpacity(1.0);
+                riskBanner.setStyle(URGENT_BASE);
+
+                // ── Animation 1: background-color pulse (1.2 s loop) ─────────
+                // KeyFrame events call setStyle() because JavaFX CSS properties
+                // like -fx-background-color cannot be interpolated via KeyValue.
+                urgentBgPulse = new Timeline(
+                        new KeyFrame(Duration.ZERO,           e -> riskBanner.setStyle(URGENT_BASE)),
+                        new KeyFrame(Duration.millis(600),    e -> riskBanner.setStyle(URGENT_PEAK)),
+                        new KeyFrame(Duration.millis(1200),   e -> riskBanner.setStyle(URGENT_BASE))
+                );
+                urgentBgPulse.setCycleCount(Timeline.INDEFINITE);
+                urgentBgPulse.play();
+
+                // ── Animation 2: ⚠ icon scale pulse (0.6 s auto-reverse) ─────
+                urgentIconPulse = new ScaleTransition(Duration.millis(600), riskLabel);
+                urgentIconPulse.setFromX(1.0);
+                urgentIconPulse.setFromY(1.0);
+                urgentIconPulse.setToX(1.06);
+                urgentIconPulse.setToY(1.06);
+                urgentIconPulse.setAutoReverse(true);
+                urgentIconPulse.setCycleCount(Animation.INDEFINITE);
+                urgentIconPulse.play();
+            }
+
+            case MODERATE -> {
+                // ── Static amber banner — no animation ───────────────────────
+                riskLabel.setText("\u26a1  MODERATE RISK \u2014 Schedule a dermatology check-up");
+                riskLabel.setStyle(
+                        "-fx-text-fill: #92400E;"
+                        + "-fx-font-size: 13px;"
+                        + "-fx-font-weight: bold;"
+                );
+                riskBanner.setMaxWidth(Double.MAX_VALUE);
+                riskBanner.setOpacity(1.0);
+                // Reset scale in case a previous URGENT result left a mid-pulse state
+                riskLabel.setScaleX(1.0);
+                riskLabel.setScaleY(1.0);
+                riskBanner.setStyle(
+                        "-fx-background-color: #FFFBEB;"
+                        + "-fx-background-radius: 8;"
+                        + "-fx-border-radius: 8;"
+                        + "-fx-border-color: #F59E0B;"
+                        + "-fx-border-width: 1.5;"
+                        + "-fx-padding: 10 16;"
+                );
+            }
+
+            case LOW -> {
+                // ── Quiet pill badge — no animation ──────────────────────────
+                riskLabel.setText("\u2713  Low risk");
+                riskLabel.setStyle(
+                        "-fx-text-fill: #166534;"
+                        + "-fx-font-size: 12px;"
+                        + "-fx-font-weight: normal;"
+                );
+                riskBanner.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+                riskBanner.setOpacity(1.0);
+                // Reset scale in case a previous URGENT result left a mid-pulse state
+                riskLabel.setScaleX(1.0);
+                riskLabel.setScaleY(1.0);
+                riskBanner.setStyle(
+                        "-fx-background-color: #F0FDF4;"
+                        + "-fx-background-radius: 20;"
+                        + "-fx-border-width: 0;"
+                        + "-fx-padding: 5 14;"
+                );
+            }
+        }
+
+        riskBanner.setVisible(true);
+        riskBanner.setManaged(true);
+        AnimationUtil.fadeIn(riskBanner, 400);
+    }
+
+    /**
+     * Stops and discards both URGENT animations ({@link #urgentBgPulse} and
+     * {@link #urgentIconPulse}). Also resets banner opacity and label scale to
+     * 1.0 so no visual artefacts bleed into subsequent results.
+     * Safe to call when either or both animations are null.
+     */
+    private void stopUrgentAnimations() {
+        if (urgentBgPulse != null) {
+            urgentBgPulse.stop();
+            urgentBgPulse = null;
+        }
+        if (urgentIconPulse != null) {
+            urgentIconPulse.stop();
+            urgentIconPulse = null;
+        }
+        if (riskBanner  != null) riskBanner.setOpacity(1.0);
+        if (riskLabel   != null) {
+            riskLabel.setScaleX(1.0);
+            riskLabel.setScaleY(1.0);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

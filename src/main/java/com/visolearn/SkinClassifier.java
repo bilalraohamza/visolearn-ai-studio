@@ -88,6 +88,9 @@ public class SkinClassifier implements AutoCloseable {
     private final ImagePreprocessor    preprocessor;
     private List<String>               classLabels;
 
+    ZooModel<NDList, NDList> getEffNetModel() { return effNetModel; }
+    ZooModel<NDList, NDList> getDenseNetModel() { return denseNetModel; }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Prediction Result Record
     // ─────────────────────────────────────────────────────────────────────────
@@ -304,6 +307,14 @@ public class SkinClassifier implements AutoCloseable {
         try (NDManager predictionManager = NDManager.newBaseManager()) {
             NDArray inputTensor = preprocessor.preprocessFromFile(predictionManager, imagePath);
             return executeEnsemble(inputTensor, startTime, effNetPredictor, denseNetPredictor);
+        }
+    }
+
+    public PredictionResult predictWithPredictors(Path imagePath, Predictor<NDList, NDList> effPredictor, Predictor<NDList, NDList> densePredictor) throws Exception {
+        long startTime = System.currentTimeMillis();
+        try (NDManager predictionManager = NDManager.newBaseManager()) {
+            NDArray inputTensor = preprocessor.preprocessFromFile(predictionManager, imagePath);
+            return executeEnsemble(inputTensor, startTime, effPredictor, densePredictor);
         }
     }
 

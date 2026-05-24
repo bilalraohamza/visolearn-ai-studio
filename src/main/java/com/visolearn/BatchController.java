@@ -470,10 +470,20 @@ public class BatchController implements Initializable {
         // ── Atomic counter for progress bar updates ──────────────────────────
         AtomicInteger completedCount = new AtomicInteger(0);
 
+        // ── Initialize per-thread predictors ─────────────────────────────────
+        @SuppressWarnings("unchecked")
+        ai.djl.inference.Predictor<ai.djl.ndarray.NDList, ai.djl.ndarray.NDList>[] effPredictors = new ai.djl.inference.Predictor[threadCount];
+        @SuppressWarnings("unchecked")
+        ai.djl.inference.Predictor<ai.djl.ndarray.NDList, ai.djl.ndarray.NDList>[] densePredictors = new ai.djl.inference.Predictor[threadCount];
+
+        for (int i = 0; i < threadCount; i++) {
+            effPredictors[i] = classifier.getEffNetModel().newPredictor();
+            densePredictors[i] = classifier.getDenseNetModel().newPredictor();
+        }
+
         // ── Create fixed-thread pool ─────────────────────────────────────────
         // threadIndex gives each worker a unique name (e.g. "batch-worker-1",
-        // "batch-worker-2") regardless of pool size. Using threadCount here
-        // would give every thread the same name, making stack traces useless.
+        // "batch-worker-2") regardless of pool size.
         AtomicInteger threadIndex = new AtomicInteger(0);
         ExecutorService pool = Executors.newFixedThreadPool(threadCount,
                 r -> {
@@ -482,69 +492,71 @@ public class BatchController implements Initializable {
                     return t;
                 });
 
-        // ── Submit one Callable<Void> per image ──────────────────────────────
+        // ── Submit tasks per thread ──────────────────────────────────────────
         List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-        for (int i = 0; i < imageFiles.length; i++) {
-            final File   imageFile   = imageFiles[i];
-            final Path   imagePath   = imageFile.toPath();
-            final BatchResult row    = placeholders.get(i);
-
+        for (int t = 0; t < threadCount; t++) {
+            final int tIndex = t;
             CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                ai.djl.inference.Predictor<ai.djl.ndarray.NDList, ai.djl.ndarray.NDList> effP = effPredictors[tIndex];
+                ai.djl.inference.Predictor<ai.djl.ndarray.NDList, ai.djl.ndarray.NDList> denseP = densePredictors[tIndex];
 
-                // ── Pre-flight validation ────────────────────────────────────
-                ValidationResult vr = ImageValidator.validate(imageFile);
-                if (!vr.valid()) {
-                    System.err.println("Batch validation failed for "
-                            + imageFile.getName() + ": " + vr.title());
-                    Platform.runLater(() -> {
-                        row.fail();
-                        resultsTable.refresh();
-                        int done = completedCount.incrementAndGet();
-                        batchProgressBar.setProgress((double) done / total);
-                        progressCountLabel.setText(done + " / " + total);
-                        progressLabel.setText("Skipped (invalid): " + imageFile.getName());
-                    });
-                    return;
+                try {
+                    for (int i = tIndex; i < imageFiles.length; i += threadCount) {
+                        final File   imageFile   = imageFiles[i];
+                        final Path   imagePath   = imageFile.toPath();
+                        final BatchResult row    = placeholders.get(i);
+
+                        // ── Pre-flight validation ────────────────────────────────────
+                        ValidationResult vr = ImageValidator.validate(imageFile);
+                        if (!vr.valid()) {
+                            System.err.println("Batch validation failed for "
+                                    + imageFile.getName() + ": " + vr.title());
+                            Platform.runLater(() -> {
+                                row.fail();
+                                resultsTable.refresh();
+                                int done = completedCount.incrementAndGet();
+                                batchProgressBar.setProgress((double) done / total);
+                                progressCountLabel.setText(done + " / " + total);
+                                progressLabel.setText("Skipped (invalid): " + imageFile.getName());
+                            });
+                            continue;
+                        }
+
+                        // ── Per-worker PredictorPair ─────────────────────────────────
+                        try {
+                            SkinClassifier.PredictionResult result = classifier.predictWithPredictors(imagePath, effP, denseP);
+
+                            String fullName = SkinClassifier.CLASS_FULL_NAMES[result.classIndex];
+                            double rawConf  = result.confidence;
+                            String timeStr  = result.inferenceTimeMs + " ms";
+
+                            Platform.runLater(() -> {
+                                row.complete(fullName, rawConf, timeStr);
+                                resultsTable.refresh();
+                                int done  = completedCount.incrementAndGet();
+                                batchProgressBar.setProgress((double) done / total);
+                                progressCountLabel.setText(done + " / " + total);
+                                progressLabel.setText("Processed: " + imageFile.getName());
+                            });
+
+                        } catch (Exception ex) {
+                            System.err.println("Batch error on " + imageFile.getName()
+                                    + ": " + ex.getMessage());
+                            Platform.runLater(() -> {
+                                row.fail();
+                                resultsTable.refresh();
+                                int done = completedCount.incrementAndGet();
+                                batchProgressBar.setProgress((double) done / total);
+                                progressCountLabel.setText(done + " / " + total);
+                            });
+                        }
+                    }
+                } finally {
+                    effP.close();
+                    denseP.close();
                 }
-
-                // ── Per-worker PredictorPair ─────────────────────────────────
-                // Each worker creates its own pair of Predictor instances from
-                // the shared (thread-safe) ZooModel objects. No synchronization
-                // is needed: DJL Predictor is per-thread; ZooModel is shared.
-                // The try-with-resources guarantees the pair is always closed,
-                // releasing native ONNX Runtime memory when the worker finishes.
-                try (SkinClassifier.PredictorPair pair = classifier.newPredictorPair()) {
-
-                    SkinClassifier.PredictionResult result = pair.predict(imagePath);
-
-                    String fullName = SkinClassifier.CLASS_FULL_NAMES[result.classIndex];
-                    double rawConf  = result.confidence;
-                    String timeStr  = result.inferenceTimeMs + " ms";
-
-                    Platform.runLater(() -> {
-                        row.complete(fullName, rawConf, timeStr);
-                        resultsTable.refresh();
-                        int done  = completedCount.incrementAndGet();
-                        batchProgressBar.setProgress((double) done / total);
-                        progressCountLabel.setText(done + " / " + total);
-                        progressLabel.setText("Processed: " + imageFile.getName());
-                    });
-
-                } catch (Exception ex) {
-                    System.err.println("Batch error on " + imageFile.getName()
-                            + ": " + ex.getMessage());
-                    Platform.runLater(() -> {
-                        row.fail();
-                        resultsTable.refresh();
-                        int done = completedCount.incrementAndGet();
-                        batchProgressBar.setProgress((double) done / total);
-                        progressCountLabel.setText(done + " / " + total);
-                    });
-                }
-
             }, pool);
-
 
             futures.add(future);
         }
@@ -563,9 +575,11 @@ public class BatchController implements Initializable {
                         showSummary(imageFiles.length, elapsed);
                         runBatchButton.setDisable(false);
                         exportCsvButton.setDisable(false);
-                        progressLabel.setText("Analysis complete. ("
-                                + threadCount + " thread"
-                                + (threadCount > 1 ? "s" : "") + ")");
+                        if (threadCount > 1) {
+                            progressLabel.setText("Analysis complete — " + threadCount + " parallel threads");
+                        } else {
+                            progressLabel.setText("Analysis complete. (1 thread)");
+                        }
                         System.out.printf("BatchController: %d images in %d ms "
                                 + "using %d thread(s)%n",
                                 imageFiles.length, elapsed, threadCount);

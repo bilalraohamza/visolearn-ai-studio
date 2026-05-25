@@ -37,8 +37,13 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import javafx.application.Platform;
+import javafx.scene.chart.LineChart;
 import javafx.scene.chart.PieChart;
+import javafx.scene.chart.XYChart;
 
 public class HistoryController implements Initializable {
 
@@ -71,9 +76,13 @@ public class HistoryController implements Initializable {
     @FXML private Label    avgConfidenceDescLabel;
     @FXML private Label    totalInferenceDescLabel;
     @FXML private Label    patientNotesLabel;
+    @FXML private LineChart<String, Number> longitudinalChart;
+    @FXML private Label longitudinalTitle;
+    @FXML private VBox longitudinalBox;
 
     private final PatientService        patientService        = new PatientService(new PatientDAO());
     private final ClassificationService classificationService = new ClassificationService(new PredictionDAO());
+    private final PredictionDAO         predictionDAO         = new PredictionDAO();
 
     private Patient selectedPatient;
     private PauseTransition searchDebouncer;
@@ -566,6 +575,7 @@ public class HistoryController implements Initializable {
                             patientNotesLabel.setText(
                                     (dn != null && !dn.isBlank()) ? dn : "No notes available.");
                         }
+                        buildLongitudinalChart(selectedPatient);
                     } else {
                         selectedPatient = null;
                         selectedPatientLabel.setText("-");
@@ -577,6 +587,10 @@ public class HistoryController implements Initializable {
                         totalInferenceLabel.setText("0 ms");
                         if (patientNotesLabel != null) {
                             patientNotesLabel.setText("No notes available.");
+                        }
+                        if (longitudinalBox != null) {
+                            longitudinalBox.setVisible(false);
+                            longitudinalBox.setManaged(false);
                         }
                     }
                 });
@@ -1004,6 +1018,88 @@ public class HistoryController implements Initializable {
             totalInferenceDescLabel.setStyle(isDark 
                 ? "-fx-text-fill: #9CA3AF; -fx-font-size: 12px;" 
                 : "-fx-text-fill: #64748B; -fx-font-size: 12px;");
+        }
+    }
+
+    private void buildLongitudinalChart(Patient patient) {
+        if (longitudinalChart == null || patient == null) return;
+
+        longitudinalChart.getData().clear();
+        longitudinalChart.setTitle("");
+        longitudinalTitle.setText(
+            "Confidence Over Time — " + patient.name);
+
+        List<Prediction> sessions =
+            predictionDAO.getByPatientOrderedByDate(patient.id);
+
+        if (sessions.size() < 2) {
+            longitudinalBox.setVisible(false);
+            longitudinalBox.setManaged(false);
+            return;
+        }
+
+        // Group sessions by predictedClass
+        // Each unique class gets its own Series on the chart
+        Map<String, XYChart.Series<String, Number>> seriesMap
+            = new LinkedHashMap<>();
+
+        for (Prediction p : sessions) {
+            seriesMap.computeIfAbsent(p.predictedClass, cls -> {
+                XYChart.Series<String, Number> s = new XYChart.Series<>();
+                s.setName(cls);
+                return s;
+            });
+
+            // X axis: format timestamp as "MMM dd" e.g. "Jan 14"
+            String label = formatDateLabel(p.timestamp);
+
+            seriesMap.get(p.predictedClass).getData().add(
+                new XYChart.Data<>(label, p.confidence)
+            );
+        }
+
+        longitudinalChart.getData().addAll(seriesMap.values());
+
+        // Color urgent classes (Melanoma, BCC) red on the chart
+        // by adding a style class after the chart renders
+        Platform.runLater(() -> colorUrgentSeries(longitudinalChart));
+
+        longitudinalBox.setVisible(true);
+        longitudinalBox.setManaged(true);
+    }
+
+    private String formatDateLabel(String timestamp) {
+        try {
+            // Predictions.timestamp format is "YYYY-MM-DD HH:MM:SS"
+            LocalDateTime dt = LocalDateTime.parse(
+                timestamp,
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+            );
+            return dt.format(DateTimeFormatter.ofPattern("MMM dd"));
+        } catch (Exception e) {
+            return timestamp.length() >= 10
+                ? timestamp.substring(5, 10)  // fallback: MM-DD
+                : timestamp;
+        }
+    }
+
+    private void colorUrgentSeries(
+            LineChart<String, Number> chart) {
+        Set<String> urgentClasses = Set.of(
+            "Melanoma", "Basal Cell Carcinoma");
+        for (XYChart.Series<String, Number> series : chart.getData()) {
+            if (urgentClasses.contains(series.getName())) {
+                // Apply red color to the line
+                series.getNode().setStyle(
+                    "-fx-stroke: #EF4444;");
+                // Apply red to each data point dot
+                for (XYChart.Data<String, Number> d : series.getData()) {
+                    if (d.getNode() != null) {
+                        d.getNode().setStyle(
+                            "-fx-background-color: #EF4444, white;");
+                    }
+                }
+            }
         }
     }
 }

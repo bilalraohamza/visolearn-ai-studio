@@ -198,4 +198,28 @@
 .text-area .scroll-pane { -fx-background-color: transparent; }
 .table-view .label { -fx-text-fill: #F8F9FA; }
 .titled-pane > .title > .text { -fx-fill: #F8F9FA; }
-.combo-box .list-cell { -fx-text-fill: #F8F9FA; }
+.combo-box .list-cell { -fx-text-fill: #F8F9FA; }
+
+/* ===== Longitudinal Line Chart ===== */
+.line-chart {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+.line-chart .chart-plot-background {
+    -fx-background-color: rgba(255,255,255,0.03);
+}
+.line-chart .chart-vertical-grid-lines {
+    -fx-stroke: rgba(255,255,255,0.06);
+}
+.line-chart .chart-horizontal-grid-lines {
+    -fx-stroke: rgba(255,255,255,0.06);
+}
+.line-chart .axis-label {
+    -fx-text-fill: #6B7280;
+}
+.line-chart .chart-legend {
+    -fx-background-color: transparent;
+}
+.line-chart .chart-legend-item-symbol {
+    -fx-background-radius: 4px;
+}

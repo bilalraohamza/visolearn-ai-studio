@@ -168,6 +168,42 @@ public class PredictionDAO {
     }
 
     /**
+     * Retrieves all prediction sessions for a given patient, ordered by
+     * oldest first (for longitudinal chart).
+     */
+    public List<Prediction> getByPatientOrderedByDate(int patientId) {
+        List<Prediction> results = new ArrayList<>();
+        String sql = """
+            SELECT id, patient_id, image_path, predicted_class,
+                   confidence, inference_time, timestamp, notes
+            FROM   Predictions
+            WHERE  patient_id = ?
+            ORDER BY timestamp ASC
+            """;
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, patientId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    results.add(new Prediction(
+                            rs.getInt("id"),
+                            rs.getInt("patient_id"),
+                            rs.getString("image_path"),
+                            rs.getString("predicted_class"),
+                            rs.getDouble("confidence"),
+                            rs.getInt("inference_time"),
+                            rs.getString("timestamp"),
+                            rs.getString("notes")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return results;
+    }
+
+    /**
      * Deletes a single prediction record by its primary key.
      * Does not delete the cached image file.
      *

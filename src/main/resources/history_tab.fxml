@@ -6,6 +6,9 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
 <?import javafx.scene.chart.PieChart?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.NumberAxis?>
 
 <SplitPane fx:id="historyRoot"
            dividerPositions="0.3"
@@ -72,7 +75,14 @@
     </VBox>
 
     <!-- Right: session detail -->
-    <VBox spacing="0" styleClass="bg-base">
+    <ScrollPane fitToWidth="true"
+                hbarPolicy="NEVER"
+                vbarPolicy="AS_NEEDED"
+                style="-fx-background-color: transparent;
+                       -fx-background: transparent;
+                       -fx-border-color: transparent;">
+
+        <VBox spacing="0" styleClass="bg-base">
 
         <HBox alignment="CENTER_LEFT" spacing="10" styleClass="sidebar-header">
             <Text text="&#128203;" fill="#F59E0B"
@@ -89,11 +99,12 @@
         </HBox>
 
         <TableView fx:id="predictionsTable"
+                   prefHeight="280" maxHeight="320"
                    style="-fx-background-color: transparent;
                           -fx-control-inner-background: #1A1A24;
                           -fx-border-color: transparent;"
                    editable="false">
-            <VBox.vgrow><Priority fx:constant="ALWAYS"/></VBox.vgrow>
+            <VBox.vgrow><Priority fx:constant="NEVER"/></VBox.vgrow>
             <columns>
                 <TableColumn fx:id="imageColumn"       text="Scan"
                              prefWidth="80" maxWidth="80" resizable="false"
@@ -172,6 +183,45 @@
             </VBox>
         </HBox>
 
+        <VBox fx:id="longitudinalBox"
+              visible="false" managed="false"
+              spacing="8"
+              style="-fx-padding: 16 0 0 0;">
+
+            <Label fx:id="longitudinalTitle"
+                   style="-fx-font-size: 14px;
+                          -fx-font-weight: bold;
+                          -fx-text-fill: #F8F9FA;"/>
+
+            <Label text="Confidence trend across scan sessions"
+                   style="-fx-font-size: 11px;
+                          -fx-text-fill: #6B7280;"/>
+
+            <LineChart fx:id="longitudinalChart"
+                       prefHeight="220"
+                       animated="false"
+                       legendVisible="true"
+                       style="-fx-background-color: transparent;">
+                <xAxis>
+                    <CategoryAxis label="Session Date"
+                                  style="-fx-tick-label-fill: #9CA3AF;
+                                         -fx-text-fill: #9CA3AF;"/>
+                </xAxis>
+                <yAxis>
+                    <NumberAxis label="Confidence (%)"
+                                lowerBound="0"
+                                upperBound="100"
+                                tickUnit="20"
+                                autoRanging="false"
+                                style="-fx-tick-label-fill: #9CA3AF;
+                                       -fx-text-fill: #9CA3AF;"/>
+                </yAxis>
+            </LineChart>
+
+        </VBox>
+
     </VBox>
+
+    </ScrollPane>
 
 </SplitPane>

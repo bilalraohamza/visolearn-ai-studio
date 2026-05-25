@@ -191,6 +191,12 @@ public final class DatabaseUtil {
                 }
             }
 
+            try {
+                stmt.execute(
+                    "ALTER TABLE Patients ADD COLUMN " +
+                    "follow_up_date TEXT");
+            } catch (SQLException ignored) {}
+
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS Predictions (
                     id              INTEGER PRIMARY KEY AUTOINCREMENT,

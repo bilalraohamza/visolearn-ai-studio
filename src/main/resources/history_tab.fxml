@@ -149,37 +149,75 @@
                           maxWidth="320" maxHeight="220"/>
             </VBox>
 
-            <VBox spacing="12" alignment="TOP_LEFT" styleClass="summary-panel">
+            <VBox spacing="6" alignment="TOP_LEFT" styleClass="summary-panel">
                 <Text text="Session Summary" fill="#F8F9FA"
-                      style="-fx-font-family: 'System'; -fx-font-size: 15px; -fx-font-weight: bold;"/>
+                      style="-fx-font-family: 'System'; -fx-font-size: 13px; -fx-font-weight: bold;"/>
                 <HBox spacing="8" alignment="BASELINE_LEFT">
                     <Label fx:id="totalSessionsDescLabel" text="Total sessions:"
-                           style="-fx-font-family: 'System'; -fx-font-size: 12px;"/>
+                           style="-fx-font-family: 'System'; -fx-font-size: 11px;"/>
                     <Label fx:id="totalSessionsLabel" text="0"
-                           styleClass="text-primary text-bold text-md"/>
+                           styleClass="text-primary"
+                           style="-fx-font-size: 15px; -fx-font-weight: bold;"/>
                 </HBox>
                 <HBox spacing="8" alignment="BASELINE_LEFT">
                     <Label fx:id="avgConfidenceDescLabel" text="Avg confidence:"
-                           style="-fx-font-family: 'System'; -fx-font-size: 12px;"/>
+                           style="-fx-font-family: 'System'; -fx-font-size: 11px;"/>
                     <Label fx:id="avgConfidenceLabel" text="0%"
-                           styleClass="text-primary text-bold text-md"/>
+                           styleClass="text-primary"
+                           style="-fx-font-size: 15px; -fx-font-weight: bold;"/>
                 </HBox>
                 <HBox spacing="8" alignment="BASELINE_LEFT">
                     <Label fx:id="totalInferenceDescLabel" text="Total inference time:"
-                           style="-fx-font-family: 'System'; -fx-font-size: 12px;"/>
+                           style="-fx-font-family: 'System'; -fx-font-size: 11px;"/>
                     <Label fx:id="totalInferenceLabel" text="0 ms"
-                           styleClass="text-primary text-bold text-md"/>
+                           styleClass="text-primary"
+                           style="-fx-font-size: 15px; -fx-font-weight: bold;"/>
                 </HBox>
 
                 <!-- Patient Doctor Notes (from registration) -->
                 <Region style="-fx-pref-height: 1; -fx-background-color: rgba(255,255,255,0.08);">
-                    <VBox.margin><Insets top="4" bottom="4"/></VBox.margin>
+                    <VBox.margin><Insets top="2" bottom="2"/></VBox.margin>
                 </Region>
                 <Text text="Patient Notes" fill="#F59E0B"
                       style="-fx-font-family: 'System'; -fx-font-size: 13px; -fx-font-weight: bold;"/>
                 <Label fx:id="patientNotesLabel" text="No notes available."
                        wrapText="true" styleClass="text-muted text-sm"
-                       style="-fx-max-width: 260;"/>
+                       style="-fx-max-width: 220; -fx-font-size: 11px;"/>
+
+                <Region style="-fx-pref-height: 1;
+                               -fx-background-color:
+                               rgba(255,255,255,0.08);">
+                    <VBox.margin>
+                        <Insets top="2" bottom="2"/>
+                    </VBox.margin>
+                </Region>
+
+                <VBox fx:id="followUpBox"
+                      spacing="4"
+                      visible="false" managed="false">
+
+                    <Label text="Follow-up Appointment"
+                           style="-fx-font-size: 11px;
+                                  -fx-font-weight: bold;
+                                  -fx-text-fill: #F59E0B;"/>
+
+                    <Label fx:id="followUpDateLabel"
+                           text="No follow-up scheduled"
+                           wrapText="true"
+                           style="-fx-font-size: 11px;
+                                  -fx-text-fill: #9CA3AF;"/>
+
+                    <Button fx:id="scheduleFollowUpButton"
+                            text="Schedule Follow-up"
+                            onAction="#handleScheduleFollowUp"
+                            style="-fx-background-color: #10B981;
+                                   -fx-text-fill: white;
+                                   -fx-font-size: 11px;
+                                   -fx-font-weight: bold;
+                                   -fx-background-radius: 6;
+                                   -fx-padding: 4 10;
+                                   -fx-cursor: hand;"/>
+                </VBox>
             </VBox>
         </HBox>
 

@@ -62,6 +62,8 @@ public class Patient {
      */
     public final String doctorNotes;
 
+    public final String followUpDate;
+
     /**
      * Constructs a new {@link Patient} record with all clinical fields.
      *
@@ -72,10 +74,12 @@ public class Patient {
      * @param phone       Contact phone number.
      * @param skinType    Fitzpatrick skin type (I–VI).
      * @param doctorNotes Free-text clinical notes.
+     * @param followUpDate Scheduled follow-up date.
      */
     public Patient(int id, String name, String dob,
                    String gender, String phone,
-                   String skinType, String doctorNotes) {
+                   String skinType, String doctorNotes,
+                   String followUpDate) {
         this.id          = id;
         this.name        = name;
         this.dob         = dob;
@@ -83,6 +87,16 @@ public class Patient {
         this.phone       = phone;
         this.skinType    = skinType;
         this.doctorNotes = doctorNotes;
+        this.followUpDate = followUpDate;
+    }
+
+    /**
+     * Overloaded constructor for backwards compatibility in tests.
+     */
+    public Patient(int id, String name, String dob,
+                   String gender, String phone,
+                   String skinType, String doctorNotes) {
+        this(id, name, dob, gender, phone, skinType, doctorNotes, null);
     }
 
     /**

@@ -25,6 +25,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.text.Text;
+import javafx.scene.control.TextInputDialog;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -80,9 +81,14 @@ public class HistoryController implements Initializable {
     @FXML private Label longitudinalTitle;
     @FXML private VBox longitudinalBox;
 
+    @FXML private VBox followUpBox;
+    @FXML private Label followUpDateLabel;
+    @FXML private Button scheduleFollowUpButton;
+
     private final PatientService        patientService        = new PatientService(new PatientDAO());
     private final ClassificationService classificationService = new ClassificationService(new PredictionDAO());
     private final PredictionDAO         predictionDAO         = new PredictionDAO();
+    private final PatientDAO            patientDAO            = new PatientDAO();
 
     private Patient selectedPatient;
     private PauseTransition searchDebouncer;
@@ -592,6 +598,10 @@ public class HistoryController implements Initializable {
                             longitudinalBox.setVisible(false);
                             longitudinalBox.setManaged(false);
                         }
+                        if (followUpBox != null) {
+                            followUpBox.setVisible(false);
+                            followUpBox.setManaged(false);
+                        }
                     }
                 });
     }
@@ -704,6 +714,7 @@ public class HistoryController implements Initializable {
                 totalInferenceLabel.setText("0 ms");
             }
             buildDistributionChart(predictions);
+            Platform.runLater(() -> showFollowUpSection(selectedPatient));
         });
         new Thread(task, "History-load-" + patientId).start();
     }
@@ -1066,6 +1077,20 @@ public class HistoryController implements Initializable {
 
         longitudinalBox.setVisible(true);
         longitudinalBox.setManaged(true);
+
+        longitudinalChart.setMaxWidth(Double.MAX_VALUE);
+        longitudinalChart.setPrefWidth(
+            longitudinalBox.getWidth() > 0
+                ? longitudinalBox.getWidth()
+                : 700
+        );
+        VBox.setVgrow(longitudinalChart, Priority.ALWAYS);
+
+        longitudinalBox.widthProperty().addListener(
+            (obs, oldW, newW) ->
+                longitudinalChart.setPrefWidth(
+                    newW.doubleValue() - 40)
+        );
     }
 
     private String formatDateLabel(String timestamp) {
@@ -1101,5 +1126,118 @@ public class HistoryController implements Initializable {
                 }
             }
         }
+    }
+
+    private void showFollowUpSection(Patient patient) {
+        if (followUpBox == null || patient == null) return;
+
+        try {
+            String date = patientDAO
+                .getFollowUpDate(patient.id);
+
+            boolean hasUrgent = predictionsTable
+                .getItems().stream()
+                .anyMatch(p ->
+                    "Melanoma".equals(p.predictedClass) ||
+                    "Basal Cell Carcinoma"
+                        .equals(p.predictedClass));
+
+            if (date != null && !date.isBlank()) {
+                followUpDateLabel.setText(
+                    "Next follow-up: " + date);
+                followUpDateLabel.setStyle(
+                    "-fx-text-fill: #10B981;" +
+                    "-fx-font-size: 13px;" +
+                    "-fx-font-weight: bold;");
+                scheduleFollowUpButton.setText(
+                    "Change Follow-up Date");
+            } else if (hasUrgent) {
+                followUpDateLabel.setText(
+                    "⚠ Urgent result — " +
+                    "follow-up recommended");
+                followUpDateLabel.setStyle(
+                    "-fx-text-fill: #EF4444;" +
+                    "-fx-font-size: 12px;");
+                scheduleFollowUpButton.setText(
+                    "Schedule Follow-up");
+            } else {
+                followUpDateLabel.setText(
+                    "No follow-up scheduled");
+                followUpDateLabel.setStyle(
+                    "-fx-text-fill: #9CA3AF;" +
+                    "-fx-font-size: 13px;");
+                scheduleFollowUpButton.setText(
+                    "Schedule Follow-up");
+            }
+
+            followUpBox.setVisible(true);
+            followUpBox.setManaged(true);
+
+        } catch (Exception e) {
+            System.err.println(
+                "Follow-up error: " + e.getMessage());
+            followUpBox.setVisible(true);
+            followUpBox.setManaged(true);
+        }
+    }
+
+    @FXML
+    private void handleScheduleFollowUp() {
+        if (selectedPatient == null) return;
+
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Schedule Follow-up");
+        dialog.setHeaderText(
+            "Patient: " + selectedPatient.name);
+        dialog.setContentText(
+            "Enter follow-up date (YYYY-MM-DD):");
+
+        com.visolearn.MainController.applyThemeToDialog(dialog,
+            com.visolearn.utils.SettingsManager.isDarkMode());
+
+        dialog.showAndWait().ifPresent(date -> {
+            if (date == null || date.isBlank()) return;
+
+            if (!date.matches(
+                "\\d{4}-(0[1-9]|1[0-2])" +
+                "-(0[1-9]|[12]\\d|3[01])")) {
+                ToastUtil.showToast(
+                    (StackPane) scheduleFollowUpButton
+                        .getScene().getRoot(),
+                    "Invalid date. Use YYYY-MM-DD",
+                    ToastUtil.ToastType.ERROR);
+                return;
+            }
+
+            Task<Void> task = new Task<>() {
+                @Override
+                protected Void call() throws Exception {
+                    patientDAO.setFollowUpDate(
+                        selectedPatient.id, date);
+                    return null;
+                }
+            };
+
+            task.setOnSucceeded(e ->
+                Platform.runLater(() -> {
+                    showFollowUpSection(selectedPatient);
+                    ToastUtil.showToast(
+                        (StackPane) scheduleFollowUpButton
+                            .getScene().getRoot(),
+                        "Follow-up scheduled for " + date,
+                        ToastUtil.ToastType.SUCCESS);
+                })
+            );
+
+            task.setOnFailed(e ->
+                ToastUtil.showToast(
+                    (StackPane) scheduleFollowUpButton
+                        .getScene().getRoot(),
+                    "Failed to save follow-up date.",
+                    ToastUtil.ToastType.ERROR));
+
+            new Thread(task,
+                "FollowUpSaveThread").start();
+        });
     }
 }

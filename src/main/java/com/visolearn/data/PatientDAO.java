@@ -52,10 +52,10 @@ public class PatientDAO {
         boolean hasFilter = searchStr != null && !searchStr.trim().isEmpty();
 
         if (hasFilter) {
-            sql = "SELECT id, name, dob, gender, phone, skin_type, doctor_notes "
+            sql = "SELECT id, name, dob, gender, phone, skin_type, doctor_notes, follow_up_date "
                 + "FROM Patients WHERE name LIKE ? ORDER BY name";
         } else {
-            sql = "SELECT id, name, dob, gender, phone, skin_type, doctor_notes "
+            sql = "SELECT id, name, dob, gender, phone, skin_type, doctor_notes, follow_up_date "
                 + "FROM Patients ORDER BY name";
         }
 
@@ -76,7 +76,8 @@ public class PatientDAO {
                             rs.getString("gender"),
                             rs.getString("phone"),
                             rs.getString("skin_type"),
-                            rs.getString("doctor_notes")
+                            rs.getString("doctor_notes"),
+                            rs.getString("follow_up_date")
                     ));
                 }
             }
@@ -143,6 +144,27 @@ public class PatientDAO {
 
             ps.setInt(1, patientId);
             ps.executeUpdate();
+        }
+    }
+
+    public void setFollowUpDate(int patientId, String date) throws SQLException {
+        String sql = "UPDATE Patients SET follow_up_date = ? WHERE id = ?";
+        try (Connection c = DatabaseUtil.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, date);
+            ps.setInt(2, patientId);
+            ps.executeUpdate();
+        }
+    }
+
+    public String getFollowUpDate(int patientId) throws SQLException {
+        String sql = "SELECT follow_up_date FROM Patients WHERE id = ?";
+        try (Connection c = DatabaseUtil.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, patientId);
+            var rs = ps.executeQuery();
+            if (rs.next()) return rs.getString(1);
+            return null;
         }
     }
 }

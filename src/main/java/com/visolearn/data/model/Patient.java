@@ -25,6 +25,8 @@ public class Patient {
 
     /** Primary key — assigned by SQLite AUTOINCREMENT on insert. */
     public final int    id;
+    
+    public final int doctorId;
 
     /** Patient's full name as recorded at registration. */
     public final String name;
@@ -68,6 +70,7 @@ public class Patient {
      * Constructs a new {@link Patient} record with all clinical fields.
      *
      * @param id          SQLite-generated primary key.
+     * @param doctorId    Doctor ID owning this patient.
      * @param name        Patient's full name.
      * @param dob         Date of birth string (ISO 8601).
      * @param gender      Gender / biological sex.
@@ -76,11 +79,12 @@ public class Patient {
      * @param doctorNotes Free-text clinical notes.
      * @param followUpDate Scheduled follow-up date.
      */
-    public Patient(int id, String name, String dob,
+    public Patient(int id, int doctorId, String name, String dob,
                    String gender, String phone,
                    String skinType, String doctorNotes,
                    String followUpDate) {
         this.id          = id;
+        this.doctorId    = doctorId;
         this.name        = name;
         this.dob         = dob;
         this.gender      = gender;
@@ -96,7 +100,7 @@ public class Patient {
     public Patient(int id, String name, String dob,
                    String gender, String phone,
                    String skinType, String doctorNotes) {
-        this(id, name, dob, gender, phone, skinType, doctorNotes, null);
+        this(id, 1, name, dob, gender, phone, skinType, doctorNotes, null);
     }
 
     /**

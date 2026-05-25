@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.*?>
+
+<StackPane xmlns="http://javafx.com/javafx"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="com.visolearn.LoginController"
+           style="-fx-background-color: #12121C;"
+           prefWidth="420" prefHeight="560">
+
+    <VBox alignment="CENTER" spacing="0" maxWidth="340">
+
+        <VBox alignment="CENTER" spacing="6"
+              style="-fx-padding: 0 0 32 0;">
+            <Label text="VisoLearn AI Studio"
+                   style="-fx-font-size: 22px;
+                          -fx-font-weight: bold;
+                          -fx-text-fill: #F8F9FA;"/>
+            <Label text="Skin Lesion Classification"
+                   style="-fx-font-size: 12px;
+                          -fx-text-fill: #6B7280;"/>
+        </VBox>
+
+        <VBox spacing="16"
+              style="-fx-background-color: #1E1E2A;
+                     -fx-background-radius: 12;
+                     -fx-padding: 28 28 24 28;
+                     -fx-border-color: #374151;
+                     -fx-border-radius: 12;
+                     -fx-border-width: 1;">
+
+            <Label fx:id="formTitleLabel"
+                   text="Doctor Login"
+                   style="-fx-font-size: 16px;
+                          -fx-font-weight: bold;
+                          -fx-text-fill: #F8F9FA;"/>
+
+            <VBox fx:id="fullNameBox" spacing="4"
+                  visible="false" managed="false">
+                <Label text="Full Name"
+                       style="-fx-font-size: 11px;
+                              -fx-text-fill: #9CA3AF;"/>
+                <TextField fx:id="fullNameField"
+                           promptText="Dr. Ahmed Khan"
+                           style="-fx-background-color: #252532;
+                                  -fx-text-fill: #F8F9FA;
+                                  -fx-border-color: #374151;
+                                  -fx-border-radius: 6;
+                                  -fx-background-radius: 6;
+                                  -fx-padding: 8 12;"/>
+                <Label fx:id="fullNameError" text=""
+                       style="-fx-text-fill: #EF4444;
+                              -fx-font-size: 10px;"
+                       visible="false" managed="false"/>
+            </VBox>
+
+            <VBox spacing="4">
+                <Label text="Username"
+                       style="-fx-font-size: 11px;
+                              -fx-text-fill: #9CA3AF;"/>
+                <TextField fx:id="usernameField"
+                           promptText="doctor_username"
+                           style="-fx-background-color: #252532;
+                                  -fx-text-fill: #F8F9FA;
+                                  -fx-border-color: #374151;
+                                  -fx-border-radius: 6;
+                                  -fx-background-radius: 6;
+                                  -fx-padding: 8 12;"/>
+                <Label fx:id="usernameError" text=""
+                       style="-fx-text-fill: #EF4444;
+                              -fx-font-size: 10px;"
+                       visible="false" managed="false"/>
+            </VBox>
+
+            <VBox spacing="4">
+                <Label text="Password"
+                       style="-fx-font-size: 11px;
+                              -fx-text-fill: #9CA3AF;"/>
+                <PasswordField fx:id="passwordField"
+                               promptText="Enter password"
+                               style="-fx-background-color: #252532;
+                                      -fx-text-fill: #F8F9FA;
+                                      -fx-border-color: #374151;
+                                      -fx-border-radius: 6;
+                                      -fx-background-radius: 6;
+                                      -fx-padding: 8 12;"/>
+                <Label fx:id="passwordError" text=""
+                       style="-fx-text-fill: #EF4444;
+                              -fx-font-size: 10px;"
+                       visible="false" managed="false"/>
+            </VBox>
+
+            <VBox fx:id="confirmBox" spacing="4"
+                  visible="false" managed="false">
+                <Label text="Confirm Password"
+                       style="-fx-font-size: 11px;
+                              -fx-text-fill: #9CA3AF;"/>
+                <PasswordField fx:id="confirmField"
+                               promptText="Repeat password"
+                               style="-fx-background-color: #252532;
+                                      -fx-text-fill: #F8F9FA;
+                                      -fx-border-color: #374151;
+                                      -fx-border-radius: 6;
+                                      -fx-background-radius: 6;
+                                      -fx-padding: 8 12;"/>
+                <Label fx:id="confirmError" text=""
+                       style="-fx-text-fill: #EF4444;
+                              -fx-font-size: 10px;"
+                       visible="false" managed="false"/>
+            </VBox>
+
+            <Label fx:id="errorBanner" text=""
+                   wrapText="true"
+                   visible="false" managed="false"
+                   style="-fx-text-fill: #EF4444;
+                          -fx-font-size: 12px;
+                          -fx-background-color: #2D1515;
+                          -fx-background-radius: 6;
+                          -fx-padding: 8 12;"/>
+
+            <Button fx:id="primaryButton"
+                    text="Login"
+                    maxWidth="Infinity"
+                    onAction="#handlePrimary"
+                    style="-fx-background-color: #10B981;
+                           -fx-text-fill: white;
+                           -fx-font-size: 13px;
+                           -fx-font-weight: bold;
+                           -fx-background-radius: 8;
+                           -fx-padding: 10 0;
+                           -fx-cursor: hand;"/>
+
+            <HBox alignment="CENTER" spacing="4">
+                <Label fx:id="toggleLabel"
+                       text="New to VisoLearn?"
+                       style="-fx-font-size: 11px;
+                              -fx-text-fill: #6B7280;"/>
+                <Label fx:id="toggleLink"
+                       text="Create account"
+                       onMouseClicked="#handleToggleMode"
+                       style="-fx-font-size: 11px;
+                              -fx-text-fill: #10B981;
+                              -fx-cursor: hand;
+                              -fx-underline: true;"/>
+            </HBox>
+
+        </VBox>
+    </VBox>
+</StackPane>

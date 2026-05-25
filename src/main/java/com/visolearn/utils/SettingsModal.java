@@ -230,6 +230,46 @@ public final class SettingsModal {
                 )
         );
 
+        Button logoutBtn = new Button("Logout");
+        logoutBtn.setStyle(
+            "-fx-background-color: transparent;" +
+            "-fx-text-fill: #EF4444;" +
+            "-fx-border-color: #EF4444;" +
+            "-fx-border-radius: 6;" +
+            "-fx-background-radius: 6;" +
+            "-fx-font-size: 12px;" +
+            "-fx-padding: 6 14;" +
+            "-fx-cursor: hand;");
+
+        logoutBtn.setOnAction(e -> {
+            com.visolearn.SessionManager.logout();
+
+            try {
+                javafx.stage.Stage mainStage = (javafx.stage.Stage) logoutBtn
+                    .getScene().getWindow();
+
+                javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(
+                    SettingsModal.class
+                        .getResource("/login.fxml"));
+                javafx.scene.Scene loginScene = new javafx.scene.Scene(
+                    loader.load(), 420, 560);
+
+                javafx.stage.Stage loginStage = new javafx.stage.Stage();
+                loginStage.setTitle(
+                    "VisoLearn AI Studio");
+                loginStage.setScene(loginScene);
+                loginStage.setResizable(false);
+                loginStage.centerOnScreen();
+                loginStage.show();
+
+                mainStage.close();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        body.getChildren().add(logoutBtn);
+
         return body;
     }
 

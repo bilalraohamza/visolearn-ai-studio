@@ -168,6 +168,15 @@ public final class DatabaseUtil {
             stmt.execute("PRAGMA journal_mode=WAL");
 
             stmt.execute("""
+                CREATE TABLE IF NOT EXISTS Doctors (
+                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username      TEXT NOT NULL UNIQUE,
+                    full_name     TEXT NOT NULL,
+                    password_hash TEXT NOT NULL
+                )
+                """);
+
+            stmt.execute("""
                 CREATE TABLE IF NOT EXISTS Patients (
                     id           INTEGER PRIMARY KEY AUTOINCREMENT,
                     name         TEXT    NOT NULL,
@@ -195,6 +204,12 @@ public final class DatabaseUtil {
                 stmt.execute(
                     "ALTER TABLE Patients ADD COLUMN " +
                     "follow_up_date TEXT");
+            } catch (SQLException ignored) {}
+
+            try {
+                stmt.execute(
+                    "ALTER TABLE Patients " +
+                    "ADD COLUMN doctor_id INTEGER DEFAULT 1");
             } catch (SQLException ignored) {}
 
             stmt.execute("""

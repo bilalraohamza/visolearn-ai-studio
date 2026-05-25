@@ -52,25 +52,27 @@ public class PatientDAO {
         boolean hasFilter = searchStr != null && !searchStr.trim().isEmpty();
 
         if (hasFilter) {
-            sql = "SELECT id, name, dob, gender, phone, skin_type, doctor_notes, follow_up_date "
-                + "FROM Patients WHERE name LIKE ? ORDER BY name";
+            sql = "SELECT id, doctor_id, name, dob, gender, phone, skin_type, doctor_notes, follow_up_date "
+                + "FROM Patients WHERE doctor_id = ? AND name LIKE ? ORDER BY name ASC";
         } else {
-            sql = "SELECT id, name, dob, gender, phone, skin_type, doctor_notes, follow_up_date "
-                + "FROM Patients ORDER BY name";
+            sql = "SELECT id, doctor_id, name, dob, gender, phone, skin_type, doctor_notes, follow_up_date "
+                + "FROM Patients WHERE doctor_id = ? ORDER BY name ASC";
         }
 
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
+            ps.setInt(1, com.visolearn.SessionManager.getCurrentDoctorId());
             if (hasFilter) {
                 // Case-insensitive partial match: wraps user input with SQL wildcards
-                ps.setString(1, "%" + searchStr.trim() + "%");
+                ps.setString(2, "%" + searchStr.trim() + "%");
             }
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     results.add(new Patient(
                             rs.getInt("id"),
+                            rs.getInt("doctor_id"),
                             rs.getString("name"),
                             rs.getString("dob"),
                             rs.getString("gender"),
@@ -102,19 +104,20 @@ public class PatientDAO {
                       String gender, String phone,
                       String skinType, String doctorNotes) throws SQLException {
 
-        String sql = "INSERT INTO Patients (name, dob, gender, phone, skin_type, doctor_notes) "
-                   + "VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO Patients (doctor_id, name, dob, gender, phone, skin_type, doctor_notes) "
+                   + "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql,
                      Statement.RETURN_GENERATED_KEYS)) {
 
-            ps.setString(1, name);
-            ps.setString(2, dob);
-            ps.setString(3, gender);
-            ps.setString(4, phone);
-            ps.setString(5, skinType);
-            ps.setString(6, doctorNotes);
+            ps.setInt(1, com.visolearn.SessionManager.getCurrentDoctorId());
+            ps.setString(2, name);
+            ps.setString(3, dob);
+            ps.setString(4, gender);
+            ps.setString(5, phone);
+            ps.setString(6, skinType);
+            ps.setString(7, doctorNotes);
 
             int affected = ps.executeUpdate();
             if (affected == 0) {

@@ -12,7 +12,9 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.RadioButton;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.ListCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -135,6 +137,11 @@ public class ClassifyController implements Initializable {
     
     @FXML private Label shortcutHintLabel;
 
+    @FXML private RadioButton scoreCamRadio;
+    @FXML private RadioButton occlusionRadio;
+    @FXML private ToggleGroup saliencyModeGroup;
+    @FXML private HBox        saliencyModeBox;
+
     // ─────────────────────────────────────────────────────────────────────────
     // Backend Components
     // ─────────────────────────────────────────────────────────────────────────
@@ -142,8 +149,18 @@ public class ClassifyController implements Initializable {
     /** Skin lesion classifier using ensemble EfficientNet-B4 + DenseNet-169 ONNX models. */
     private SkinClassifier classifier;
 
-    /** Occlusion-sensitivity heatmap renderer. */
+    /** Occlusion-sensitivity heatmap renderer (precise mode). */
     private OcclusionRenderer occlusionRenderer;
+
+    /** Score-CAM saliency map renderer (fast mode). */
+    private ScoreCamRenderer scoreCamRenderer;
+
+    /**
+     * Saliency mode flag.
+     * true  = Score-CAM (fast, default)
+     * false = Occlusion Sensitivity (precise)
+     */
+    private boolean useScoreCam = true;
 
     /** Currently loaded image file path. */
     private Path currentImagePath;
@@ -275,6 +292,7 @@ public class ClassifyController implements Initializable {
                     // Initialization succeeded — wire up the classifier and unlock the UI
                     classifier = readyClassifier;
                     occlusionRenderer = new OcclusionRenderer(classifier);
+                    scoreCamRenderer  = new ScoreCamRenderer(classifier);
                     uploadButton.setDisable(false);
                     predictionLabel.setText("Awaiting Image...");
                     predictionLabel.setOpacity(1.0);
@@ -499,6 +517,12 @@ public class ClassifyController implements Initializable {
         lastResult           = null;
         occlusionToggle.setSelected(false);
         occlusionToggle.setDisable(true);
+        useScoreCam = true;
+        if (scoreCamRadio != null) scoreCamRadio.setSelected(true);
+        if (saliencyModeBox != null) {
+            saliencyModeBox.setVisible(false);
+            saliencyModeBox.setManaged(false);
+        }
         if (exportReportButton != null) exportReportButton.setDisable(true);
 
         if (notesArea != null) {
@@ -575,10 +599,27 @@ public class ClassifyController implements Initializable {
     /** Handles the occlusion-sensitivity heatmap toggle checkbox. */
     @FXML
     private void handleOcclusionToggle() {
-        if (occlusionToggle.isSelected() && lastResult != null) {
+        boolean selected = occlusionToggle.isSelected();
+        if (saliencyModeBox != null) {
+            saliencyModeBox.setVisible(selected);
+            saliencyModeBox.setManaged(selected);
+        }
+        if (selected && lastResult != null) {
             generateAndShowHeatmap();
         } else {
             heatmapImageView.setVisible(false);
+        }
+    }
+
+    @FXML
+    private void handleSaliencyModeChange() {
+        if (scoreCamRadio != null) {
+            useScoreCam = scoreCamRadio.isSelected();
+        }
+        // If a heatmap is already showing, regenerate with the new mode
+        if (occlusionToggle.isSelected() && lastResult != null) {
+            heatmapImageView.setVisible(false);
+            generateAndShowHeatmap();
         }
     }
 
@@ -904,19 +945,43 @@ public class ClassifyController implements Initializable {
         saliencyOverlay.setManaged(true);
         saliencyProgressBar.setProgress(0);
         saliencyCountLabel.setText("Generating saliency map...");
-        saliencyPctLabel.setText("0 / 49 patches");
+
+        boolean useScore = useScoreCam;
+        int totalPasses = useScore ? 25 : 49;
+        saliencyPctLabel.setText("0 / " + totalPasses + (useScore ? " masks" : " patches"));
 
         Task<BufferedImage> heatmapTask = new Task<>() {
             @Override
             protected BufferedImage call() throws Exception {
-                return occlusionRenderer.generateHeatmap(
+                if (useScore) {
+                    return scoreCamRenderer.generateHeatmap(
                         currentImagePath, lastResult,
-                        (completed, total) -> Platform.runLater(() -> {
-                            saliencyProgressBar.setProgress((double) completed / total);
-                            saliencyCountLabel.setText("Analyzing region " + completed + " of " + total);
-                            saliencyPctLabel.setText(completed + " / " + total + " patches");
-                        })
-                );
+                        (completed, total) ->
+                            Platform.runLater(() -> {
+                                saliencyProgressBar.setProgress(
+                                    (double) completed / total);
+                                saliencyCountLabel.setText(
+                                    "Score-CAM: mask " + completed
+                                    + " of " + total);
+                                saliencyPctLabel.setText(
+                                    completed + " / " + total + " masks");
+                            })
+                    );
+                } else {
+                    return occlusionRenderer.generateHeatmap(
+                        currentImagePath, lastResult,
+                        (completed, total) ->
+                            Platform.runLater(() -> {
+                                saliencyProgressBar.setProgress(
+                                    (double) completed / total);
+                                saliencyCountLabel.setText(
+                                    "Occlusion: patch " + completed
+                                    + " of " + total);
+                                saliencyPctLabel.setText(
+                                    completed + " / " + total + " patches");
+                            })
+                    );
+                }
             }
         };
 
@@ -942,7 +1007,7 @@ public class ClassifyController implements Initializable {
             Platform.runLater(() -> {
                 saliencyOverlay.setVisible(false);
                 saliencyOverlay.setManaged(false);
-                System.err.println("Occlusion map error: " + heatmapTask.getException().getMessage());
+                System.err.println("Saliency map error: " + heatmapTask.getException().getMessage());
             });
         });
 

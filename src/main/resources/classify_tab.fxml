@@ -10,6 +10,10 @@
       styleClass="page-root"
       spacing="20">
 
+    <fx:define>
+        <ToggleGroup fx:id="saliencyModeGroup"/>
+    </fx:define>
+
     <!-- Left panel: image input -->
     <VBox spacing="16" HBox.hgrow="ALWAYS" prefWidth="500">
         <VBox styleClass="glass-card" style="-fx-padding: 20;" VBox.vgrow="ALWAYS">
@@ -68,10 +72,32 @@
             </HBox>
 
             <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 16 0 0 0;">
-                <CheckBox fx:id="occlusionToggle"
-                          text="Overlay Occlusion Sensitivity Map"
-                          onAction="#handleOcclusionToggle"
-                          styleClass="text-secondary text-md"/>
+                <VBox spacing="6">
+                    <CheckBox fx:id="occlusionToggle"
+                              text="Overlay Saliency Map"
+                              onAction="#handleOcclusionToggle"
+                              style="-fx-text-fill: #9CA3AF; -fx-font-size: 12px;"/>
+
+                    <HBox fx:id="saliencyModeBox"
+                          spacing="12" alignment="CENTER_LEFT"
+                          visible="false" managed="false"
+                          style="-fx-padding: 0 0 0 4;">
+
+                        <RadioButton fx:id="scoreCamRadio"
+                                     text="Score-CAM (Fast ~2s)"
+                                     selected="true"
+                                     onAction="#handleSaliencyModeChange"
+                                     toggleGroup="$saliencyModeGroup"
+                                     style="-fx-text-fill: #10B981; -fx-font-size: 11px;"/>
+
+                        <RadioButton fx:id="occlusionRadio"
+                                     text="Occlusion (Precise ~8s)"
+                                     onAction="#handleSaliencyModeChange"
+                                     toggleGroup="$saliencyModeGroup"
+                                     style="-fx-text-fill: #9CA3AF; -fx-font-size: 11px;"/>
+
+                    </HBox>
+                </VBox>
                 <Region HBox.hgrow="ALWAYS"/>
                 <HBox alignment="CENTER_RIGHT" spacing="8"
                       fx:id="loadingBox" opacity="0" visible="false">

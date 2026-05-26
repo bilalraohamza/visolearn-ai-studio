@@ -117,6 +117,19 @@ public class OcclusionRenderer {
             SkinClassifier.PredictionResult result,
             ProgressCallback callback) throws Exception {
 
+        try (SkinClassifier.PredictorPair pair =
+                classifier.newPredictorPair()) {
+            return generateHeatmapWithPair(
+                originalImagePath, result, callback, pair);
+        }
+    }
+
+    private BufferedImage generateHeatmapWithPair(
+            Path originalImagePath,
+            SkinClassifier.PredictionResult result,
+            ProgressCallback callback,
+            SkinClassifier.PredictorPair pair) throws Exception {
+
         // Load and resize original image to 380x380
         BufferedImage original = ImageIO.read(originalImagePath.toFile());
         if (original == null) {
@@ -128,7 +141,7 @@ public class OcclusionRenderer {
 
         // Run 49 occlusion inference passes
         float[][] importanceMap = computeOcclusionSensitivity(
-                resized, result, callback
+                resized, result, callback, pair
         );
 
         // ReLU: keep only positive drops (regions that helped the prediction)
@@ -165,7 +178,8 @@ public class OcclusionRenderer {
     private float[][] computeOcclusionSensitivity(
             BufferedImage resized,
             SkinClassifier.PredictionResult baseline,
-            ProgressCallback callback) throws Exception {
+            ProgressCallback callback,
+            SkinClassifier.PredictorPair pair) throws Exception {
 
         float[][] importance = new float[OUTPUT_SIZE][OUTPUT_SIZE];
 
@@ -187,9 +201,9 @@ public class OcclusionRenderer {
                 BufferedImage occluded = copyImage(resized);
                 fillPatch(occluded, x0, y0, x1, y1);
 
-                // Run inference on the occluded image
+                // Run inference on the occluded image using the dedicated pair
                 SkinClassifier.PredictionResult occResult =
-                        classifier.predictFromImage(occluded);
+                        pair.predictFromImage(occluded);
 
                 // Confidence drop for the target class
                 float drop = baselineConf -

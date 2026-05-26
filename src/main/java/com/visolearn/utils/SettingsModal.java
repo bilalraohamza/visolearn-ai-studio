@@ -31,7 +31,7 @@ import javafx.scene.text.FontWeight;
 import javafx.util.Duration;
 
 import java.util.function.Consumer;
-
+import java.io.File;
 /**
  * Application settings modal with live preview and rollback on cancel.
  */
@@ -226,20 +226,230 @@ public final class SettingsModal {
                         "Dark Mode",
                         "Switches the application between light and dark appearance",
                         SettingsManager.isDarkMode(),
-                        SettingsManager::setDarkMode
+                        val -> {
+                            SettingsManager.setDarkMode(val);
+                            if (body.getScene() != null) {
+                                MainController.applyTheme(body.getScene(), val);
+                            }
+                            refreshCardStyles(body);
+                        }
                 )
         );
 
+        // ── Backup card ────────────────────────────────
+        VBox backupCard = new VBox(10);
+        backupCard.getStyleClass().add("setting-card");
+        backupCard.setPadding(new Insets(16, 20, 16, 20));
+        backupCard.setStyle(
+            "-fx-background-color: " + settingPanelBg() + ";" +
+            "-fx-background-radius: 9px;" +
+            "-fx-border-color: " + dividerColor() + ";" +
+            "-fx-border-radius: 9px;" +
+            "-fx-border-width: 1px;");
+
+        Label backupTitle = new Label("Data Backup");
+        backupTitle.getStyleClass().add("backup-title");
+        backupTitle.setStyle(
+            "-fx-font-size: 13px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: #F59E0B;");
+
+        Label backupSubtitle = new Label(
+            BackupManager.getBackupSummary());
+        backupSubtitle.setStyle(
+            "-fx-font-size: 12px;" +
+            "-fx-text-fill: #9CA3AF;");
+
+        // Export button — matches the green accent style
+        Button exportBtn = new Button(
+            "⬇  Export Backup (.zip)");
+        exportBtn.setMaxWidth(Double.MAX_VALUE);
+        String exportBase =
+            "-fx-background-color: #10B981;" +
+            "-fx-text-fill: white !important;" +
+            "-fx-font-size: 13px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-background-radius: 8;" +
+            "-fx-padding: 10 16;" +
+            "-fx-cursor: hand;";
+
+        String exportHover =
+            "-fx-background-color: #059669;" +
+            "-fx-text-fill: white;" +
+            "-fx-font-size: 13px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-background-radius: 8;" +
+            "-fx-padding: 10 16;" +
+            "-fx-cursor: hand;";
+
+        exportBtn.setStyle(exportBase);
+        AnimationUtil.applyButtonHover(exportBtn);
+
+        exportBtn.setOnMouseEntered(e -> {
+            exportBtn.setStyle(exportHover);
+            if (SettingsManager.isAnimationsEnabled()) {
+                javafx.animation.ScaleTransition st =
+                    new javafx.animation.ScaleTransition(
+                        javafx.util.Duration.millis(120),
+                        exportBtn);
+                st.setToX(1.02);
+                st.setToY(1.02);
+                st.play();
+            }
+        });
+        exportBtn.setOnMouseExited(e -> {
+            exportBtn.setStyle(exportBase);
+            if (SettingsManager.isAnimationsEnabled()) {
+                javafx.animation.ScaleTransition st =
+                    new javafx.animation.ScaleTransition(
+                        javafx.util.Duration.millis(120),
+                        exportBtn);
+                st.setToX(1.0);
+                st.setToY(1.0);
+                st.play();
+            }
+        });
+
+        // Import button — matches the outlined style
+        Button importBtn = new Button(
+            "⬆  Import Backup (.zip)");
+        importBtn.getStyleClass().add("import-btn");
+        importBtn.setMaxWidth(Double.MAX_VALUE);
+        boolean isDark = SettingsManager.isDarkMode();
+
+        String importBase =
+            "-fx-background-color: transparent;" +
+            "-fx-text-fill: " +
+            (isDark ? "#9CA3AF" : "#475569") + ";" +
+            "-fx-border-color: " +
+            (isDark ? "#4B5563" : "#CBD5E1") + ";" +
+            "-fx-border-radius: 8;" +
+            "-fx-background-radius: 8;" +
+            "-fx-font-size: 13px;" +
+            "-fx-padding: 10 16;" +
+            "-fx-cursor: hand;";
+
+        String importHover =
+            "-fx-background-color: " +
+            (isDark ? "#252532" : "#F1F5F9") + ";" +
+            "-fx-text-fill: " +
+            (isDark ? "#F8F9FA" : "#0F172A") + ";" +
+            "-fx-border-color: " +
+            (isDark ? "#6B7280" : "#94A3B8") + ";" +
+            "-fx-border-radius: 8;" +
+            "-fx-background-radius: 8;" +
+            "-fx-font-size: 13px;" +
+            "-fx-padding: 10 16;" +
+            "-fx-cursor: hand;";
+
+        importBtn.setStyle(importBase);
+
+        importBtn.setOnMouseEntered(e -> {
+            importBtn.setStyle(importHover);
+            if (SettingsManager.isAnimationsEnabled()) {
+                javafx.animation.ScaleTransition st =
+                    new javafx.animation.ScaleTransition(
+                        javafx.util.Duration.millis(120),
+                        importBtn);
+                st.setToX(1.02);
+                st.setToY(1.02);
+                st.play();
+            }
+        });
+        importBtn.setOnMouseExited(e -> {
+            importBtn.setStyle(importBase);
+            if (SettingsManager.isAnimationsEnabled()) {
+                javafx.animation.ScaleTransition st =
+                    new javafx.animation.ScaleTransition(
+                        javafx.util.Duration.millis(120),
+                        importBtn);
+                st.setToX(1.0);
+                st.setToY(1.0);
+                st.play();
+            }
+        });
+
+        exportBtn.setOnAction(e ->
+            handleExportBackup(exportBtn, backupSubtitle));
+        importBtn.setOnAction(e ->
+            handleImportBackup(importBtn, backupSubtitle));
+
+        backupCard.getChildren().addAll(
+            backupTitle, backupSubtitle,
+            exportBtn, importBtn);
+
+        VBox logoutCard = new VBox(10);
+        logoutCard.getStyleClass().add("setting-card");
+        logoutCard.setPadding(new Insets(16, 20, 16, 20));
+        logoutCard.setStyle(
+            "-fx-background-color: " + settingPanelBg() + ";" +
+            "-fx-background-radius: 9px;" +
+            "-fx-border-color: " + dividerColor() + ";" +
+            "-fx-border-radius: 9px;" +
+            "-fx-border-width: 1px;");
+
+        Label logoutTitle = new Label("Account");
+        logoutTitle.getStyleClass().add("logout-title");
+        logoutTitle.setStyle(
+            "-fx-font-size: 14px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: " + textPrimary() + ";");
+
+        Label logoutSubtitle = new Label(
+            "Logged in as Dr. " +
+            com.visolearn.SessionManager.getCurrentDoctorName());
+        logoutSubtitle.setStyle(
+            "-fx-font-size: 12px;" +
+            "-fx-text-fill: #9CA3AF;");
+
         Button logoutBtn = new Button("Logout");
-        logoutBtn.setStyle(
+        logoutBtn.setMaxWidth(Double.MAX_VALUE);
+        String logoutBase =
             "-fx-background-color: transparent;" +
             "-fx-text-fill: #EF4444;" +
             "-fx-border-color: #EF4444;" +
-            "-fx-border-radius: 6;" +
-            "-fx-background-radius: 6;" +
-            "-fx-font-size: 12px;" +
-            "-fx-padding: 6 14;" +
-            "-fx-cursor: hand;");
+            "-fx-border-radius: 8;" +
+            "-fx-background-radius: 8;" +
+            "-fx-font-size: 13px;" +
+            "-fx-padding: 10 16;" +
+            "-fx-cursor: hand;";
+
+        String logoutHover =
+            "-fx-background-color: #EF4444;" +
+            "-fx-text-fill: white;" +
+            "-fx-border-color: #EF4444;" +
+            "-fx-border-radius: 8;" +
+            "-fx-background-radius: 8;" +
+            "-fx-font-size: 13px;" +
+            "-fx-padding: 10 16;" +
+            "-fx-cursor: hand;";
+
+        logoutBtn.setStyle(logoutBase);
+
+        logoutBtn.setOnMouseEntered(e -> {
+            logoutBtn.setStyle(logoutHover);
+            if (SettingsManager.isAnimationsEnabled()) {
+                javafx.animation.ScaleTransition st =
+                    new javafx.animation.ScaleTransition(
+                        javafx.util.Duration.millis(120),
+                        logoutBtn);
+                st.setToX(1.02);
+                st.setToY(1.02);
+                st.play();
+            }
+        });
+        logoutBtn.setOnMouseExited(e -> {
+            logoutBtn.setStyle(logoutBase);
+            if (SettingsManager.isAnimationsEnabled()) {
+                javafx.animation.ScaleTransition st =
+                    new javafx.animation.ScaleTransition(
+                        javafx.util.Duration.millis(120),
+                        logoutBtn);
+                st.setToX(1.0);
+                st.setToY(1.0);
+                st.play();
+            }
+        });
 
         logoutBtn.setOnAction(e -> {
             com.visolearn.SessionManager.logout();
@@ -268,9 +478,175 @@ public final class SettingsModal {
             }
         });
 
-        body.getChildren().add(logoutBtn);
+        logoutCard.getChildren().addAll(
+            logoutTitle, logoutSubtitle, logoutBtn);
+
+        body.getChildren().addAll(backupCard, logoutCard);
 
         return body;
+    }
+
+    private static void handleExportBackup(
+            Button exportBtn, Label summaryLabel) {
+
+        javafx.stage.FileChooser chooser =
+            new javafx.stage.FileChooser();
+        chooser.setTitle("Export Backup");
+        chooser.setInitialFileName(
+            "visolearn_backup_" +
+            java.time.LocalDate.now() + ".zip");
+        chooser.getExtensionFilters().add(
+            new javafx.stage.FileChooser
+                .ExtensionFilter(
+                    "ZIP Archive", "*.zip"));
+
+        File dest = chooser.showSaveDialog(
+            exportBtn.getScene().getWindow());
+        if (dest == null) return;
+
+        exportBtn.setDisable(true);
+        exportBtn.setText("Exporting...");
+
+        javafx.concurrent.Task<Void> task =
+            new javafx.concurrent.Task<>() {
+                @Override
+                protected Void call() throws Exception {
+                    BackupManager.exportBackup(dest);
+                    return null;
+                }
+            };
+
+        task.setOnSucceeded(ev ->
+            javafx.application.Platform.runLater(() -> {
+                exportBtn.setDisable(false);
+                exportBtn.setText("Export Backup (.zip)");
+                summaryLabel.setText(
+                    "Backup saved: " + dest.getName());
+                summaryLabel.setStyle(
+                    "-fx-font-size: 11px;" +
+                    "-fx-text-fill: #10B981;");
+
+                // Show success alert
+                javafx.scene.control.Alert alert =
+                    new javafx.scene.control.Alert(
+                        javafx.scene.control.Alert
+                            .AlertType.INFORMATION);
+                alert.setTitle("Export Successful");
+                alert.setHeaderText(null);
+                alert.setContentText(
+                    "Backup saved successfully to:\n"
+                    + dest.getAbsolutePath());
+                MainController.applyThemeToDialog(
+                    alert, SettingsManager.isDarkMode());
+                alert.showAndWait();
+            })
+        );
+
+        task.setOnFailed(ev ->
+            javafx.application.Platform.runLater(() -> {
+                exportBtn.setDisable(false);
+                exportBtn.setText("Export Backup (.zip)");
+                summaryLabel.setText(
+                    "Export failed: " +
+                    task.getException().getMessage());
+                summaryLabel.setStyle(
+                    "-fx-font-size: 11px;" +
+                    "-fx-text-fill: #EF4444;");
+            })
+        );
+
+        new Thread(task, "BackupExportThread").start();
+    }
+
+    private static void handleImportBackup(
+            Button importBtn, Label summaryLabel) {
+
+        // Warn user before overwriting
+        javafx.scene.control.Alert confirm =
+            new javafx.scene.control.Alert(
+                javafx.scene.control.Alert
+                    .AlertType.CONFIRMATION);
+        confirm.setTitle("Import Backup");
+        confirm.setHeaderText("Overwrite existing data?");
+        confirm.setContentText(
+            "Importing a backup will replace your current " +
+            "database and all scan images.\n\n" +
+            "This cannot be undone. Continue?");
+        MainController.applyThemeToDialog(
+            confirm, SettingsManager.isDarkMode());
+
+        var result = confirm.showAndWait();
+        if (result.isEmpty() || result.get() !=
+                javafx.scene.control.ButtonType.OK) {
+            return;
+        }
+
+        javafx.stage.FileChooser chooser =
+            new javafx.stage.FileChooser();
+        chooser.setTitle("Select Backup ZIP");
+        chooser.getExtensionFilters().add(
+            new javafx.stage.FileChooser
+                .ExtensionFilter(
+                    "ZIP Archive", "*.zip"));
+
+        File src = chooser.showOpenDialog(
+            importBtn.getScene().getWindow());
+        if (src == null) return;
+
+        importBtn.setDisable(true);
+        importBtn.setText("Importing...");
+
+        javafx.concurrent.Task<Void> task =
+            new javafx.concurrent.Task<>() {
+                @Override
+                protected Void call() throws Exception {
+                    BackupManager.importBackup(src);
+                    return null;
+                }
+            };
+
+        task.setOnSucceeded(ev ->
+            javafx.application.Platform.runLater(() -> {
+                importBtn.setDisable(false);
+                importBtn.setText(
+                    "Import Backup (.zip)");
+                summaryLabel.setText(
+                    BackupManager.getBackupSummary());
+                summaryLabel.setStyle(
+                    "-fx-font-size: 11px;" +
+                    "-fx-text-fill: #10B981;");
+
+                javafx.scene.control.Alert alert =
+                    new javafx.scene.control.Alert(
+                        javafx.scene.control.Alert
+                            .AlertType.INFORMATION);
+                alert.setTitle("Import Successful");
+                alert.setHeaderText(null);
+                alert.setContentText(
+                    "Backup imported successfully.\n\n" +
+                    "Please restart VisoLearn AI Studio " +
+                    "to load the restored data.");
+                MainController.applyThemeToDialog(
+                    alert, SettingsManager.isDarkMode());
+                alert.showAndWait();
+            })
+        );
+
+        task.setOnFailed(ev ->
+            javafx.application.Platform.runLater(() -> {
+                importBtn.setDisable(false);
+                importBtn.setText(
+                    "Import Backup (.zip)");
+                summaryLabel.setText(
+                    "Import failed: " +
+                    task.getException().getMessage());
+                summaryLabel.setStyle(
+                    "-fx-font-size: 11px;" +
+                    "-fx-text-fill: #EF4444;");
+            })
+        );
+
+        new Thread(task, "BackupImportThread").start();
     }
 
     private static VBox buildOpacitySetting() {
@@ -502,8 +878,39 @@ public final class SettingsModal {
         return button;
     }
 
+    private static void refreshCardStyles(VBox body) {
+        String cardStyle = "-fx-background-color: " + settingPanelBg() + ";" +
+                "-fx-background-radius: 9px;" +
+                "-fx-border-color: " + dividerColor() + ";" +
+                "-fx-border-radius: 9px;" +
+                "-fx-border-width: 1px;";
+        
+        for (javafx.scene.Node node : body.lookupAll(".setting-card")) {
+            node.setStyle(cardStyle);
+        }
+        
+        for (javafx.scene.Node node : body.lookupAll(".logout-title")) {
+            node.setStyle(
+                "-fx-font-size: 14px;" +
+                "-fx-font-weight: bold;" +
+                "-fx-text-fill: " + textPrimary() + ";");
+        }
+        for (javafx.scene.Node node : body.lookupAll(".import-btn")) {
+            node.setStyle(
+                "-fx-background-color: transparent;" +
+                "-fx-text-fill: " + textSecondary() + ";" +
+                "-fx-border-color: " + sliderTrackBg() + ";" +
+                "-fx-border-radius: 8;" +
+                "-fx-background-radius: 8;" +
+                "-fx-font-size: 13px;" +
+                "-fx-padding: 10 16;" +
+                "-fx-cursor: hand;");
+        }
+    }
+
     private static VBox buildSettingPanel() {
         VBox panel = new VBox(8);
+        panel.getStyleClass().add("setting-card");
         panel.setPadding(new Insets(14, 16, 14, 16));
         panel.setMaxWidth(Double.MAX_VALUE);
         panel.setStyle(

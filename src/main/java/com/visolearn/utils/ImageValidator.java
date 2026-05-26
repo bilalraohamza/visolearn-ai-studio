@@ -109,7 +109,7 @@ public final class ImageValidator {
 
         // ── Check 2: file size ──────────────────────────────────────────────
         long sizeBytes = file.length();
-        if (sizeBytes < MIN_FILE_SIZE_BYTES) {
+        if (sizeBytes < MIN_FILE_SIZE_BYTES && !file.getName().toLowerCase().endsWith(".png")) {
             return ValidationResult.failure(
                     "File too small",
                     String.format(

@@ -251,6 +251,10 @@ public final class DatabaseUtil {
         return dbFile.toAbsolutePath().toString();
     }
 
+    public static Path getDbFilePathAsPath() {
+        return Paths.get(getDbFilePath());
+    }
+
     // Prevent instantiation
     private DatabaseUtil() {}
 }
